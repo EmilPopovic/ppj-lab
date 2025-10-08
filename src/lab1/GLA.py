@@ -1,5 +1,10 @@
+import re
 import sys
-from typing import Generator, Dict, List, Set
+from typing import Generator, Dict, List, Set, Optional, Match
+
+ANALYZER = """
+
+"""
 
 class State:
     def __init__(self, name: str, is_acceptable: bool) -> None:
@@ -38,9 +43,8 @@ class State:
         return self.name < other.name
 
 class Automaton:
-    def __init__(self, states: Set[State], alphabet: Set[str], initial_state: State) -> None:
+    def __init__(self, states: Set[State], initial_state: State) -> None:
         self.states: Set[State] = states
-        self.alphabet: Set[str] = alphabet
         self.initial_state: State = initial_state
         self.current_states: Set[State] = initial_state.epsilon()
 
@@ -66,44 +70,94 @@ def log(*args, **kwargs) -> None:
     """Use this function for logging and errors not needed in program output"""
     print(*args, file=sys.stderr, **kwargs)
 
-# def main() -> None:
-#     def read_input() -> Generator[str, None, None]:
-#         while True:
-#             try:
-#                 yield input()
-#             except EOFError:
-#                 break
+class Rule:
+    state: str = ''
+    regex: str = ''
+    token: Optional[str] = None
+    increment_line: bool = False
+    next_state: Optional[str] = None
+    cutoff: int = 0
 
-#     data = read_input()
+    def __repr__(self) -> str:
+        return f'state: {self.state} | regex: {self.regex} | token: {self.token} {"| inc" if self.increment_line else ""} | next state: {self.next_state} | cutoff: {self.cutoff}'
 
-#     input_strings = [s.split(',') for s in next(data).split('|')]
-#     state_names = next(data).split(',')
-#     alphabet = set(next(data).split(','))
-#     acceptable_state_names = set(next(data).split(','))
-#     initial_state = next(data)
-
-#     states = {State(name, name in acceptable_state_names) for name in state_names}
-#     states_dict = {state.name: state for state in states}
-#     initial_state = states_dict[initial_state]
-
-#     for line in data:
-#         key_part, value = line.split('->')
-#         state, symbol = key_part.split(',')
-#         from_state = states_dict[state]
-#         to_states = {states_dict[to_state] for to_state in value.split(',')} if value != '#' else set()
-#         from_state.transitions[symbol] = to_states
-
-#     automaton = Automaton(states, alphabet, initial_state)
-#     for s in input_strings:
-#         automaton.simulate(s)
-#         automaton.reset()
+def resolve_macros(regex: str, reg_defs: 'dict[str, str]') -> str:
+    def replacer(match: Match[str]) -> str:
+        key = match.group(1)
+        return f'({reg_defs.get(key, match.group(0))})'
+    
+    result = re.sub(r'\{(\w+)\}', replacer, regex)
+    return result
 
 def main() -> None:
-    rows = [line.strip() for line in sys.stdin]
-    for row in rows:
-        log(row)
+    def read_input() -> Generator[str, None, None]:
+        while True:
+            try:
+                yield input()
+            except EOFError:
+                break
 
-    ...
+    reg_defs: dict[str, str] = {}
 
+    states = []
+    start_state = ''
+    tokens = []
+    rules: list[Rule] = []
+
+    data = read_input()
+
+    for row in data:
+        log(f'ROW: {row}')
+
+        if row.startswith('{') and len(row) > 1:
+            reg_def_name, regex = row[1:].split('} ', 1)
+            reg_defs[reg_def_name] = resolve_macros(regex, reg_defs)
+
+        elif row.startswith('%X'):
+            _, *states = row.split(' ')
+            start_state = states[0]
+            states = set(states)
+
+        elif row.startswith('%L'):
+            _, *tokens = row.split(' ')
+            tokens = set(tokens)
+
+        elif row.startswith('<'):
+            rule = Rule()
+            rules.append(rule)
+
+            state_name, regex = row[1:].split('>', 1)
+            rule.state = state_name
+            rule.regex = resolve_macros(regex, reg_defs)
+
+            next(data)
+            first_arg = next(data)
+            log(f'FIRST ARG: {first_arg}')
+            rule.token = first_arg if first_arg != '-' else None
+
+            while True:
+                arg = next(data)
+                log(f'ARG: {arg}')
+                if arg == '}':
+                    break
+                elif arg.startswith('NOVI_REDAK'):
+                    rule.increment_line = True
+                elif arg.startswith('VRATI_SE'):
+                    rule.cutoff = int(arg.split(' ')[1])
+                elif arg.startswith('UDJI_U_STANJE'):
+                    rule.next_state = arg.split(' ')[1]
+
+        else:
+            log('/(._. )\\')
+
+    log('----- REGULAR DEFINITIONS -----')
+    log(reg_defs)
+    log('----- STATES -----')
+    log(states)
+    log('----- TOKENS -----')
+    log(tokens)
+    log('----- RULES -----')
+    log(rules)
+    
 if __name__ == '__main__':
     main()
