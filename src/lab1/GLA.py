@@ -44,6 +44,8 @@ class State:
         self.is_acceptable: bool = is_acceptable
         self.transitions: Dict[str, Set[State]] = {}
 
+        self.rule_id: int = -1
+
     def immediate_transition(self, symbol: str) -> Set['State']:
         return self.transitions.get(symbol, set())
     
@@ -118,6 +120,12 @@ class Automaton:
 class AutomatonFactory:
 
     @staticmethod
+    def from_rule(rule: 'Rule') -> Automaton:
+        automaton = AutomatonFactory.from_re(rule.regex)
+        automaton.end_state.rule_id = rule.id
+        return automaton
+
+    @staticmethod
     def from_re(re: str) -> Automaton:
         automaton = AutomatonFactory.__from_re(re)
         automaton.end_state.is_acceptable = True
@@ -139,10 +147,8 @@ class AutomatonFactory:
         backslash_count = 0
         
         for c in re:
-            log(f'c: {c}, bc: {backslash_count}, d: {depth}')
 
             if not (depth == 0 and c == '|' and backslash_count % 2 == 0):
-                log('+')
                 left_re += c
 
                 if c == '(' and backslash_count % 2 == 0:
@@ -157,7 +163,6 @@ class AutomatonFactory:
                     if depth == 0:
                         is_root_parenthesis_str = False
 
-                        log(f'parenthesis regex: {root_parenthesis_str[1:]}')
                         inner_automaton = AutomatonFactory.__from_re(root_parenthesis_str[1:])
                         automaton.add_states(inner_automaton.states)
 
@@ -196,7 +201,6 @@ class AutomatonFactory:
 
                 if is_root_parenthesis_str:
                     root_parenthesis_str += c
-                    log(f'rps: {root_parenthesis_str}')
 
                 if c != '\\':
                     backslash_count = 0
@@ -204,7 +208,6 @@ class AutomatonFactory:
             else:
                 current_state.add_epsilon(end_state)
 
-                log(f'root regex: {left_re}')
                 left_re = ''
 
                 before_parenthesis_state = start_state
@@ -233,27 +236,128 @@ def resolve_macros(regex: str, reg_defs: 'dict[str, str]') -> str:
     return result
 
 class Rule:
+    last_id = 0
 
     def __init__(self) -> None:
+        self.id = Rule.last_id
+        Rule.last_id += 1
+
         self.state: str = ''
         self.regex: str = ''
         self.token: Optional[str] = None
         self.increment_line: bool = False
         self.next_state: Optional[str] = None
         self.cutoff: int = 0
+        self.automaton: Optional[Automaton] = None
+
+    def compile(self) -> None:
+        self.automaton = AutomatonFactory.from_rule(self)
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__, indent=2, cls=CustomEncoder)
+    
+class Token:
+
+    def __init__(self, type: str, line_number: int, source: str) -> None:
+        self.type: str = type
+        self.line_number: int = line_number
+        self.source: str = source
+
+    def __repr__(self) -> str:
+        return f'{self.type} {self.line_number} {self.source}'
 
 class LA:
     """A Lexical Analyzer object, usually created using LAFactory"""
 
     def __init__(self) -> None:
         self.reg_defs: dict[str, str] = {}
-        self.states: set[str] = set()
+        self.all_states: set[str] = set()
+        self.state: str = ''
         self.start_state: str = ''
-        self.tokens: list[str] = []
+        self.token_types: list[str] = []
         self.rules: list[Rule] = []
+        self.re_automaton: Optional[Automaton] = None
+
+        self.source: str = ''
+        self.start_idx: int = 0
+        self.last_accepted_idx: int = -1
+
+        self.line_number = 1
+
+    def compile(self) -> None:
+        start_state = State()
+        self.re_automaton = Automaton(start_state, State())
+
+        for rule in self.rules:
+            rule.compile()
+            if rule.automaton:
+                start_state.add_epsilon(rule.automaton.start_state)
+
+        self.state = self.start_state
+
+    def token(self) -> Optional[Token]:
+        if self.re_automaton is None:
+            raise ValueError('Lexer Automaton is None')
+        
+        applicable_rules = [rule for rule in self.rules if rule.state == self.state]
+
+        last_found_rule_id: int = -1
+
+        for i, c in enumerate(self.source[self.start_idx:]):
+            self.re_automaton.reset()
+            self.re_automaton.nextc(c)
+
+            if not self.re_automaton.current_states:
+                break
+
+            accepting_states = sorted(
+                [
+                    state
+                    for state in self.re_automaton.current_states
+                    if state.rule_id != -1
+                        and (state.rule_id in [rule.id for rule in applicable_rules])
+                ],
+                key=lambda state: state.rule_id
+            )
+
+            if accepting_states:
+                last_found_rule_id = accepting_states[0].rule_id
+                self.last_accepted_idx = self.start_idx + i
+
+        rule = next((r for r in self.rules if r.id == last_found_rule_id), None)
+
+        if rule is None:
+            return None  # error
+        
+        token_type = rule.token
+        
+        line_number = self.line_number
+        if rule.increment_line:
+            self.line_number += 1
+
+        if rule.next_state:
+            self.state = rule.next_state
+
+        if rule.cutoff:
+            source = self.source[self.start_idx : self.start_idx + rule.cutoff]
+            self.start_idx += rule.cutoff
+            self.last_accepted_idx = self.start_idx - 1
+        else:
+            source = self.source[self.start_idx:self.last_accepted_idx+1]
+            self.start_idx = self.last_accepted_idx + 1
+
+        if token_type is None:
+            return self.token()
+
+        return Token(token_type, line_number, source)
+
+
+    def tokens(self) -> Generator[Token, None, None]:
+        while True:
+            token = self.token()
+            if token is None:
+                break
+            yield token
 
     def to_file(self, filename: str) -> None: ...
 
@@ -278,8 +382,6 @@ class LAFactory:
         data = read_input()
 
         for row in data:
-            log(f'ROW: {row}')
-
             if row.startswith('{') and len(row) > 1:
                 reg_def_name, regex = row[1:].split('} ', 1)
                 la.reg_defs[reg_def_name] = resolve_macros(regex, la.reg_defs)
@@ -287,7 +389,7 @@ class LAFactory:
             elif row.startswith('%X'):
                 _, *states_list = row.split(' ')
                 la.start_state = states_list[0]
-                la.states = set(states_list)
+                la.all_states = set(states_list)
 
             elif row.startswith('%L'):
                 _, *tokens = row.split(' ')
@@ -303,12 +405,10 @@ class LAFactory:
 
                 next(data)
                 first_arg = next(data)
-                log(f'FIRST ARG: {first_arg}')
                 rule.token = first_arg if first_arg != '-' else None
 
                 while True:
                     arg = next(data)
-                    log(f'ARG: {arg}')
                     if arg == '}':
                         break
                     elif arg.startswith('NOVI_REDAK'):
@@ -319,16 +419,20 @@ class LAFactory:
                         rule.next_state = arg.split(' ')[1]
 
             else:
-                log('/(._. )\\')
+                raise Exception('Something broke /(._. )\\')
     
+        la.compile()
+
         return la
 
 def main() -> None:
     la = LAFactory.from_stdin()
 
-    log(la)
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        la.source = f.read()
 
-    la.to_file('LA.py')
+    for t in la.tokens():
+        out(t)
 
 def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
     """Draw automaton using Graphviz for publication-quality output"""
@@ -380,29 +484,4 @@ def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
     return dot
     
 if __name__ == '__main__':
-    # main()
-
-    # regex = '((x|y)*a*|c(ef)*)|b|k'
-    regex = r'(\)a|\_)\|\(|x*|y*'
-    # regex = r'\||a'
-
-    log(regex)
-
-    automaton = AutomatonFactory.from_re(regex)
-
-    draw_automaton_graphviz(automaton, 'a')
-
-    # tests = [
-    #     'b',
-    #     'k',
-    #     'bk',
-    #     'cefef',
-    #     'cefe',
-    #     'xy',
-    #     'xyya',
-    #     'xca',
-    # ]
-
-    # for s in tests:
-    #     log(f'{s} -> {automaton.simulate(s)}')
-    #     automaton.reset()
+    main()
