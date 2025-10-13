@@ -7,6 +7,8 @@ ANALYZER = """
 
 """
 
+EPSILON = '$'
+
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, set):
@@ -46,9 +48,9 @@ class State:
         return self.transitions.get(symbol, set())
     
     def add_epsilon(self, other: 'State') -> None:
-        epsilon = self.transitions.get('$', set())
+        epsilon = self.transitions.get(EPSILON, set())
         epsilon.add(other)
-        self.transitions.setdefault('$', epsilon)
+        self.transitions.setdefault(EPSILON, epsilon)
 
     def add_transition(self, c: str, other: 'State') -> None:
         next_states = self.transitions.get(c, set())
@@ -62,7 +64,7 @@ class State:
 
         while stack:
             state = stack.pop()
-            for next_state in state.immediate_transition('$'):
+            for next_state in state.immediate_transition(EPSILON):
                 if next_state not in epsilon:
                     epsilon.add(next_state)
                     stack.append(next_state)
@@ -134,19 +136,23 @@ class AutomatonFactory:
         left_re = ''
         root_parenthesis_str = ''
         is_root_parenthesis_str = False
+        backslash_count = 0
         
         for c in re:
-            if c != '|' or depth != 0:
+            log(f'c: {c}, bc: {backslash_count}, d: {depth}')
+
+            if not (depth == 0 and c == '|' and backslash_count % 2 == 0):
+                log('+')
                 left_re += c
 
-                if c == '(':
+                if c == '(' and backslash_count % 2 == 0:
                     if depth == 0:
                         root_parenthesis_str = ''
                         is_root_parenthesis_str = True
                         before_parenthesis_state = current_state
                     depth += 1
 
-                elif c == ')':
+                elif c == ')' and backslash_count % 2 == 0:
                     depth -= 1
                     if depth == 0:
                         is_root_parenthesis_str = False
@@ -157,21 +163,43 @@ class AutomatonFactory:
 
                         current_state.add_epsilon(inner_automaton.start_state)
                         current_state = inner_automaton.end_state
+
+                elif c == '\\':
+                    if backslash_count % 2 == 1 and depth == 0:
+                        before_parenthesis_state = current_state
+                        new_state = State()
+                        current_state.add_transition(c, new_state)
+                        automaton.add_state(new_state)
+                        current_state = new_state
+                    backslash_count += 1
                  
-                elif c == '*' and depth == 0:
+                elif c == '*' and depth == 0 and backslash_count % 2 == 0:
                     before_parenthesis_state.add_epsilon(current_state)
                     current_state.add_epsilon(before_parenthesis_state)
                     before_parenthesis_state = current_state
                 
                 elif depth == 0:
+                    sym = c
+
+                    if c == 'n' and backslash_count % 2 == 1:
+                        sym = '\n'
+                    elif c == 't' and backslash_count % 2 == 1:
+                        sym = '\t'
+                    elif c == '_' and backslash_count % 2 == 1:
+                        sym = ' '
+
                     before_parenthesis_state = current_state
                     new_state = State()
-                    current_state.add_transition(c, new_state)
+                    current_state.add_transition(sym, new_state)
                     automaton.add_state(new_state)
                     current_state = new_state
 
                 if is_root_parenthesis_str:
                     root_parenthesis_str += c
+                    log(f'rps: {root_parenthesis_str}')
+
+                if c != '\\':
+                    backslash_count = 0
 
             else:
                 current_state.add_epsilon(end_state)
@@ -181,6 +209,7 @@ class AutomatonFactory:
 
                 before_parenthesis_state = start_state
                 current_state = start_state
+                backslash_count = 0
 
         current_state.add_epsilon(end_state)
 
@@ -333,6 +362,7 @@ def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
                 edge_key = (state.id, target.id)
                 # Display epsilon as ε
                 display_symbol = 'ε' if symbol == '$' else symbol
+                display_symbol = display_symbol.replace('\\', '\\\\').replace('"', '\\"').replace('\n', 'NL').replace('\t', 'TAB').replace(' ', 'SPACE')
                 if edge_key in transitions_map:
                     transitions_map[edge_key].append(display_symbol)
                 else:
@@ -352,25 +382,27 @@ def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
 if __name__ == '__main__':
     # main()
 
-    regex = '((x|y)*a*|c(ef)*)|b|k'
+    # regex = '((x|y)*a*|c(ef)*)|b|k'
+    regex = r'(\)a|\_)\|\(|x*|y*'
+    # regex = r'\||a'
 
     log(regex)
 
     automaton = AutomatonFactory.from_re(regex)
 
-    # draw_automaton_graphviz(automaton, 'a')
+    draw_automaton_graphviz(automaton, 'a')
 
-    tests = [
-        'b',
-        'k',
-        'bk',
-        'cefef',
-        'cefe',
-        'xy',
-        'xyya',
-        'xca',
-    ]
+    # tests = [
+    #     'b',
+    #     'k',
+    #     'bk',
+    #     'cefef',
+    #     'cefe',
+    #     'xy',
+    #     'xyya',
+    #     'xca',
+    # ]
 
-    for s in tests:
-        log(f'{s} -> {automaton.simulate(s)}')
-        automaton.reset()
+    # for s in tests:
+    #     log(f'{s} -> {automaton.simulate(s)}')
+    #     automaton.reset()
