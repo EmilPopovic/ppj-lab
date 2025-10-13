@@ -8,24 +8,52 @@ ANALYZER = """
 """
 
 class CustomEncoder(json.JSONEncoder):
-
     def default(self, o):
         if isinstance(o, set):
             return list(o)
+        
+        if isinstance(o, State):
+            result = {
+                "id": o.id,
+                "is_acceptable": o.is_acceptable,
+                "transitions": {}
+            }
+            
+            # Store only state IDs in transitions
+            for symbol, states in o.transitions.items():
+                result["transitions"][symbol] = [s.id for s in states]
+            
+            return result
+        
         if hasattr(o, '__dict__'):
             return o.__dict__
+        
         return super().default(o)
+
 
 class State:
     """A state of an epsilon NFA"""
+    __last_id: int = 0
 
-    def __init__(self, name: str, is_acceptable: bool) -> None:
-        self.name: str = name
+    def __init__(self, is_acceptable: bool = False) -> None:
+        self.id = State.__last_id
+        State.__last_id += 1
+
         self.is_acceptable: bool = is_acceptable
         self.transitions: Dict[str, Set[State]] = {}
 
     def immediate_transition(self, symbol: str) -> Set['State']:
         return self.transitions.get(symbol, set())
+    
+    def add_epsilon(self, other: 'State') -> None:
+        epsilon = self.transitions.get('$', set())
+        epsilon.add(other)
+        self.transitions.setdefault('$', epsilon)
+
+    def add_transition(self, c: str, other: 'State') -> None:
+        next_states = self.transitions.get(c, set())
+        next_states.add(other)
+        self.transitions.setdefault(c, next_states)
 
     @staticmethod
     def epsilon_set(states: Set['State']) -> Set['State']:
@@ -51,39 +79,112 @@ class State:
     def transition(self, symbol: str) -> Set['State']:
         return State.epsilon_set(self.immediate_transition(symbol))
 
-    def __lt__(self, other):
-        return self.name < other.name
-
 class Automaton:
     """Epsilon NFA with simulation logic"""
 
-    def __init__(self, states: Set[State], initial_state: State) -> None:
-        self.states: Set[State] = states
-        self.initial_state: State = initial_state
-        self.current_states: Set[State] = initial_state.epsilon()
+    def __init__(self, start_state: State, end_state: State) -> None:
+        self.states: Set[State] = {start_state, end_state}
 
-    def simulate(self, inputs: List[str]) -> None:
-        """
-        Simulates the working of the epsilon NFA on a single whole input string (list of symbols)
-        
-        Each symbol can itself be a string.
+        self.start_state: State = start_state
+        self.end_state: State = end_state
 
-        Outputs a list of current states after every step.
-        """
-        out(self.current_states_string(), end='')
-        for symbol in inputs:
-            out('|', end='')
-            self.current_states = State.transition_set(self.current_states, symbol)
-            out(self.current_states_string(), end='')
-        out()
+        self.current_states: Set[State] = start_state.epsilon()
 
-    def current_states_string(self):
-        """Returns a comma-separated list of current states as a string, '#' if none."""
-        return ','.join(state.name for state in sorted(self.current_states)) if self.current_states else '#'
+    def add_state(self, new_state: State) -> None:
+        self.states.add(new_state)
+
+    def add_states(self, new_states: Set['State']):
+        self.states.update(new_states)
+
+    def simulate(self, inputs: str) -> bool:
+        accepts = False
+        for c in inputs:
+            accepts = self.nextc(c)
+        return accepts
+
+    def nextc(self, c: str) -> bool:
+        self.current_states = State.transition_set(self.current_states, c)
+        return any([state.is_acceptable for state in self.current_states])
 
     def reset(self) -> None:
         """Resets the automaton. Used before starting a new simulation when not in initial state."""
-        self.current_states = self.initial_state.epsilon()
+        self.current_states = self.start_state.epsilon()
+
+    def __repr__(self) -> str:
+        return json.dumps(self.states, indent=2, cls=CustomEncoder)
+
+class AutomatonFactory:
+
+    @staticmethod
+    def from_re(re: str) -> Automaton:
+        automaton = AutomatonFactory.__from_re(re)
+        automaton.end_state.is_acceptable = True
+        return automaton
+
+    @staticmethod
+    def __from_re(re: str) -> Automaton:
+        start_state = State()
+        end_state = State()
+        automaton = Automaton(start_state, end_state)
+        
+        depth = 0
+        before_parenthesis_state = start_state 
+        current_state = start_state
+
+        left_re = ''
+        root_parenthesis_str = ''
+        is_root_parenthesis_str = False
+        
+        for c in re:
+            if c != '|' or depth != 0:
+                left_re += c
+
+                if c == '(':
+                    if depth == 0:
+                        root_parenthesis_str = ''
+                        is_root_parenthesis_str = True
+                        before_parenthesis_state = current_state
+                    depth += 1
+
+                elif c == ')':
+                    depth -= 1
+                    if depth == 0:
+                        is_root_parenthesis_str = False
+
+                        log(f'parenthesis regex: {root_parenthesis_str[1:]}')
+                        inner_automaton = AutomatonFactory.__from_re(root_parenthesis_str[1:])
+                        automaton.add_states(inner_automaton.states)
+
+                        current_state.add_epsilon(inner_automaton.start_state)
+                        current_state = inner_automaton.end_state
+                 
+                elif c == '*' and depth == 0:
+                    before_parenthesis_state.add_epsilon(current_state)
+                    current_state.add_epsilon(before_parenthesis_state)
+                    before_parenthesis_state = current_state
+                
+                elif depth == 0:
+                    before_parenthesis_state = current_state
+                    new_state = State()
+                    current_state.add_transition(c, new_state)
+                    automaton.add_state(new_state)
+                    current_state = new_state
+
+                if is_root_parenthesis_str:
+                    root_parenthesis_str += c
+
+            else:
+                current_state.add_epsilon(end_state)
+
+                log(f'root regex: {left_re}')
+                left_re = ''
+
+                before_parenthesis_state = start_state
+                current_state = start_state
+
+        current_state.add_epsilon(end_state)
+
+        return automaton
 
 def out(*args, **kwargs) -> None:
     """Use this function for program output"""
@@ -199,6 +300,77 @@ def main() -> None:
     log(la)
 
     la.to_file('LA.py')
+
+def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
+    """Draw automaton using Graphviz for publication-quality output"""
+    try:
+        from graphviz import Digraph
+    except ImportError:
+        print("Install graphviz: pip install graphviz")
+        return
+    
+    dot = Digraph(comment='Automaton')
+    dot.attr(rankdir='LR')  # Left to right layout
+    
+    # Add invisible start node for the start arrow
+    dot.node('', shape='none', width='0')
+    
+    # Add all states
+    for state in automaton.states:
+        if state.is_acceptable:
+            dot.node(str(state.id), shape='doublecircle')
+        else:
+            dot.node(str(state.id), shape='circle')
+    
+    # Add start arrow
+    dot.edge('', str(automaton.start_state.id))
+    
+    # Group transitions between same states
+    transitions_map = {}
+    for state in automaton.states:
+        for symbol, target_states in state.transitions.items():
+            for target in target_states:
+                edge_key = (state.id, target.id)
+                # Display epsilon as ε
+                display_symbol = 'ε' if symbol == '$' else symbol
+                if edge_key in transitions_map:
+                    transitions_map[edge_key].append(display_symbol)
+                else:
+                    transitions_map[edge_key] = [display_symbol]
+    
+    # Add edges with combined labels
+    for (from_id, to_id), symbols in transitions_map.items():
+        label = ', '.join(sorted(symbols))
+        dot.edge(str(from_id), str(to_id), label=label)
+    
+    # Render the graph
+    dot.render(filename, view=True, format='png', cleanup=True)
+    log(f"Saved to {filename}.png")
+    
+    return dot
     
 if __name__ == '__main__':
-    main()
+    # main()
+
+    regex = '((x|y)*a*|c(ef)*)|b|k'
+
+    log(regex)
+
+    automaton = AutomatonFactory.from_re(regex)
+
+    # draw_automaton_graphviz(automaton, 'a')
+
+    tests = [
+        'b',
+        'k',
+        'bk',
+        'cefef',
+        'cefe',
+        'xy',
+        'xyya',
+        'xca',
+    ]
+
+    for s in tests:
+        log(f'{s} -> {automaton.simulate(s)}')
+        automaton.reset()
