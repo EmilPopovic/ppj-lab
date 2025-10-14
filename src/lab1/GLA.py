@@ -11,7 +11,9 @@ from typing import Generator, Dict, List, Set, Optional, Match
 
 LA_PICKLE_BASE64 = '{{ LA_PICKLE_BASE64 }}'
 
-EPSILON = '$'
+EPSILON = None
+
+Symbol = Optional[str]
 # end preamble
 
 class CustomEncoder(json.JSONEncoder):
@@ -47,11 +49,11 @@ class State:
         State.__last_id += 1
 
         self.is_acceptable: bool = is_acceptable
-        self.transitions: Dict[str, Set[State]] = {}
+        self.transitions: Dict[Symbol, Set[State]] = {}
 
         self.rule_id: int = -1
 
-    def immediate_transition(self, symbol: str) -> Set['State']:
+    def immediate_transition(self, symbol: Symbol) -> Set['State']:
         return self.transitions.get(symbol, set())
     
     def add_epsilon(self, other: 'State') -> None:
@@ -59,7 +61,7 @@ class State:
         epsilon.add(other)
         self.transitions.setdefault(EPSILON, epsilon)
 
-    def add_transition(self, c: str, other: 'State') -> None:
+    def add_transition(self, c: Symbol, other: 'State') -> None:
         next_states = self.transitions.get(c, set())
         next_states.add(other)
         self.transitions.setdefault(c, next_states)
@@ -82,10 +84,10 @@ class State:
         return State.epsilon_set({self})
 
     @staticmethod
-    def transition_set(states: Set['State'], symbol: str) -> Set['State']:
+    def transition_set(states: Set['State'], symbol: Symbol) -> Set['State']:
         return set.union(*(state.transition(symbol) for state in states)) if states else set()
 
-    def transition(self, symbol: str) -> Set['State']:
+    def transition(self, symbol: Symbol) -> Set['State']:
         return State.epsilon_set(self.immediate_transition(symbol))
 
 class Automaton:
@@ -199,7 +201,7 @@ class AutomatonFactory:
                     before_parenthesis_state = current_state
                 
                 elif depth == 0:
-                    sym = c
+                    sym: Symbol = c
 
                     if c == 'n' and backslash_count % 2 == 1:
                         sym = '\n'
@@ -207,6 +209,8 @@ class AutomatonFactory:
                         sym = '\t'
                     elif c == '_' and backslash_count % 2 == 1:
                         sym = ' '
+                    elif c == '$' and backslash_count % 2 == 0:
+                        sym = None
 
                     before_parenthesis_state = current_state
                     new_state = State()
@@ -528,7 +532,7 @@ def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
             for target in target_states:
                 edge_key = (state.id, target.id)
                 # Display epsilon as ε
-                display_symbol = 'ε' if symbol == '$' else symbol
+                display_symbol = 'ε' if symbol is None else symbol
                 display_symbol = display_symbol.replace('\\', '\\\\').replace('"', '\\"').replace('\n', 'NL').replace('\t', 'TAB').replace(' ', 'SPACE')
                 if edge_key in transitions_map:
                     transitions_map[edge_key].append(display_symbol)
