@@ -1,3 +1,7 @@
+import inspect
+from collections import OrderedDict
+
+# begin preamble
 import re
 import sys
 import json
@@ -9,8 +13,6 @@ LA_PICKLE_BASE64 = '{{ LA_PICKLE_BASE64 }}'
 
 EPSILON = '$'
 # end preamble
-import inspect
-from collections import OrderedDict
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
@@ -39,13 +41,10 @@ class CustomEncoder(json.JSONEncoder):
 class State:
     """A state of an epsilon NFA"""
     __last_id: int = 0
-    __all_states: Dict[int, 'State'] = {}
 
     def __init__(self, is_acceptable: bool = False) -> None:
         self.id = State.__last_id
         State.__last_id += 1
-
-        State.__all_states[self.id] = self
 
         self.is_acceptable: bool = is_acceptable
         self.transitions: Dict[str, Set[State]] = {}
@@ -85,16 +84,6 @@ class State:
     @staticmethod
     def transition_set(states: Set['State'], symbol: str) -> Set['State']:
         return set.union(*(state.transition(symbol) for state in states)) if states else set()
-    
-    @staticmethod
-    def from_json(json_dict: Dict[str, str]) -> 'State':
-        state = State(bool(json_dict.get('is_acceptable', 'False')))
-        state.rule_id = int(json_dict.get('rule_id', '-1'))
-        return state
-    
-    @staticmethod
-    def by_id(id: int) -> Optional['State']:
-        return State.__all_states.get(id, None)
 
     def transition(self, symbol: str) -> Set['State']:
         return State.epsilon_set(self.immediate_transition(symbol))
@@ -454,34 +443,6 @@ class LAFactory:
         la.compile()
 
         return la
-
-    # @staticmethod
-    # def from_json(json_str: str) -> LA:
-    #     data = json.loads(json_str)
-
-    #     states_dict = sorted(data['states'], key=lambda s: s.id)
-    #     states = set()
-
-    #     for state_dict in states_dict:
-    #         states.add(State.from_json(state_dict))
-
-    #     for state_dict in states_dict:
-    #         state = State.by_id(state_dict['id'])
-    #         if state is None:
-    #             raise Exception('Invalid state')
-    #         for sym, state_ids in state_dict['transitions']:
-    #             for id in state_ids:
-    #                 next_state = State.by_id(id)
-    #                 if next_state is None:
-    #                     raise Exception('Invalid state')
-    #                 state.add_transition(sym, next_state)
-
-    #     start_state = State.by_id(data['start_state']['id'])
-    #     end_state = State.by_id(data['end_state']['id'])
-
-    #     la = LA()
-
-    #     return la
     
     @staticmethod
     def from_pickle(b64_pickle: str) -> LA:
@@ -492,8 +453,13 @@ class LAFactory:
     
 def make_la_file(filename: str, la: LA) -> None:
     b64_la: str = base64.b64encode(pickle.dumps(la)).decode('utf-8')
+    
+    all_src = inspect.getsource(sys.modules[__name__])
+    before_preamble_end = all_src.split('# end preamble', 1)[0]
+    preamble = before_preamble_end.split('# begin preamble', 1)[1]
+
     src = OrderedDict([
-        ('preamble_src', inspect.getsource(sys.modules[__name__]).split('# end preamble', 1)[0].replace('{{ LA_PICKLE_BASE64 }}', b64_la)),
+        ('preamble_src', preamble.replace('{{ LA_PICKLE_BASE64 }}', b64_la)),
         ('custom_encoder_src', inspect.getsource(CustomEncoder)),
         ('state_src', inspect.getsource(State)),
         ('automaton_src', inspect.getsource(Automaton)),
@@ -512,8 +478,6 @@ def make_la_file(filename: str, la: LA) -> None:
     src_str = ''    
     for _, class_src in src.items():
         src_str += class_src + '\n'
-
-    log(f'LA.py SOURCE:\n\n{src_str}')
 
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(src_str)
