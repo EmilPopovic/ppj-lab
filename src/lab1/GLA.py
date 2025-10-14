@@ -15,6 +15,14 @@ EPSILON = None
 Symbol = Optional[str]
 # end preamble
 
+def out(*args, **kwargs) -> None:
+    """Use this function for program output"""
+    print(*args, file=sys.stdout, **kwargs)
+
+def log(*args, **kwargs) -> None:
+    """Use this function for logging and errors not needed in program output"""
+    print(*args, file=sys.stderr, **kwargs)
+
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, set):
@@ -268,14 +276,6 @@ class AutomatonFactory:
 
         return automaton
 
-def out(*args, **kwargs) -> None:
-    """Use this function for program output"""
-    print(*args, file=sys.stdout, **kwargs)
-
-def log(*args, **kwargs) -> None:
-    """Use this function for logging and errors not needed in program output"""
-    print(*args, file=sys.stderr, **kwargs)
-
 class Rule:
     last_id = 0
 
@@ -290,9 +290,6 @@ class Rule:
         self.next_state: Optional[str] = None
         self.cutoff: int = 0
         self.automaton: Optional[Automaton] = None
-
-    def compile(self) -> None:
-        self.automaton = AutomatonFactory.from_rule(self)
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__, indent=2, cls=CustomEncoder)
@@ -324,17 +321,6 @@ class LA:
         self.last_accepted_idx: int = -1
 
         self.line_number = 1
-
-    def compile(self) -> None:
-        start_state = State()
-        self.re_automaton = Automaton(start_state, State())
-
-        for rule in self.rules:
-            rule.compile()
-            if rule.automaton:
-                start_state.add_epsilon(rule.automaton.start_state)
-
-        self.state = self.start_state
 
     def token(self) -> Optional[Token]:
         if self.start_idx >= len(self.source):
@@ -416,7 +402,7 @@ class LA:
         la: LA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
         return la
 
-class LAFactory:
+class LAUtils:
     """Factory for creating Lexical Analyzer objects"""
 
     _letters_re = 'a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z'
@@ -425,6 +411,18 @@ class LAFactory:
     _macro_re = '{' + _word_re + '}'
 
     _macros_automaton = None
+
+    @staticmethod
+    def compile(la: LA) -> None:
+        start_state = State()
+        la.re_automaton = Automaton(start_state, State())
+
+        for rule in la.rules:
+            rule.automaton = AutomatonFactory.from_rule(rule)
+            if rule.automaton:
+                start_state.add_epsilon(rule.automaton.start_state)
+
+        la.state = la.start_state
 
     @classmethod
     def macros_automaton(cls) -> Automaton:
@@ -438,8 +436,7 @@ class LAFactory:
         result = ''
         last_end = 0
         
-        for start, end in LAFactory.macros_automaton().matches(regex):
-            log(f'[{start}:{end}]')
+        for start, end in LAUtils.macros_automaton().matches(regex):
             result += regex[last_end:start]
             last_end = end
 
@@ -467,7 +464,7 @@ class LAFactory:
         for row in data:
             if row.startswith('{') and len(row) > 1:
                 reg_def_name, regex = row[1:].split('} ', 1)
-                la.reg_defs[reg_def_name] = LAFactory.resolve_macros(regex, la.reg_defs)
+                la.reg_defs[reg_def_name] = LAUtils.resolve_macros(regex, la.reg_defs)
 
             elif row.startswith('%X'):
                 _, *states_list = row.split(' ')
@@ -484,7 +481,7 @@ class LAFactory:
 
                 state_name, regex = row[1:].split('>', 1)
                 rule.state = state_name
-                rule.regex = LAFactory.resolve_macros(regex, la.reg_defs)
+                rule.regex = LAUtils.resolve_macros(regex, la.reg_defs)
 
                 next(data)
                 first_arg = next(data)
@@ -504,7 +501,7 @@ class LAFactory:
             else:
                 raise Exception('Something broke /(._. )\\')
     
-        la.compile()
+        LAUtils.compile(la)
 
         return la
     
@@ -517,12 +514,11 @@ def make_la_file(filename: str, la: LA) -> None:
 
     src = OrderedDict([
         ('preamble_src', preamble.replace('{{ LA_PICKLE_BASE64 }}', b64_la)),
+        ('out_src', inspect.getsource(out)),
+        ('log_src', inspect.getsource(log)),
         ('custom_encoder_src', inspect.getsource(CustomEncoder)),
         ('state_src', inspect.getsource(State)),
         ('automaton_src', inspect.getsource(Automaton)),
-        ('automaton_factory_src', inspect.getsource(AutomatonFactory)),
-        ('out_src', inspect.getsource(out)),
-        ('log_src', inspect.getsource(log)),
         ('rule_src', inspect.getsource(Rule)),
         ('token_src', inspect.getsource(Token)),
         ('la_src', inspect.getsource(LA)),
@@ -546,7 +542,7 @@ def la_main() -> None:
         out(t)
 
 def main() -> None:
-    la = LAFactory.from_stdin()
+    la = LAUtils.from_stdin()
 
     if la.re_automaton:
         make_la_file('LA.py', la)
