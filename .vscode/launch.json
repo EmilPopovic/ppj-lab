@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug with stdin/stdout redirect",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/LA.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "args": ["<", "tests/lab1_teza/33_simplePpjLang_alt/test.in", ">", "out.txt"]
+        }
+    ]
+}

@@ -2,12 +2,11 @@ import inspect
 from collections import OrderedDict
 
 # begin preamble
-import re
 import sys
 import json
 import pickle
 import base64
-from typing import Generator, Dict, List, Set, Optional, Match
+from typing import Generator, Dict, List, Set, Optional, Tuple
 
 LA_PICKLE_BASE64 = '{{ LA_PICKLE_BASE64 }}'
 
@@ -116,6 +115,41 @@ class Automaton:
     def nextc(self, c: str) -> bool:
         self.current_states = State.transition_set(self.current_states, c)
         return any([state.is_acceptable for state in self.current_states])
+    
+    def match(self, input: str, start_idx: int = 0) -> Optional[Tuple[int, int]]:        
+        self.reset()
+        match: Optional[Tuple[int, int]] = None
+
+        i = start_idx
+        prev_accepting = False
+        accepting = False
+        
+        while i < len(input):
+            c = input[i]
+            prev_accepting = accepting
+            accepting = self.nextc(c)
+            
+            if not self.current_states:
+                start_idx = i + 1
+                self.reset()
+                if prev_accepting:
+                    break
+
+            if accepting:
+                match = (start_idx, i + 1)
+
+            i += 1
+            
+        return match
+
+    def matches(self, input: str) -> Generator[Tuple[int, int], None, None]:
+        i = 0
+        while True:
+            match = self.match(input, i)
+            if match is None:
+                break
+            _, i = match
+            yield match
 
     def reset(self) -> None:
         """Resets the automaton. Used before starting a new simulation when not in initial state."""
@@ -134,7 +168,6 @@ class Automaton:
             indent=2,
             cls=CustomEncoder
         )
-        return json.dumps(self.states, indent=2, cls=CustomEncoder)
 
 class AutomatonFactory:
 
@@ -242,15 +275,6 @@ def out(*args, **kwargs) -> None:
 def log(*args, **kwargs) -> None:
     """Use this function for logging and errors not needed in program output"""
     print(*args, file=sys.stderr, **kwargs)
-
-def resolve_macros(regex: str, reg_defs: 'dict[str, str]') -> str:
-    """Replaces {macros} in regular expressions"""
-    def replacer(match: Match[str]) -> str:
-        key = match.group(1)
-        return f'({reg_defs.get(key, match.group(0))})'
-    
-    result = re.sub(r'\{(\w+)\}', replacer, regex)
-    return result
 
 class Rule:
     last_id = 0
@@ -386,9 +410,45 @@ class LA:
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__, indent=2, cls=CustomEncoder)
+    
+    @staticmethod
+    def from_pickle(b64_pickle: str) -> 'LA':
+        la: LA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
+        return la
 
 class LAFactory:
     """Factory for creating Lexical Analyzer objects"""
+
+    _letters_re = 'a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q|r|s|t|u|v|w|x|y|z'
+    _all_letters_re = f'{_letters_re}|{_letters_re.upper()}'
+    _word_re = f'({_all_letters_re})({_all_letters_re})*'
+    _macro_re = '{' + _word_re + '}'
+
+    _macros_automaton = None
+
+    @classmethod
+    def macros_automaton(cls) -> Automaton:
+        if cls._macros_automaton is None:
+            cls._macros_automaton = AutomatonFactory.from_re(cls._macro_re)
+        return cls._macros_automaton
+
+    @staticmethod
+    def resolve_macros(regex: str, reg_defs: 'dict[str, str]') -> str:
+        """Replaces {macros} in regular expressions"""   
+        result = ''
+        last_end = 0
+        
+        for start, end in LAFactory.macros_automaton().matches(regex):
+            log(f'[{start}:{end}]')
+            result += regex[last_end:start]
+            last_end = end
+
+            result += f'({reg_defs.get(regex[start+1 : end-1], regex[start:end])})'
+
+        if last_end < len(regex):
+            result += regex[last_end:]
+
+        return result
 
     @staticmethod
     def from_stdin() -> LA:
@@ -407,7 +467,7 @@ class LAFactory:
         for row in data:
             if row.startswith('{') and len(row) > 1:
                 reg_def_name, regex = row[1:].split('} ', 1)
-                la.reg_defs[reg_def_name] = resolve_macros(regex, la.reg_defs)
+                la.reg_defs[reg_def_name] = LAFactory.resolve_macros(regex, la.reg_defs)
 
             elif row.startswith('%X'):
                 _, *states_list = row.split(' ')
@@ -424,7 +484,7 @@ class LAFactory:
 
                 state_name, regex = row[1:].split('>', 1)
                 rule.state = state_name
-                rule.regex = resolve_macros(regex, la.reg_defs)
+                rule.regex = LAFactory.resolve_macros(regex, la.reg_defs)
 
                 next(data)
                 first_arg = next(data)
@@ -448,12 +508,6 @@ class LAFactory:
 
         return la
     
-    @staticmethod
-    def from_pickle(b64_pickle: str) -> LA:
-        la: LA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
-        return la
-
-    
 def make_la_file(filename: str, la: LA) -> None:
     b64_la: str = base64.b64encode(pickle.dumps(la)).decode('utf-8')
     
@@ -469,11 +523,9 @@ def make_la_file(filename: str, la: LA) -> None:
         ('automaton_factory_src', inspect.getsource(AutomatonFactory)),
         ('out_src', inspect.getsource(out)),
         ('log_src', inspect.getsource(log)),
-        ('resolve_macros_src', inspect.getsource(resolve_macros)),
         ('rule_src', inspect.getsource(Rule)),
         ('token_src', inspect.getsource(Token)),
         ('la_src', inspect.getsource(LA)),
-        ('la_factory_src', inspect.getsource(LAFactory)),
         ('la_main_src', inspect.getsource(la_main)),
         ('entrypoint_src', 'if __name__ == \'__main__\':\n    la_main()')
     ])
@@ -486,7 +538,7 @@ def make_la_file(filename: str, la: LA) -> None:
         f.write(src_str)
 
 def la_main() -> None:
-    la = LAFactory.from_pickle(LA_PICKLE_BASE64)
+    la = LA.from_pickle(LA_PICKLE_BASE64)
 
     la.source = sys.stdin.read()
 
@@ -503,3 +555,22 @@ def main() -> None:
     
 if __name__ == '__main__':
     main()
+    # reg_defs = {
+    #     'nums': '0|1|2|3|4|5|6|7|8|9',
+    #     'letters': 'a|b|c|d|e|f|A|B|C|D|E|F'
+    # }
+
+    # regex = r'0x({nums}|{letters})({nums}|{letters})*'
+
+    # log(regex)
+
+    # r = LAFactory.resolve_macros(regex, reg_defs)
+
+    # log(r)
+
+    # a = AutomatonFactory.from_re(r)
+
+    # s = 'kkk0xfkkkkkk0xa0xa'
+
+    # for match in a.matches(s):
+    #     log(match)
