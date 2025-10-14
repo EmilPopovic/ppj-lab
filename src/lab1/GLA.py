@@ -484,8 +484,7 @@ def make_la_file(filename: str, la: LA) -> None:
 def la_main() -> None:
     la = LAFactory.from_pickle(LA_PICKLE_BASE64)
 
-    with open(sys.argv[1], 'r', encoding='utf-8') as f:
-        la.source = f.read()
+    la.source = sys.stdin.read()
 
     for t in la.tokens():
         out(t)
