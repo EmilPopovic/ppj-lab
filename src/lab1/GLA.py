@@ -288,7 +288,7 @@ class Rule:
         self.token: Optional[str] = None
         self.increment_line: bool = False
         self.next_state: Optional[str] = None
-        self.cutoff: int = 0
+        self.cutoff: Optional[int] = None
         self.automaton: Optional[Automaton] = None
 
     def __repr__(self) -> str:
@@ -322,14 +322,21 @@ class LA:
 
         self.line_number = 1
 
-    def token(self) -> Optional[Token]:
+    def __token(self) -> Optional[Token]:
         if self.start_idx >= len(self.source):
-            return None
+            raise EOFError()
 
         if self.re_automaton is None:
             raise ValueError('Lexer Automaton is None')
-        
+
         applicable_rules = [rule for rule in self.rules if rule.state == self.state]
+        applicable_states: Set[State] = set()
+        applicable_end_states: Set[State] = set()
+
+        for rule in applicable_rules:
+            if rule.automaton:
+                applicable_states.update(rule.automaton.states)
+                applicable_end_states.add(rule.automaton.end_state)
 
         last_found_rule_id: int = -1
         self.re_automaton.reset()
@@ -337,20 +344,16 @@ class LA:
         for i, c in enumerate(self.source[self.start_idx:]):
             self.re_automaton.nextc(c)
 
-            if not self.re_automaton.current_states:
+            if not (self.re_automaton.current_states & applicable_states):
                 break
 
             accepting_states = sorted(
-                [
-                    state
-                    for state in self.re_automaton.current_states
-                    if state.rule_id != -1
-                        and (state.rule_id in [rule.id for rule in applicable_rules])
-                ],
+                [state for state in self.re_automaton.current_states & applicable_end_states],
                 key=lambda state: state.rule_id
             )
 
             if accepting_states:
+                r: Rule = list(filter(lambda r: r.id == accepting_states[0].rule_id, self.rules))[0]
                 last_found_rule_id = accepting_states[0].rule_id
                 self.last_accepted_idx = self.start_idx + i
 
@@ -359,11 +362,10 @@ class LA:
         if rule is None:
             self.last_accepted_idx = self.start_idx
             self.start_idx += 1
-            if self.start_idx < len(self.source):
-                log(f'Error on line {self.line_number}')
-                return self.token()
-            return None
-        
+
+            log(f'Error on line {self.line_number}')
+            raise ValueError()
+
         token_type = rule.token
         
         line_number = self.line_number
@@ -373,7 +375,7 @@ class LA:
         if rule.next_state:
             self.state = rule.next_state
 
-        if rule.cutoff:
+        if rule.cutoff is not None:
             source = self.source[self.start_idx : self.start_idx + rule.cutoff]
             self.start_idx += rule.cutoff
             self.last_accepted_idx = self.start_idx - 1
@@ -382,10 +384,22 @@ class LA:
             self.start_idx = self.last_accepted_idx + 1
 
         if token_type is None:
-            return self.token()
+            return None
 
         return Token(token_type, line_number, source)
 
+    def token(self) -> Optional[Token]:
+        while True:
+            try:
+                token = self.__token()
+
+                if token is not None:
+                    return token
+
+            except EOFError as _:
+                return None
+            except ValueError as _:
+                continue
 
     def tokens(self) -> Generator[Token, None, None]:
         while True:
@@ -551,22 +565,4 @@ def main() -> None:
     
 if __name__ == '__main__':
     main()
-    # reg_defs = {
-    #     'nums': '0|1|2|3|4|5|6|7|8|9',
-    #     'letters': 'a|b|c|d|e|f|A|B|C|D|E|F'
-    # }
 
-    # regex = r'0x({nums}|{letters})({nums}|{letters})*'
-
-    # log(regex)
-
-    # r = LAFactory.resolve_macros(regex, reg_defs)
-
-    # log(r)
-
-    # a = AutomatonFactory.from_re(r)
-
-    # s = 'kkk0xfkkkkkk0xa0xa'
-
-    # for match in a.matches(s):
-    #     log(match)
