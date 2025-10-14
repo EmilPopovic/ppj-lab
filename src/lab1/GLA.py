@@ -1,13 +1,16 @@
 import re
 import sys
 import json
+import pickle
+import base64
 from typing import Generator, Dict, List, Set, Optional, Match
 
-ANALYZER = """
-
-"""
+LA_PICKLE_BASE64 = '{{ LA_PICKLE_BASE64 }}'
 
 EPSILON = '$'
+# end preamble
+import inspect
+from collections import OrderedDict
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, o):
@@ -16,14 +19,15 @@ class CustomEncoder(json.JSONEncoder):
         
         if isinstance(o, State):
             result = {
-                "id": o.id,
-                "is_acceptable": o.is_acceptable,
-                "transitions": {}
+                'id': o.id,
+                'is_acceptable': o.is_acceptable,
+                'rule_id': o.rule_id,
+                'transitions': {}
             }
             
             # Store only state IDs in transitions
             for symbol, states in o.transitions.items():
-                result["transitions"][symbol] = [s.id for s in states]
+                result['transitions'][symbol] = [s.id for s in states]
             
             return result
         
@@ -32,14 +36,16 @@ class CustomEncoder(json.JSONEncoder):
         
         return super().default(o)
 
-
 class State:
     """A state of an epsilon NFA"""
     __last_id: int = 0
+    __all_states: Dict[int, 'State'] = {}
 
     def __init__(self, is_acceptable: bool = False) -> None:
         self.id = State.__last_id
         State.__last_id += 1
+
+        State.__all_states[self.id] = self
 
         self.is_acceptable: bool = is_acceptable
         self.transitions: Dict[str, Set[State]] = {}
@@ -79,6 +85,16 @@ class State:
     @staticmethod
     def transition_set(states: Set['State'], symbol: str) -> Set['State']:
         return set.union(*(state.transition(symbol) for state in states)) if states else set()
+    
+    @staticmethod
+    def from_json(json_dict: Dict[str, str]) -> 'State':
+        state = State(bool(json_dict.get('is_acceptable', 'False')))
+        state.rule_id = int(json_dict.get('rule_id', '-1'))
+        return state
+    
+    @staticmethod
+    def by_id(id: int) -> Optional['State']:
+        return State.__all_states.get(id, None)
 
     def transition(self, symbol: str) -> Set['State']:
         return State.epsilon_set(self.immediate_transition(symbol))
@@ -114,7 +130,19 @@ class Automaton:
         """Resets the automaton. Used before starting a new simulation when not in initial state."""
         self.current_states = self.start_state.epsilon()
 
+    def to_json(self) -> str:
+        return str(self)
+
     def __repr__(self) -> str:
+        return json.dumps(
+            {
+                'states': self.states,
+                'start_state': self.start_state,
+                'end_state': self.end_state,
+            },
+            indent=2,
+            cls=CustomEncoder
+        )
         return json.dumps(self.states, indent=2, cls=CustomEncoder)
 
 class AutomatonFactory:
@@ -141,7 +169,6 @@ class AutomatonFactory:
         before_parenthesis_state = start_state 
         current_state = start_state
 
-        left_re = ''
         root_parenthesis_str = ''
         is_root_parenthesis_str = False
         backslash_count = 0
@@ -149,7 +176,6 @@ class AutomatonFactory:
         for c in re:
 
             if not (depth == 0 and c == '|' and backslash_count % 2 == 0):
-                left_re += c
 
                 if c == '(' and backslash_count % 2 == 0:
                     if depth == 0:
@@ -207,8 +233,6 @@ class AutomatonFactory:
 
             else:
                 current_state.add_epsilon(end_state)
-
-                left_re = ''
 
                 before_parenthesis_state = start_state
                 current_state = start_state
@@ -296,15 +320,18 @@ class LA:
         self.state = self.start_state
 
     def token(self) -> Optional[Token]:
+        if self.start_idx >= len(self.source):
+            return None
+
         if self.re_automaton is None:
             raise ValueError('Lexer Automaton is None')
         
         applicable_rules = [rule for rule in self.rules if rule.state == self.state]
 
         last_found_rule_id: int = -1
+        self.re_automaton.reset()
 
         for i, c in enumerate(self.source[self.start_idx:]):
-            self.re_automaton.reset()
             self.re_automaton.nextc(c)
 
             if not self.re_automaton.current_states:
@@ -327,7 +354,12 @@ class LA:
         rule = next((r for r in self.rules if r.id == last_found_rule_id), None)
 
         if rule is None:
-            return None  # error
+            self.last_accepted_idx = self.start_idx
+            self.start_idx += 1
+            if self.start_idx < len(self.source):
+                log(f'Error on line {self.line_number}')
+                return self.token()
+            return None
         
         token_type = rule.token
         
@@ -358,8 +390,6 @@ class LA:
             if token is None:
                 break
             yield token
-
-    def to_file(self, filename: str) -> None: ...
 
     def __repr__(self) -> str:
         return json.dumps(self.__dict__, indent=2, cls=CustomEncoder)
@@ -425,14 +455,85 @@ class LAFactory:
 
         return la
 
-def main() -> None:
-    la = LAFactory.from_stdin()
+    # @staticmethod
+    # def from_json(json_str: str) -> LA:
+    #     data = json.loads(json_str)
+
+    #     states_dict = sorted(data['states'], key=lambda s: s.id)
+    #     states = set()
+
+    #     for state_dict in states_dict:
+    #         states.add(State.from_json(state_dict))
+
+    #     for state_dict in states_dict:
+    #         state = State.by_id(state_dict['id'])
+    #         if state is None:
+    #             raise Exception('Invalid state')
+    #         for sym, state_ids in state_dict['transitions']:
+    #             for id in state_ids:
+    #                 next_state = State.by_id(id)
+    #                 if next_state is None:
+    #                     raise Exception('Invalid state')
+    #                 state.add_transition(sym, next_state)
+
+    #     start_state = State.by_id(data['start_state']['id'])
+    #     end_state = State.by_id(data['end_state']['id'])
+
+    #     la = LA()
+
+    #     return la
+    
+    @staticmethod
+    def from_pickle(b64_pickle: str) -> LA:
+        la: LA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
+        log(f'LA:\n\n{la}')
+        return la
+
+    
+def make_la_file(filename: str, la: LA) -> None:
+    b64_la: str = base64.b64encode(pickle.dumps(la)).decode('utf-8')
+    src = OrderedDict([
+        ('preamble_src', inspect.getsource(sys.modules[__name__]).split('# end preamble', 1)[0].replace('{{ LA_PICKLE_BASE64 }}', b64_la)),
+        ('custom_encoder_src', inspect.getsource(CustomEncoder)),
+        ('state_src', inspect.getsource(State)),
+        ('automaton_src', inspect.getsource(Automaton)),
+        ('automaton_factory_src', inspect.getsource(AutomatonFactory)),
+        ('out_src', inspect.getsource(out)),
+        ('log_src', inspect.getsource(log)),
+        ('resolve_macros_src', inspect.getsource(resolve_macros)),
+        ('rule_src', inspect.getsource(Rule)),
+        ('token_src', inspect.getsource(Token)),
+        ('la_src', inspect.getsource(LA)),
+        ('la_factory_src', inspect.getsource(LAFactory)),
+        ('la_main_src', inspect.getsource(la_main)),
+        ('entrypoint_src', 'if __name__ == \'__main__\':\n    la_main()\n')
+    ])
+
+    src_str = ''    
+    for _, class_src in src.items():
+        src_str += class_src + '\n'
+
+    log(f'LA.py SOURCE:\n\n{src_str}')
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(src_str)
+
+def la_main() -> None:
+    la = LAFactory.from_pickle(LA_PICKLE_BASE64)
 
     with open(sys.argv[1], 'r', encoding='utf-8') as f:
         la.source = f.read()
 
     for t in la.tokens():
         out(t)
+
+def main() -> None:
+    la = LAFactory.from_stdin()
+
+    if la.re_automaton:
+        make_la_file('LA.py', la)
+    else:
+        raise Exception('LA must be compiled before generating file')
 
 def draw_automaton_graphviz(automaton: Automaton, filename: str = "automaton"):
     """Draw automaton using Graphviz for publication-quality output"""
