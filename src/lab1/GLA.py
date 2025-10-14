@@ -287,8 +287,8 @@ class LA:
         self.all_states: set[str] = set()
         self.state: str = ''
         self.start_state: str = ''
-        self.token_types: list[str] = []
-        self.rules: list[Rule] = []
+        self.token_types: List[str] = []
+        self.rules: List[Rule] = []
         self.re_automaton: Optional[Automaton] = None
 
         self.source: str = ''
@@ -447,7 +447,6 @@ class LAFactory:
     @staticmethod
     def from_pickle(b64_pickle: str) -> LA:
         la: LA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
-        log(f'LA:\n\n{la}')
         return la
 
     
@@ -472,7 +471,7 @@ def make_la_file(filename: str, la: LA) -> None:
         ('la_src', inspect.getsource(LA)),
         ('la_factory_src', inspect.getsource(LAFactory)),
         ('la_main_src', inspect.getsource(la_main)),
-        ('entrypoint_src', 'if __name__ == \'__main__\':\n    la_main()\n')
+        ('entrypoint_src', 'if __name__ == \'__main__\':\n    la_main()')
     ])
 
     src_str = ''    
