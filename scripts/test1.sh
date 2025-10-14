@@ -11,6 +11,10 @@ echo -e "${BOLD}${BLUE}=============================="
 echo -e "     Running Lab 1 tests"
 echo -e "==============================${RESET}\n"
 
+echo -e "Running with:"
+python3.8 --version
+echo
+
 pass_count=0
 fail_count=0
 
@@ -25,8 +29,8 @@ for dict in tests/lab1_teza/*; do
         continue
     fi
 
-    python src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
-    python LA.py <"$dict/test.in" >output.txt 2>/dev/null
+    python3.8 src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
+    python3.8 LA.py <"$dict/test.in" >output.txt 2>/dev/null
 
     if diff -q output.txt "$dict/test.out" >/dev/null; then
         echo -e "${GREEN}  ✔ PASS${RESET}\n"
