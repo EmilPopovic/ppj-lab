@@ -18,8 +18,17 @@ echo
 pass_count=0
 fail_count=0
 
-for dict in tests/lab1_teza/*; do
+if [ -n "$1" ]; then
+    pattern="tests/lab1_teza/${1}_*"
+else
+    pattern="tests/lab1_teza/*"
+fi
+
+found_any=false
+
+for dict in $pattern; do
     [ -d "$dict" ] || continue
+    found_any=true
     test_name=$(basename "$dict")
 
     echo -e "${BOLD}${YELLOW}→ Testing:${RESET} ${test_name}"
@@ -42,6 +51,10 @@ for dict in tests/lab1_teza/*; do
         ((fail_count++))
     fi
 done
+
+if [ "$found_any" = false ]; then
+    echo -e "${RED}No matching tests found for pattern: ${pattern}${RESET}"
+fi
 
 rm -f output.txt LA.py
 
