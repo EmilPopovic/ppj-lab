@@ -353,7 +353,6 @@ class LA:
             )
 
             if accepting_states:
-                r: Rule = list(filter(lambda r: r.id == accepting_states[0].rule_id, self.rules))[0]
                 last_found_rule_id = accepting_states[0].rule_id
                 self.last_accepted_idx = self.start_idx + i
 
