@@ -15,7 +15,7 @@ EPSILON = None
 Symbol = Optional[str]
 # end preamble
 
-OUTPUT_FILENAME = 'LeksickiAnalizator.py'
+OUTPUT_FILENAME = 'LA.py'
 
 def out(*args, **kwargs) -> None:
     """Use this function for program output"""

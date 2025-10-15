@@ -39,7 +39,7 @@ for dict in $pattern; do
     fi
 
     python3.8 src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
-    python3.8 LeksickiAnalizator.py <"$dict/test.in" >output.txt 2>/dev/null
+    python3.8 LA.py <"$dict/test.in" >output.txt 2>/dev/null
 
     if diff -q output.txt "$dict/test.out" >/dev/null; then
         echo -e "${GREEN}  ✔ PASS${RESET}\n"
@@ -56,7 +56,7 @@ if [ "$found_any" = false ]; then
     echo -e "${RED}No matching tests found for pattern: ${pattern}${RESET}"
 fi
 
-rm -f output.txt LeksickiAnalizator.py
+rm -f output.txt LA.py
 
 total=$((pass_count + fail_count))
 echo -e "${BOLD}${BLUE}==============================${RESET}"
