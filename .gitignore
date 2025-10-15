@@ -4,3 +4,6 @@ __pycache__/
 LA.py
 out.txt
 output.txt
+*.zip
+analizator/
+!src/lab1/analizator
