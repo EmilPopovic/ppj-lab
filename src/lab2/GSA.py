@@ -106,13 +106,10 @@ def mark_empty(nonterminal: Nontermial) -> bool:
     if nonterminal.is_empty is not None:
         return nonterminal.is_empty
     
-    log(f'Provjeravam {nonterminal}')
     if nonterminal.is_empty:
-        log(f'{nonterminal} je trivijalan slučaj')
         return True
     
     right_sides: Set[RightSide] = {rs for rs in nonterminal.right_sides if rs.nonterminal_only}
-    log(f'Desne strane: {right_sides}')
     
     for rs in right_sides:
         if rs.is_empty:
@@ -181,7 +178,6 @@ class SAUtils:
             nt.calculate_in_nt_only_production_of(sa.nonterminals)
 
         stack: list[Nontermial] = [n for n in sa.nonterminals if n.is_empty]
-        log(f'Trivijalni: {stack}')
         
         while stack:
             curr = stack.pop()
@@ -189,14 +185,11 @@ class SAUtils:
             if curr.is_empty == False:  # noqa: E712
                 continue
 
-            log(f'{curr} je prazan, gledam roditelje')
             parents: Set[Nontermial] = {nt for nt in curr.in_nt_only_production_of if nt.is_empty is None}
-            log(f'Roditelji od {str(curr)}: {parents}')
 
             for parent in parents:
                 parent.is_empty = mark_empty(parent)
                 if parent.is_empty:
-                    log(f'Roditelj {parent} od {curr} je prazan')
                     stack.append(parent)           
 
         for nt in sa.nonterminals:
