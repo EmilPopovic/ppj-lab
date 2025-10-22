@@ -1,5 +1,7 @@
 import sys
-from typing import Generator, Set, List, Optional, Iterator
+from typing import Generator, Set, List, Optional, Iterator, Dict
+
+SymbolTable = Dict['Nonterminal', Dict['Nonterminal | Terminal', bool]]
 
 def out(*args, **kwargs) -> None:
     """Use this function for program output"""
@@ -86,6 +88,41 @@ class Nonterminal:
                 return all(nt.mark_empty() for nt in rs if isinstance(nt, Nonterminal))
         
         return False
+    
+    def starts_directly_with(self, other: 'Nonterminal | Terminal') -> bool:
+        for rs in self.right_sides:
+            if rs.is_epsilon:
+                continue
+            
+            i = 0
+            while i < len(rs._items) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
+                if rs[i] == other:
+                    return True
+                i += 1
+
+            if i == len(rs._items):
+                continue
+            elif rs[i] == other:
+                return True
+
+        return False
+    
+    # def starts_with(self, other: 'Nonterminal | Terminal', table_starts_directly_with: SymbolTable) -> bool:
+    #     if table_starts_directly_with[self][other]:
+    #         return True
+        
+    #     for rs in self.right_sides:
+    #         if rs.is_epsilon:
+    #             continue
+
+    #         i = 0
+    #         while i < len(rs._items) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
+    #             assert isinstance(rs[i], Nonterminal)
+    #             if rs[i] == other:
+    #                 return True
+    #             elif rs[i].starts_with(other):
+    #                 return True
+
     
 class Terminal:
 
@@ -188,6 +225,17 @@ class SAUtils:
         for nt in sa.nonterminals:
             if nt.is_empty is None:
                 nt.is_empty = False
+
+        table_starts_directly_with: SymbolTable = {}
+        for row in sa.nonterminals:
+            table_starts_directly_with[row] = {}
+            for col in sa.nonterminals | sa.terminals:
+                table_starts_directly_with[row][col] = row.starts_directly_with(col)
+
+        # table_starts_with: SymbolTable = {}
+        # for row in sa.nonterminals:
+        #     for col in sa.nonterminals | sa.terminals:
+        #         table_starts_with[row][col] = row.starts_with(col, table_starts_directly_with)
 
         return sa
 
