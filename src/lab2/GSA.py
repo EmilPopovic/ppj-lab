@@ -75,19 +75,22 @@ class Nonterminal:
         assert isinstance(self.in_nt_only_production_of, set)
         return other in self.in_nt_only_production_of
     
-    def mark_empty(self) -> bool:
+    def _mark_empty(self, start: 'Nonterminal') -> bool:
         if self.is_empty is not None:
             return self.is_empty
-        
+
         for rs in {rs for rs in self.right_sides if rs.nonterminal_only}:
             if rs.is_empty:
                 rs.left_side.is_empty = True
                 rs.is_empty = True
                 return True
             elif rs.is_empty is None:
-                return all(nt.mark_empty() for nt in rs if isinstance(nt, Nonterminal))
+                return all(nt._mark_empty(start) for nt in rs if isinstance(nt, Nonterminal) and nt is not start)
         
         return False
+
+    def mark_empty(self) -> bool:
+        return self._mark_empty(start=self)
     
     def starts_directly_with(self, other: 'Nonterminal | Terminal') -> bool:
         for rs in self.right_sides:
