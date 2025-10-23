@@ -109,22 +109,54 @@ class Nonterminal:
                 return True
 
         return False
-    
-    # def starts_with(self, other: 'Nonterminal | Terminal', table_starts_directly_with: SymbolTable) -> bool:
-    #     if table_starts_directly_with[self][other]:
-    #         return True
-        
-    #     for rs in self.right_sides:
-    #         if rs.is_epsilon:
-    #             continue
 
-    #         i = 0
-    #         while i < len(rs._items) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
-    #             assert isinstance(rs[i], Nonterminal)
-    #             if rs[i] == other:
-    #                 return True
-    #             elif rs[i].starts_with(other):
-    #                 return True
+def mark_starts_with(table_starts_directly_with: SymbolTable) -> None:
+    for row, row_dict in table_starts_directly_with.items():
+        for col in row_dict:
+            if row == col:
+                row_dict[col] = True
+
+            elif isinstance(col, Nonterminal) and row_dict[col]:
+                for col2 in table_starts_directly_with[col]:
+                    if table_starts_directly_with[col][col2]:
+                        row_dict[col2] = True
+
+def print_sym_table(table: SymbolTable) -> None:
+    all_symbols = set()
+    for row_symbol in table:
+        all_symbols.add(row_symbol)
+        for col_symbol in table[row_symbol]:
+            all_symbols.add(col_symbol)
+
+    nonterminals = sorted([s for s in all_symbols if type(s).__name__ == 'Nonterminal'], 
+                         key=lambda s: s.name)
+    terminals = sorted([s for s in all_symbols if type(s).__name__ == 'Terminal'], 
+                      key=lambda s: s.name)
+
+    columns = nonterminals + terminals
+
+    def display_name(symbol):
+        if type(symbol).__name__ == 'Nonterminal':
+            return f'<{symbol.name}>'
+        return symbol.name
+
+    col_width = max(len(display_name(s)) for s in columns) + 2
+
+    print(' ' * col_width, end='')
+    for col in columns:
+        print(f'{display_name(col):>{col_width}}', end='')
+    print()
+
+    for row in nonterminals + terminals:
+        if row in table:
+            print(f'{display_name(row):<{col_width}}', end='')
+            for col in columns:
+                if col in table[row] and table[row][col]:
+                    print(f'{"1":>{col_width}}', end='')
+                else:
+                    print(' ' * col_width, end='')
+            print()
+
 
     
 class Terminal:
@@ -234,6 +266,12 @@ class SAUtils:
             table_starts_directly_with[row] = {}
             for col in sa.nonterminals | sa.terminals:
                 table_starts_directly_with[row][col] = row.starts_directly_with(col)
+
+        print_sym_table(table_starts_directly_with)
+
+        mark_starts_with(table_starts_directly_with)
+
+        print_sym_table(table_starts_directly_with)
 
         # table_starts_with: SymbolTable = {}
         # for row in sa.nonterminals:
