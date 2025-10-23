@@ -18,6 +18,7 @@ class RightSide:
         self._items = list(*args, **kwargs)
         self.is_epsilon: bool = is_epsilon
         self.is_empty: Optional[bool] = None
+        self.starts_with: Set[Terminal] = set()
 
     def __hash__(self) -> int:
         return hash(str(self.left_side) + ';'.join(str(e) for e in self))
@@ -38,6 +39,20 @@ class RightSide:
     def nonterminal_only(self) -> bool:
         return all(isinstance(e, Nonterminal) for e in self._items)
 
+    def calculate_starts_with(self) -> None:
+        if self.is_epsilon:
+            return
+
+        for s in self:
+            if isinstance(s, Terminal):
+                self.starts_with.add(s)
+                return
+            elif isinstance(s, Nonterminal):
+                self.starts_with.update(s.starts_with)
+
+                if not s.is_empty:
+                    return
+
 class Nonterminal:
     
     def __init__(self, name: str) -> None:
@@ -45,6 +60,7 @@ class Nonterminal:
         self.right_sides: Set[RightSide] = set()
         self.is_empty: Optional[bool] = None
         self.in_nt_only_production_of: Optional[Set[Nonterminal]] = None
+        self.starts_with: Set[Terminal] = set()
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -70,7 +86,10 @@ class Nonterminal:
                 any(nt_in_p == self for nt_in_p in p) for p in nt.right_sides if p.nonterminal_only
             )
         }
-    
+
+    def calculate_starts_with(self, table_starts_with: SymbolTable) -> None:
+        self.starts_with = {t for t in table_starts_with[self] if isinstance(t, Terminal) and table_starts_with[self][t]}
+
     def is_in_production_of(self, other: 'Nonterminal') -> bool:
         assert isinstance(self.in_nt_only_production_of, set)
         return other in self.in_nt_only_production_of
@@ -261,22 +280,25 @@ class SAUtils:
             if nt.is_empty is None:
                 nt.is_empty = False
 
-        table_starts_directly_with: SymbolTable = {}
+        table_starts_with: SymbolTable = {}
         for row in sa.nonterminals:
-            table_starts_directly_with[row] = {}
+            table_starts_with[row] = {}
             for col in sa.nonterminals | sa.terminals:
-                table_starts_directly_with[row][col] = row.starts_directly_with(col)
+                table_starts_with[row][col] = row.starts_directly_with(col)
 
-        print_sym_table(table_starts_directly_with)
+        print_sym_table(table_starts_with)
 
-        mark_starts_with(table_starts_directly_with)
+        mark_starts_with(table_starts_with)
 
-        print_sym_table(table_starts_directly_with)
+        print_sym_table(table_starts_with)
 
-        # table_starts_with: SymbolTable = {}
-        # for row in sa.nonterminals:
-        #     for col in sa.nonterminals | sa.terminals:
-        #         table_starts_with[row][col] = row.starts_with(col, table_starts_directly_with)
+        for nt in sa.nonterminals:
+            nt.calculate_starts_with(table_starts_with)
+
+        for rs in set.union(*(nt.right_sides for nt in sa.nonterminals)):
+            rs.calculate_starts_with()
+            print(f'{rs.left_side} -> {rs}: {rs.starts_with}')
+
 
         return sa
 
