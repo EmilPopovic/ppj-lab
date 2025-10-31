@@ -161,20 +161,20 @@ def print_sym_table(table: SymbolTable) -> None:
 
     col_width = max(len(display_name(s)) for s in columns) + 2
 
-    print(' ' * col_width, end='')
+    log(' ' * col_width, end='')
     for col in columns:
-        print(f'{display_name(col):>{col_width}}', end='')
-    print()
+        log(f'{display_name(col):>{col_width}}', end='')
+    log()
 
     for row in nonterminals + terminals:
         if row in table:
-            print(f'{display_name(row):<{col_width}}', end='')
+            log(f'{display_name(row):<{col_width}}', end='')
             for col in columns:
                 if col in table[row] and table[row][col]:
-                    print(f'{"1":>{col_width}}', end='')
+                    log(f'{"1":>{col_width}}', end='')
                 else:
-                    print(' ' * col_width, end='')
-            print()
+                    log(' ' * col_width, end='')
+            log()
 
 
     
@@ -297,7 +297,7 @@ class SAUtils:
 
         for rs in set.union(*(nt.right_sides for nt in sa.nonterminals)):
             rs.calculate_starts_with()
-            print(f'{rs.left_side} -> {rs}: {rs.starts_with}')
+            log(f'{rs.left_side} -> {rs}: {rs.starts_with}')
 
 
         return sa
