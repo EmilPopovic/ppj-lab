@@ -1,6 +1,4 @@
-from posix import stat
 import sys
-import copy
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
@@ -87,6 +85,47 @@ class NFAState:
 
     def transition(self, symbol: Symbol) -> Set['NFAState']:
         return NFAState.epsilon_set(self.immediate_transition(symbol))
+
+class NFA:
+
+    def __init__(self, states: Set[NFAState], start_state: NFAState, alphabet: Set['Terminal | Nonterminal']) -> None:
+        self.states = states
+        self.start_state = start_state
+        self.alphabet = alphabet
+
+
+class DFAState:
+    __last_id = 0
+
+    def __init__(self, lr_items: Set[LRItem]) -> None:
+        self.id = DFAState.__last_id
+        DFAState.__last_id += 1
+
+        self.lr_items = lr_items
+        self.transitions: Dict[Symbol, 'DFAState'] = {}
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, 'DFAState'):
+            return False
+
+        return self.lr_items == other.lr_items
+
+    def __hash__(self) -> int:
+        return hash(frozenset(self.lr_items))
+
+    def add_transition(self, c: Symbol, other: 'DFAState') -> None:
+        self.transitions.setdefault(c, other)
+
+    def transition(self, symbol: Symbol) -> Optional['DFAState']:
+        return self.transitions.get(symbol)
+
+
+class DFA:
+
+    def __init__(self, states: Set[DFAState], start_state: DFAState, alphabet: Set['Terminal | Nonterminal']) -> None:
+        self.states = states
+        self.start_state = start_state
+        self.alphabet = alphabet
 
 
 class RightSide:
@@ -417,78 +456,61 @@ class SAUtils:
 
         epsilon_nfa_states.add(start_state)
 
-        nfa_states: Set[NFAState] = SAUtils.epsilon_nfa_to_nfa(epsilon_nfa_states, sa.nonterminals | sa.terminals)
+        epislon_nfa = NFA(epsilon_nfa_states, start_state, sa.nonterminals | sa.terminals)
 
-        draw_automaton(nfa_states)
-
+        dfa: DFA = SAUtils.epsilon_nfa_to_dfa(epislon_nfa)
+    
         return sa
 
     @staticmethod
-    def epsilon_nfa_to_nfa(epsilon_nfa_states: Set[NFAState], alphabet: Set[Terminal | Nonterminal]) -> Set[NFAState]:
+    def epsilon_nfa_to_dfa(epsilon_nfa: NFA) -> DFA:
         nfa_states: Dict[int, NFAState] = {}
 
-        for state in epsilon_nfa_states:
+        for state in epsilon_nfa.states:
             new_state = NFAState(state.lr_item)
             nfa_states[state.id] = new_state
 
-        for state in epsilon_nfa_states:
+        for state in epsilon_nfa.states:
             new_state = nfa_states[state.id]
 
-            for symbol in alphabet:
+            for symbol in epsilon_nfa.alphabet:
                 for next_state in NFAState.transition_set(state.epsilon(), symbol):
                     new_state.add_transition(symbol, nfa_states[next_state.id])
 
-        return set(nfa_states.values())
+        nfa = NFA(set(nfa_states.values()), nfa_states[epsilon_nfa.start_state.id], epsilon_nfa.alphabet)
 
-def draw_automaton(states: Set[NFAState], filename: str = "automaton"):
-    """Draw automaton using Graphviz for publication-quality output"""
-    try:
-        from graphviz import Digraph
-    except ImportError:
-        print("Install graphviz: pip install graphviz")
-        return
-    
-    def escape_label(text: str) -> str:
-        """Escape special characters for Graphviz DOT format"""
-        return text.replace('\\', '\\\\').replace('"', '\\"').replace('<', '\\<').replace('>', '\\>')
-    
-    dot = Digraph(comment='Automaton')
-    dot.attr(rankdir='LR')  # Left to right layout
-    
-    # Add invisible start node for the start arrow
-    dot.node('', shape='none', width='0')
-    
-    # Add all states with properly escaped labels
-    for state in states:
-        # Use state ID as the node name and LR item as label
-        label = escape_label(str(state.lr_item))
-        dot.node(str(state.id), label=label, shape='circle')
-    
-    # Group transitions between same states
-    transitions_map = {}
-    for state in states:
-        for symbol, target_states in state.transitions.items():
-            for target in target_states:
-                edge_key = (state.id, target.id)
+        epsilon_nfa_real_start_states: Set[NFAState] = epsilon_nfa.start_state.epsilon() - {epsilon_nfa.start_state}
+        nfa_real_start_states: Set[NFAState] = {nfa_states[state.id] for state in epsilon_nfa_real_start_states} 
 
-                # Display epsilon as ε
-                display_symbol = 'ε' if symbol is None else str(symbol)
-                if edge_key in transitions_map:
-                    transitions_map[edge_key].append(display_symbol)
-                else:
-                    transitions_map[edge_key] = [display_symbol]
-    
-    # Add edges with combined labels (properly escaped)
-    for (from_id, to_id), symbols in transitions_map.items():
-        label = ', '.join(sorted(symbols, key=str))
-        label = escape_label(label)
-        dot.edge(str(from_id), str(to_id), label=label)
-    
-    # Render the graph
-    dot.render(filename, view=True, format='png', cleanup=True)
-    log(f"Saved to {filename}.png")
-    
-    return dot
+        print(nfa_real_start_states)
+
+        start_state = DFAState({state.lr_item for state in nfa_real_start_states})
+        dfa = DFA({start_state}, start_state, nfa.alphabet)
+
+        queue: List[frozenset[NFAState]] = [frozenset(nfa_real_start_states)]
+        discovered_states: Set[DFAState] = {start_state}
+
+        state_dict: Dict[frozenset[NFAState], DFAState] = {frozenset(nfa_real_start_states) : start_state}
+
+        while queue:
+            current_states: frozenset[NFAState] = queue.pop(0)
+            currect_dfa_state = state_dict[current_states]
+
+            for symbol in dfa.alphabet:
+                next_states: frozenset[NFAState] = frozenset(NFAState.transition_set(set(current_states), symbol))
+
+                state_dict.setdefault(next_states, DFAState({next_state.lr_item for next_state in next_states}))
+                dfa_state = state_dict[next_states]
+
+                if dfa_state not in discovered_states:
+                    discovered_states.add(dfa_state)
+                    queue.append(frozenset(next_states))
+
+                currect_dfa_state.add_transition(symbol, dfa_state)
+
+        dfa.states.update(discovered_states)
+
+        return dfa
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
