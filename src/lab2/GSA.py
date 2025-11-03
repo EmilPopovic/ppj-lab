@@ -396,11 +396,11 @@ class SAUtils:
             nt.calculate_in_nt_only_production_of(sa.nonterminals)
 
         stack: list[Nonterminal] = [n for n in sa.nonterminals if n.is_empty]
-        
+
         while stack:
             curr = stack.pop()
             assert curr.in_nt_only_production_of is not None
-            if curr.is_empty == False:  # noqa: E712
+            if curr.is_empty == False:
                 continue
 
             parents: Set[Nonterminal] = {nt for nt in curr.in_nt_only_production_of if nt.is_empty is None}
@@ -459,7 +459,9 @@ class SAUtils:
         epislon_nfa = NFA(epsilon_nfa_states, start_state, sa.nonterminals | sa.terminals)
 
         dfa: DFA = SAUtils.epsilon_nfa_to_dfa(epislon_nfa)
-    
+
+        log(len(dfa.states))
+
         return sa
 
     @staticmethod
@@ -481,8 +483,6 @@ class SAUtils:
 
         epsilon_nfa_real_start_states: Set[NFAState] = epsilon_nfa.start_state.epsilon() - {epsilon_nfa.start_state}
         nfa_real_start_states: Set[NFAState] = {nfa_states[state.id] for state in epsilon_nfa_real_start_states} 
-
-        print(nfa_real_start_states)
 
         start_state = DFAState({state.lr_item for state in nfa_real_start_states})
         dfa = DFA({start_state}, start_state, nfa.alphabet)
@@ -514,7 +514,7 @@ class SAUtils:
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-    log(sa.to_bnf())
+    # log(sa.to_bnf())
 
 if __name__ == '__main__':
     main()
