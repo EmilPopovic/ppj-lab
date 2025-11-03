@@ -1,0 +1,11 @@
+%V <S'> <S> <A>
+%T a b c
+%Syn a
+<S'>
+ <S> c
+<S>
+ <S> <A>
+ <A>
+<A>
+ a <S> b
+ a b
