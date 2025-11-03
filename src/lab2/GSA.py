@@ -1,5 +1,6 @@
-from os import stat
+from posix import stat
 import sys
+import copy
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
@@ -81,11 +82,11 @@ class NFAState:
         return NFAState.epsilon_set({self})
 
     @staticmethod
-    def transition_set(states: Set['NFAState'], token: Symbol) -> Set['NFAState']:
-        return set.union(*(state.transition(token) for state in states)) if states else set()
+    def transition_set(states: Set['NFAState'], symbol: Symbol) -> Set['NFAState']:
+        return set.union(*(state.transition(symbol) for state in states)) if states else set()
 
-    def transition(self, token: Symbol) -> Set['NFAState']:
-        return NFAState.epsilon_set(self.immediate_transition(token))
+    def transition(self, symbol: Symbol) -> Set['NFAState']:
+        return NFAState.epsilon_set(self.immediate_transition(symbol))
 
 
 class RightSide:
@@ -380,6 +381,8 @@ class SAUtils:
             for col in sa.nonterminals | sa.terminals:
                 table_starts_with[row][col] = row.starts_directly_with(col)
 
+        assert sa.starting_nonterminal is not None
+
         mark_starts_with(table_starts_with)
 
         epsilon_nfa_states: Set[NFAState] = set()
@@ -403,14 +406,89 @@ class SAUtils:
 
             symbol = state.lr_item.right_side[state.lr_item.dot_before_idx]
 
-            print(symbol)
-
             if isinstance(symbol, Nonterminal):
-                print(symbol.states)
                 for destination_state in symbol.states:
                     state.add_epsilon(destination_state)
 
+        start_state = NFAState(LRItem(RightSide(left_side=sa.starting_nonterminal), 0))
+
+        for s in {rs.states[-1] for rs in sa.starting_nonterminal.right_sides}:
+            start_state.add_epsilon(s)
+
+        epsilon_nfa_states.add(start_state)
+
+        nfa_states: Set[NFAState] = SAUtils.epsilon_nfa_to_nfa(epsilon_nfa_states, sa.nonterminals | sa.terminals)
+
+        draw_automaton(nfa_states)
+
         return sa
+
+    @staticmethod
+    def epsilon_nfa_to_nfa(epsilon_nfa_states: Set[NFAState], alphabet: Set[Terminal | Nonterminal]) -> Set[NFAState]:
+        nfa_states: Dict[int, NFAState] = {}
+
+        for state in epsilon_nfa_states:
+            new_state = NFAState(state.lr_item)
+            nfa_states[state.id] = new_state
+
+        for state in epsilon_nfa_states:
+            new_state = nfa_states[state.id]
+
+            for symbol in alphabet:
+                for next_state in NFAState.transition_set(state.epsilon(), symbol):
+                    new_state.add_transition(symbol, nfa_states[next_state.id])
+
+        return set(nfa_states.values())
+
+def draw_automaton(states: Set[NFAState], filename: str = "automaton"):
+    """Draw automaton using Graphviz for publication-quality output"""
+    try:
+        from graphviz import Digraph
+    except ImportError:
+        print("Install graphviz: pip install graphviz")
+        return
+    
+    def escape_label(text: str) -> str:
+        """Escape special characters for Graphviz DOT format"""
+        return text.replace('\\', '\\\\').replace('"', '\\"').replace('<', '\\<').replace('>', '\\>')
+    
+    dot = Digraph(comment='Automaton')
+    dot.attr(rankdir='LR')  # Left to right layout
+    
+    # Add invisible start node for the start arrow
+    dot.node('', shape='none', width='0')
+    
+    # Add all states with properly escaped labels
+    for state in states:
+        # Use state ID as the node name and LR item as label
+        label = escape_label(str(state.lr_item))
+        dot.node(str(state.id), label=label, shape='circle')
+    
+    # Group transitions between same states
+    transitions_map = {}
+    for state in states:
+        for symbol, target_states in state.transitions.items():
+            for target in target_states:
+                edge_key = (state.id, target.id)
+
+                # Display epsilon as ε
+                display_symbol = 'ε' if symbol is None else str(symbol)
+                if edge_key in transitions_map:
+                    transitions_map[edge_key].append(display_symbol)
+                else:
+                    transitions_map[edge_key] = [display_symbol]
+    
+    # Add edges with combined labels (properly escaped)
+    for (from_id, to_id), symbols in transitions_map.items():
+        label = ', '.join(sorted(symbols, key=str))
+        label = escape_label(label)
+        dot.edge(str(from_id), str(to_id), label=label)
+    
+    # Render the graph
+    dot.render(filename, view=True, format='png', cleanup=True)
+    log(f"Saved to {filename}.png")
+    
+    return dot
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
