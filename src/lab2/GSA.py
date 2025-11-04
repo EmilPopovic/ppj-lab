@@ -15,15 +15,18 @@ def log(*args, **kwargs) -> None:
     """Use this function for logging and errors not needed in program output"""
     print(*args, file=sys.stderr, **kwargs)
 
-
 class LRItem:
 
     def __init__(self, right_side: 'RightSide', dot_before_idx: int, context: Set[Optional['Terminal']]) -> None:
         self.right_side = right_side
         self.dot_before_idx = dot_before_idx
         self.context: Set[Optional['Terminal']] = context
+        self._repr: Optional[str] = None
 
     def __repr__(self) -> str:
+        if self._repr is not None:
+            return self._repr
+
         result: str = str(self.right_side.left_side) + ' →'
 
         for i, s in enumerate(self.right_side):
@@ -42,7 +45,8 @@ class LRItem:
             result += f' {str(s)}'
 
         result += '}'
-
+        
+        self._repr = result
         return result
 
     def __hash__(self) -> int:
@@ -124,7 +128,6 @@ class NFA:
         self.start_state = start_state
         self.alphabet = alphabet
 
-
 class DFAState:
     __last_id = 0
 
@@ -150,7 +153,6 @@ class DFAState:
     def transition(self, symbol: Symbol) -> Optional['DFAState']:
         return self.transitions.get(symbol)
 
-
 class DFA:
 
     def __init__(self, states: Set[DFAState], start_state: DFAState, alphabet: Set['Terminal | Nonterminal']) -> None:
@@ -158,15 +160,14 @@ class DFA:
         self.start_state = start_state
         self.alphabet = alphabet
 
-
 class RightSide:
 
     def __init__(self, *args, left_side: 'Nonterminal', is_epsilon: bool = False, **kwargs) -> None:
         self.left_side: Nonterminal = left_side
         self._symbols: List['Terminal | Nonterminal'] = list(*args, **kwargs)
         self.is_epsilon: bool = is_epsilon
-        self.is_empty: Optional[bool] = None
-        self.starts_with: Set[Terminal] = set()
+        self.is_nullable: Optional[bool] = None
+        self.first: Set[Terminal] = set()
         self.states: List[NFAState] = []
 
     def __hash__(self) -> int:
@@ -207,28 +208,27 @@ class RightSide:
         return all(isinstance(e, Nonterminal) for e in self._symbols)
 
     @staticmethod
-    def set_starts_with(symbols: List['Terminal | Nonterminal']) -> Set['Terminal']:
-        starts_with: Set['Terminal'] = set()
+    def set_first(symbols: List['Terminal | Nonterminal']) -> Set['Terminal']:
+        first: Set['Terminal'] = set()
 
         for s in symbols:
             if isinstance(s, Terminal):
-                starts_with.add(s)
+                first.add(s)
 
                 break
             elif isinstance(s, Nonterminal):
-                starts_with.update(s.starts_with)
+                first.update(s.first)
 
                 if not s.is_empty:
                     break
 
-        return starts_with
+        return first
 
-    def calculate_starts_with(self) -> None:
+    def calculate_first(self) -> None:
         if self.is_epsilon:
             return
 
-        self.starts_with = RightSide.set_starts_with(self._symbols)
-
+        self.first = RightSide.set_first(self._symbols)
 
 class Nonterminal:
 
@@ -237,7 +237,7 @@ class Nonterminal:
         self.right_sides: Set[RightSide] = set()
         self.is_empty: Optional[bool] = None
         self.in_nt_only_production_of: Optional[Set[Nonterminal]] = None
-        self.starts_with: Set[Terminal] = set()
+        self.first: Set[Terminal] = set()
         self.states: Set[NFAState] = set()
 
     def __hash__(self) -> int:
@@ -268,8 +268,8 @@ class Nonterminal:
     def cache_states(self, all_right_sides: Set[RightSide]) -> None:
         self.states = {rs.states[-1] for rs in all_right_sides if rs.left_side == self}
 
-    def calculate_starts_with(self, table_starts_with: SymbolTable) -> None:
-        self.starts_with = {t for t in table_starts_with[self] if isinstance(t, Terminal) and table_starts_with[self][t]}
+    def calculate_first(self, table_first: SymbolTable) -> None:
+        self.first = {t for t in table_first[self] if isinstance(t, Terminal) and table_first[self][t]}
 
     def is_in_production_of(self, other: 'Nonterminal') -> bool:
         assert isinstance(self.in_nt_only_production_of, set)
@@ -280,11 +280,11 @@ class Nonterminal:
             return self.is_empty
 
         for rs in {rs for rs in self.right_sides if rs.nonterminal_only}:
-            if rs.is_empty:
+            if rs.is_nullable:
                 rs.left_side.is_empty = True
-                rs.is_empty = True
+                rs.is_nullable = True
                 return True
-            elif rs.is_empty is None:
+            elif rs.is_nullable is None:
                 return all(nt._mark_empty(start) for nt in rs if isinstance(nt, Nonterminal) and nt is not start)
 
         return False
@@ -310,7 +310,7 @@ class Nonterminal:
 
         return False
 
-def mark_starts_with(table_starts_directly_with: SymbolTable) -> None:
+def mark_first(table_starts_directly_with: SymbolTable) -> None:
     for row, row_dict in table_starts_directly_with.items():
         for col in row_dict:
             if row == col:
@@ -356,7 +356,6 @@ def print_sym_table(table: SymbolTable) -> None:
                 else:
                     log(' ' * col_width, end='')
             log()
-
 
 class Terminal:
 
@@ -427,7 +426,7 @@ class SAUtils:
                 for e in elem_strs:
                     if e == '$':
                         right_side.is_epsilon = True
-                        right_side.is_empty = True
+                        right_side.is_nullable = True
                         current_nonterminal.is_empty = True
                         break
                     elif e.startswith('<'):
@@ -460,23 +459,23 @@ class SAUtils:
             if nt.is_empty is None:
                 nt.is_empty = False
 
-        table_starts_with: SymbolTable = {}
+        table_first: SymbolTable = {}
         for row in sa.nonterminals:
-            table_starts_with[row] = {}
+            table_first[row] = {}
             for col in sa.nonterminals | sa.terminals:
-                table_starts_with[row][col] = row.starts_directly_with(col)
+                table_first[row][col] = row.starts_directly_with(col)
 
         assert sa.starting_nonterminal is not None
 
-        mark_starts_with(table_starts_with)
+        mark_first(table_first)
 
         all_right_sides: Set[RightSide] = set.union(*(nt.right_sides for nt in sa.nonterminals))
 
         for nt in sa.nonterminals:
-            nt.calculate_starts_with(table_starts_with)
+            nt.calculate_first(table_first)
 
         for rs in all_right_sides:
-            rs.calculate_starts_with()
+            rs.calculate_first()
             # rs.compile_states()
             # epsilon_nfa_states.update(rs.states)
 
@@ -574,7 +573,7 @@ class SAUtils:
 
             beta: List[Terminal | Nonterminal] = lr_item.right_side._symbols[lr_item.dot_before_idx+1:]
 
-            context: Set[Optional[Terminal]] = {s for s in RightSide.set_starts_with(beta)}
+            context: Set[Optional[Terminal]] = {s for s in RightSide.set_first(beta)}
 
             beta_is_nullable: bool = not any(s for s in beta if isinstance(s, Terminal) or (isinstance(s, Nonterminal) and not s.is_empty))
 
