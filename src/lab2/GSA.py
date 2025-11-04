@@ -479,7 +479,7 @@ class SAUtils:
         log(len(nfa.states))
         log(len(dfa.states))
 
-        draw_automaton(dfa.states)
+        # draw_automaton(dfa.states)
 
         return sa
 
@@ -488,27 +488,17 @@ class SAUtils:
         q0 = NFAState(LRItem(RightSide(left_side=starting_nonterminal), 0, set()))
 
         queue: List[NFAState] = []
-        created: Dict[tuple, NFAState] = {(q0.lr_item.right_side, 0): q0}
+        created: Dict[str, NFAState] = {str(q0.lr_item) : q0}
 
         for rs in starting_nonterminal.right_sides_list:
-            key = (rs, 0)
-
-            if key in created:
-                found_state = created[key]
-                old_context_size = len(found_state.lr_item.context)
-                found_state.lr_item.context.add(EOF)
-
-                if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
-                    queue.append(found_state)
-                    found_state.lr_item._repr = None
-
-                new_state = found_state
-            else:
-                new_state = NFAState(LRItem(rs, 0, {EOF}))
-                created[key] = new_state
-                queue.append(new_state)
+            new_state = NFAState(
+                LRItem(rs, 0, {EOF})
+            )
 
             q0.add_epsilon(new_state)
+
+            created[str(new_state.lr_item)] = new_state
+            queue.append(new_state)
 
         while queue:
             state: NFAState = queue.pop(0)
@@ -519,22 +509,20 @@ class SAUtils:
 
             symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
 
-            state2_key = (lr_item.right_side, lr_item.dot_before_idx + 1)
-
-            if state2_key in created:
-                state2 = created[state2_key]
-                old_context_size = len(state2.lr_item.context)
-                state2.lr_item.context |= lr_item.context
-
-                if len(state2.lr_item.context) > old_context_size and state2 not in queue:
-                    queue.append(state2)
-                    state2.lr_item._repr = None
-            else:
-                state2 = NFAState(LRItem(lr_item.right_side, lr_item.dot_before_idx + 1, lr_item.context.copy()))
-                created[state2_key] = state2
-                queue.append(state2)
+            state2 = NFAState(
+                LRItem(
+                    lr_item.right_side,
+                    lr_item.dot_before_idx + 1,
+                    lr_item.context
+                )
+            )
 
             state.add_move(symbol_at_idx, state2)
+
+            state2_key = str(state2.lr_item)
+            if state2_key not in created:
+                created[state2_key] = state2
+                queue.append(state2)
 
             if isinstance(symbol_at_idx, Terminal):
                 continue
@@ -549,18 +537,13 @@ class SAUtils:
                 context |= lr_item.context
 
             for rs in symbol_at_idx.right_sides_list:
-                key = (rs, 0)
+                new_state = NFAState(LRItem(rs, 0, context))
+
+                key = str(new_state.lr_item)
 
                 if key in created:
                     found_state = created[key]
-                    old_context_size = len(found_state.lr_item.context)
-                    found_state.lr_item.context |= context
-
-                    if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
-                        queue.append(found_state)
-                        found_state.lr_item._repr = None
                 else:
-                    new_state = NFAState(LRItem(rs, 0, context.copy()))
                     created[key] = new_state
                     found_state = new_state
                     queue.append(found_state)
@@ -571,23 +554,18 @@ class SAUtils:
 
     @staticmethod
     def epsilon_nfa_to_dfa(epsilon_nfa: NFA) -> DFA:
-        # Direct conversion from epsilon-NFA to DFA using subset construction
-        # Compute epsilon closure of start state
         start_epsilon_closure: Set[NFAState] = epsilon_nfa.start_state.epsilon() - {epsilon_nfa.start_state}
         
         if not start_epsilon_closure:
-            # Handle edge case: empty start
             start_state = DFAState(set())
             return DFA({start_state}, start_state, epsilon_nfa.alphabet)
         
         start_state = DFAState({state.lr_item for state in start_epsilon_closure})
         dfa = DFA({start_state}, start_state, epsilon_nfa.alphabet)
         
-        # Use frozenset for efficient hashing and lookups
         queue: List[frozenset[NFAState]] = [frozenset(start_epsilon_closure)]
         state_dict: Dict[frozenset[NFAState], DFAState] = {frozenset(start_epsilon_closure): start_state}
         
-        # Cache epsilon closures to avoid recomputation
         epsilon_cache: Dict[int, Set[NFAState]] = {}
         
         def get_epsilon_closure(state: NFAState) -> Set[NFAState]:
@@ -600,22 +578,18 @@ class SAUtils:
             current_dfa_state = state_dict[current_states]
             
             for symbol in epsilon_nfa.alphabet:
-                # Compute move followed by epsilon closure
                 next_states_set: Set[NFAState] = set()
                 
                 for state in current_states:
-                    # Get immediate moves on symbol
                     immediate = state.immediate_move(symbol)
-                    # Add epsilon closure of each immediate move
                     for next_state in immediate:
                         next_states_set.update(get_epsilon_closure(next_state))
                 
                 if not next_states_set:
-                    continue  # Skip empty state sets
+                    continue
                 
                 next_states: frozenset[NFAState] = frozenset(next_states_set)
                 
-                # Create or reuse DFA state
                 if next_states not in state_dict:
                     dfa_state = DFAState({state.lr_item for state in next_states})
                     state_dict[next_states] = dfa_state
