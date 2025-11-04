@@ -450,6 +450,22 @@ class SA:
     def _compile_table_action(self, dfa: DFA) -> None:
         self._make_table_action_keys(dfa)
 
+        for state in dfa.states:
+            for lr_item in state.lr_items:
+                if lr_item.is_complete():
+                    if lr_item.context == {None} and lr_item.right_side.left_side == self.starting_nonterminal:
+                        self.table_action[state][None] = SAActionAccept()
+                        continue
+
+                    for t in lr_item.context:
+                        self.table_action[state][t] = SAActionReduce(lr_item.right_side)
+                    continue
+
+                symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
+                next_state = state.move(symbol_at_idx)
+                if isinstance(symbol_at_idx, Terminal) and next_state is not None:
+                    self.table_action[state][symbol_at_idx] = SAActionMove(next_state)
+
     def _make_table_new_state_keys(self, dfa: DFA) -> None:
         for state in dfa.states:
             row = self.table_new_state[state] = {}
@@ -458,6 +474,11 @@ class SA:
 
     def _compile_table_new_state(self, dfa: DFA) -> None:
         self._make_table_new_state_keys(dfa)
+
+        for state in dfa.states:
+            for nt, new_state in [item for item in state.moves.items() if isinstance(item[0], Nonterminal)]:
+                assert isinstance(nt, Nonterminal)
+                self.table_new_state[state][nt] = new_state
 
     def to_bnf(self) -> str:
         return '\n'.join(n.to_bnf() for n in self.nonterminals)
@@ -478,7 +499,12 @@ class SA:
                 return f'Move({action.state.id})'
             elif action.type == SAActionType.REDUCE:
                 assert isinstance(action, SAActionReduce)
-                return f'Reduce({action.reduction.left_side.name})'
+                rs = action.reduction
+                if rs.is_epsilon:
+                    right_side_str = '$'
+                else:
+                    right_side_str = ' '.join(str(s) for s in rs)
+                return f'Reduce({rs.left_side.name} -> {right_side_str})'
             elif action.type == SAActionType.ACCEPT:
                 return 'Accept'
             else:  # REJECT
@@ -644,10 +670,7 @@ class SAUtils:
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
         dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
 
-        log(len(nfa.states))
-        log(len(dfa.states))
-
-        draw_automaton(dfa.states)
+        # draw_automaton(dfa.states)
         
         sa.compile(dfa)
 
