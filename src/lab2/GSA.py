@@ -1,5 +1,7 @@
 import sys
 import hashlib
+from enum import Enum
+from abc import ABC
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
@@ -377,6 +379,41 @@ class Terminal:
         if not isinstance(other, Terminal):
             return False
         return self.name == other.name
+    
+class SAActionType(str, Enum):
+    MOVE = 'move'
+    REDUCE = 'reduce'
+    ACCEPT = 'accept'
+    REJECT = 'reject'
+
+class SAAction(ABC):
+    type: SAActionType
+
+class SAActionMove(SAAction):
+    type = SAActionType.MOVE
+
+    def __init__(self, state: DFAState) -> None:
+        super().__init__()
+        self.state = state
+
+class SAActionReduce(SAAction):
+    type = SAActionType.REDUCE
+
+    def __init__(self, reduction: RightSide) -> None:
+        super().__init__()
+        self.reduction = reduction
+
+class SAActionAccept(SAAction):
+    type = SAActionType.ACCEPT
+
+    def __init__(self) -> None:
+        super().__init__()
+
+class SAActionReject(SAAction):
+    type = SAActionType.REJECT
+
+    def __init__(self) -> None:
+        super().__init__()
 
 class SA:
 
@@ -385,6 +422,9 @@ class SA:
         self.nonterminals: Set[Nonterminal] = set()
         self.terminals: Set[Terminal] = set()
         self.sync_symbols: Set[Terminal] = set()
+
+        self.table_action: Dict[DFAState, Dict[Optional[Terminal], SAAction]] = {}
+        self.table_new_state: Dict[DFAState, Dict[Nonterminal, Optional[DFAState]]] = {}
 
     def get_nonterminal(self, name: str) -> Nonterminal:
         nonterms = [n for n in self.nonterminals if n.name == name]
@@ -395,9 +435,120 @@ class SA:
         terms = [t for t in self.terminals if t.name == name]
         assert len(terms) == 1
         return terms[0]
+    
+    def compile(self, dfa: DFA) -> None:
+        self._compile_table_action(dfa)
+        self._compile_table_new_state(dfa)
+
+    def _make_table_action_keys(self, dfa: DFA) -> None:
+        for state in dfa.states:
+            self.table_action[state] = {}
+            row = self.table_action[state]
+            for t in self.terminals | {None}:
+                row[t] = SAActionReject()
+
+    def _compile_table_action(self, dfa: DFA) -> None:
+        self._make_table_action_keys(dfa)
+
+    def _make_table_new_state_keys(self, dfa: DFA) -> None:
+        for state in dfa.states:
+            row = self.table_new_state[state] = {}
+            for nt in self.nonterminals:
+                row[nt] = None
+
+    def _compile_table_new_state(self, dfa: DFA) -> None:
+        self._make_table_new_state_keys(dfa)
 
     def to_bnf(self) -> str:
         return '\n'.join(n.to_bnf() for n in self.nonterminals)
+    
+    def __repr__(self) -> str:
+        if not self.table_action and not self.table_new_state:
+            return 'SA(empty tables)'
+        
+        # Sort states by ID for consistent output
+        sorted_states = sorted(self.table_action.keys(), key=lambda s: s.id)
+        # Sort terminals, putting None (EOF) at the end
+        sorted_terminals = sorted(self.terminals, key=lambda t: t.name) + [None]
+        sorted_nonterminals = sorted(self.nonterminals, key=lambda nt: nt.name)
+        
+        def format_action(action: SAAction) -> str:
+            if action.type == SAActionType.MOVE:
+                assert isinstance(action, SAActionMove)
+                return f'Move({action.state.id})'
+            elif action.type == SAActionType.REDUCE:
+                assert isinstance(action, SAActionReduce)
+                return f'Reduce({action.reduction.left_side.name})'
+            elif action.type == SAActionType.ACCEPT:
+                return 'Accept'
+            else:  # REJECT
+                return '-'
+        
+        def format_new_state(state: Optional[DFAState]) -> str:
+            return str(state.id) if state else '-'
+        
+        # Calculate column widths
+        state_col_width = max(len(f'State {s.id}') for s in sorted_states) if sorted_states else 8
+        
+        # Action table columns
+        action_widths = {}
+        for t in sorted_terminals:
+            t_name = t.name if t else 'EOF'
+            max_width = len(t_name)
+            for state in sorted_states:
+                action = self.table_action[state].get(t, SAActionReject())
+                max_width = max(max_width, len(format_action(action)))
+            action_widths[t] = max(max_width, 3) + 1
+        
+        # New state table columns
+        newstate_widths = {}
+        for nt in sorted_nonterminals:
+            max_width = len(nt.name)
+            for state in sorted_states:
+                new_state = self.table_new_state[state].get(nt)
+                max_width = max(max_width, len(format_new_state(new_state)))
+            newstate_widths[nt] = max(max_width, 3) + 1
+        
+        lines = []
+        
+        # Header row
+        header = ' ' * state_col_width + ' │'
+        for t in sorted_terminals:
+            t_name = t.name if t else 'EOF'
+            header += f' {t_name:>{action_widths[t]-1}}'
+        header += ' ║'
+        for nt in sorted_nonterminals:
+            header += f' {nt.name:>{newstate_widths[nt]-1}}'
+        lines.append(header)
+        
+        # Separator
+        separator = '─' * state_col_width + '─┼'
+        separator += '─' * sum(action_widths.values())
+        separator += '─╫'
+        separator += '─' * sum(newstate_widths.values())
+        lines.append(separator)
+        
+        # Data rows
+        for state in sorted_states:
+            row = f'State {state.id:<{state_col_width-6}} │'
+            
+            # Action table entries
+            for t in sorted_terminals:
+                action = self.table_action[state].get(t, SAActionReject())
+                action_str = format_action(action)
+                row += f' {action_str:>{action_widths[t]-1}}'
+            
+            row += ' ║'
+            
+            # New state table entries
+            for nt in sorted_nonterminals:
+                new_state = self.table_new_state[state].get(nt)
+                state_str = format_new_state(new_state)
+                row += f' {state_str:>{newstate_widths[nt]-1}}'
+            
+            lines.append(row)
+        
+        return '\n'.join(lines)
 
 class SAUtils:
 
@@ -491,12 +642,14 @@ class SAUtils:
             rs.calculate_first()
 
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
-        # dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
 
         log(len(nfa.states))
-        # log(len(dfa.states))
+        log(len(dfa.states))
 
-        # draw_automaton(dfa.states)
+        draw_automaton(dfa.states)
+        
+        sa.compile(dfa)
 
         return sa
 
@@ -701,6 +854,7 @@ def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automato
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
     # log(sa.to_bnf())
+    out(repr(sa))
 
 if __name__ == '__main__':
     main()
