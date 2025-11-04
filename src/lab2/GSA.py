@@ -415,6 +415,23 @@ class SAActionReject(SAAction):
     def __init__(self) -> None:
         super().__init__()
 
+class Token:
+
+    def __init__(self, type: Terminal, line_number: int, source: str) -> None:
+        self.type: Terminal = type
+        self.line_number: int = line_number
+        self.source: str = source
+
+    def __repr__(self) -> str:
+        return f'{self.type} {self.line_number} {self.source}'
+
+class AST:
+
+    def __init__(self, root: Nonterminal, parent: Optional[AST] = None) -> None:
+        self.root: Nonterminal = root
+        self.children: List[AST | Terminal] = []
+        self.parent: Optional[AST] = parent
+
 class SA:
 
     def __init__(self) -> None:
@@ -425,6 +442,27 @@ class SA:
 
         self.table_action: Dict[DFAState, Dict[Optional[Terminal], SAAction]] = {}
         self.table_new_state: Dict[DFAState, Dict[Nonterminal, Optional[DFAState]]] = {}
+
+    def parse_from_stdin(self) -> AST:
+        stdin_lines = sys.stdin.read().split('\n')
+        tokens = []
+        for line in stdin_lines:
+            if line.strip() == '':
+                break
+
+            terminal_name, line_number, source = line.split()
+            tokens.append(
+                Token(
+                    self.get_terminal(terminal_name),
+                    int(line_number),
+                    source
+                )
+            )
+
+        return self.parse(tokens)
+    
+    def parse(self, tokens: List[Token]) -> AST:
+        ...
 
     def get_nonterminal(self, name: str) -> Nonterminal:
         nonterms = [n for n in self.nonterminals if n.name == name]
