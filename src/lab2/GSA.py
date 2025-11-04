@@ -492,15 +492,16 @@ class SAUtils:
 
         for rs in starting_nonterminal.right_sides_list:
             key = (rs, 0)
-            
+
             if key in created:
-                # State already exists, merge context
                 found_state = created[key]
                 old_context_size = len(found_state.lr_item.context)
                 found_state.lr_item.context.add(EOF)
+
                 if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
                     queue.append(found_state)
                     found_state.lr_item._repr = None
+
                 new_state = found_state
             else:
                 new_state = NFAState(LRItem(rs, 0, {EOF}))
@@ -518,14 +519,13 @@ class SAUtils:
 
             symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
 
-            # Create or find state for next position
             state2_key = (lr_item.right_side, lr_item.dot_before_idx + 1)
-            
+
             if state2_key in created:
                 state2 = created[state2_key]
-                # Merge context
                 old_context_size = len(state2.lr_item.context)
                 state2.lr_item.context |= lr_item.context
+
                 if len(state2.lr_item.context) > old_context_size and state2 not in queue:
                     queue.append(state2)
                     state2.lr_item._repr = None
@@ -549,18 +549,15 @@ class SAUtils:
                 context |= lr_item.context
 
             for rs in symbol_at_idx.right_sides_list:
-                # Key should NOT include context - states are identified by production + dot position only
-                key = (rs, 0)  # 0 is the dot position (start of production)
-                
+                key = (rs, 0)
+
                 if key in created:
                     found_state = created[key]
-                    # Merge contexts - if context expanded, re-add to queue for processing
                     old_context_size = len(found_state.lr_item.context)
                     found_state.lr_item.context |= context
+
                     if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
-                        # Context expanded, need to reprocess this state
                         queue.append(found_state)
-                        # Clear cached string representation since context changed
                         found_state.lr_item._repr = None
                 else:
                     new_state = NFAState(LRItem(rs, 0, context.copy()))
