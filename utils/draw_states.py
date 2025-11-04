@@ -25,7 +25,7 @@ def draw_automaton(states: Set[NFAState], filename: str = "automaton"):
     # Group transitions between same states
     transitions_map = {}
     for state in states:
-        for symbol, target_states in state.transitions.items():
+        for symbol, target_states in state.moves.items():
             for target in target_states:
                 edge_key = (state.id, target.id)
 
