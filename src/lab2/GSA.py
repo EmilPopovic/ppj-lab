@@ -39,7 +39,6 @@ class LRItem:
 
         result += ', {'
 
-        # TODO: cache the __repr__ string for hashing
         sorted_context = sorted(self.context, key=lambda s: str(s) if s is not None else '')
         for s in sorted_context:
             result += f' {str(s)}'
