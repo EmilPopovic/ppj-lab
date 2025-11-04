@@ -474,12 +474,12 @@ class SAUtils:
             rs.calculate_first()
 
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
-        # dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
 
         log(len(nfa.states))
-        # log(len(dfa.states))
+        log(len(dfa.states))
 
-        # draw_automaton(nfa.states)
+        draw_automaton(dfa.states)
 
         return sa
 
@@ -571,50 +571,61 @@ class SAUtils:
 
     @staticmethod
     def epsilon_nfa_to_dfa(epsilon_nfa: NFA) -> DFA:
-        nfa_states: Dict[int, NFAState] = {}
-
-        for state in epsilon_nfa.states:
-            new_state = NFAState(state.lr_item)
-            nfa_states[state.id] = new_state
-
-        for state in epsilon_nfa.states:
-            new_state = nfa_states[state.id]
-
-            for symbol in epsilon_nfa.alphabet:
-                for next_state in NFAState.move_set(state.epsilon(), symbol):
-                    new_state.add_move(symbol, nfa_states[next_state.id])
-
-        nfa = NFA(set(nfa_states.values()), nfa_states[epsilon_nfa.start_state.id], epsilon_nfa.alphabet)
-
-        epsilon_nfa_real_start_states: Set[NFAState] = epsilon_nfa.start_state.epsilon() - {epsilon_nfa.start_state}
-        nfa_real_start_states: Set[NFAState] = {nfa_states[state.id] for state in epsilon_nfa_real_start_states} 
-
-        start_state = DFAState({state.lr_item for state in nfa_real_start_states})
-        dfa = DFA({start_state}, start_state, nfa.alphabet)
-
-        queue: List[frozenset[NFAState]] = [frozenset(nfa_real_start_states)]
-        discovered_states: Set[DFAState] = {start_state}
-
-        state_dict: Dict[frozenset[NFAState], DFAState] = {frozenset(nfa_real_start_states) : start_state}
-
+        # Direct conversion from epsilon-NFA to DFA using subset construction
+        # Compute epsilon closure of start state
+        start_epsilon_closure: Set[NFAState] = epsilon_nfa.start_state.epsilon() - {epsilon_nfa.start_state}
+        
+        if not start_epsilon_closure:
+            # Handle edge case: empty start
+            start_state = DFAState(set())
+            return DFA({start_state}, start_state, epsilon_nfa.alphabet)
+        
+        start_state = DFAState({state.lr_item for state in start_epsilon_closure})
+        dfa = DFA({start_state}, start_state, epsilon_nfa.alphabet)
+        
+        # Use frozenset for efficient hashing and lookups
+        queue: List[frozenset[NFAState]] = [frozenset(start_epsilon_closure)]
+        state_dict: Dict[frozenset[NFAState], DFAState] = {frozenset(start_epsilon_closure): start_state}
+        
+        # Cache epsilon closures to avoid recomputation
+        epsilon_cache: Dict[int, Set[NFAState]] = {}
+        
+        def get_epsilon_closure(state: NFAState) -> Set[NFAState]:
+            if state.id not in epsilon_cache:
+                epsilon_cache[state.id] = state.epsilon()
+            return epsilon_cache[state.id]
+        
         while queue:
             current_states: frozenset[NFAState] = queue.pop(0)
-            currect_dfa_state = state_dict[current_states]
-
-            for symbol in dfa.alphabet:
-                next_states: frozenset[NFAState] = frozenset(NFAState.move_set(set(current_states), symbol))
-
-                state_dict.setdefault(next_states, DFAState({next_state.lr_item for next_state in next_states}))
-                dfa_state = state_dict[next_states]
-
-                if dfa_state not in discovered_states:
-                    discovered_states.add(dfa_state)
-                    queue.append(frozenset(next_states))
-
-                currect_dfa_state.add_move(symbol, dfa_state)
-
-        dfa.states.update(discovered_states)
-
+            current_dfa_state = state_dict[current_states]
+            
+            for symbol in epsilon_nfa.alphabet:
+                # Compute move followed by epsilon closure
+                next_states_set: Set[NFAState] = set()
+                
+                for state in current_states:
+                    # Get immediate moves on symbol
+                    immediate = state.immediate_move(symbol)
+                    # Add epsilon closure of each immediate move
+                    for next_state in immediate:
+                        next_states_set.update(get_epsilon_closure(next_state))
+                
+                if not next_states_set:
+                    continue  # Skip empty state sets
+                
+                next_states: frozenset[NFAState] = frozenset(next_states_set)
+                
+                # Create or reuse DFA state
+                if next_states not in state_dict:
+                    dfa_state = DFAState({state.lr_item for state in next_states})
+                    state_dict[next_states] = dfa_state
+                    dfa.states.add(dfa_state)
+                    queue.append(next_states)
+                else:
+                    dfa_state = state_dict[next_states]
+                
+                current_dfa_state.add_move(symbol, dfa_state)
+        
         return dfa
 
 def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automaton"):
