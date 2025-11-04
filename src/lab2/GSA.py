@@ -222,6 +222,7 @@ class Nonterminal:
     def __init__(self, name: str) -> None:
         self.name = name
         self.right_sides: Set[RightSide] = set()
+        self._right_sides_list: Optional[List[RightSide]] = None
         self.is_empty: Optional[bool] = None
         self.in_nt_only_production_of: Optional[Set[Nonterminal]] = None
         self.first: Set[Terminal] = set()
@@ -252,8 +253,12 @@ class Nonterminal:
             )
         }
 
-    def cache_states(self, all_right_sides: Set[RightSide]) -> None:
-        self.states = {rs.states[-1] for rs in all_right_sides if rs.left_side == self}
+    @property
+    def right_sides_list(self) -> List[RightSide]:
+        if self._right_sides_list is None:
+            self._right_sides_list = sorted(list(self.right_sides), key=str)
+
+        return self._right_sides_list
 
     def calculate_first(self, table_first: SymbolTable) -> None:
         self.first = {t for t in table_first[self] if isinstance(t, Terminal) and table_first[self][t]}
@@ -469,10 +474,10 @@ class SAUtils:
             rs.calculate_first()
 
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
-        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
-        
+        # dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+
         log(len(nfa.states))
-        log(len(dfa.states))
+        # log(len(dfa.states))
 
         # draw_automaton(nfa.states)
 
@@ -485,7 +490,9 @@ class SAUtils:
         queue: List[NFAState] = []
         created: Dict[str, NFAState] = {str(q0.lr_item) : q0}
 
-        for rs in starting_nonterminal.right_sides:
+        # log(sorted(starting_nonterminal.right_sides, key=lambda rs: str(rs._symbols)))
+
+        for rs in starting_nonterminal.right_sides_list:
             new_state = NFAState(
                 LRItem(rs, 0, {EOF})
             )
@@ -498,6 +505,8 @@ class SAUtils:
         while queue:
             state: NFAState = queue.pop(0)
             lr_item = state.lr_item
+
+            log(state.lr_item)
 
             if lr_item.is_complete():
                 continue
@@ -531,7 +540,7 @@ class SAUtils:
             if beta_is_nullable:
                 context |= lr_item.context
 
-            for rs in symbol_at_idx.right_sides:
+            for rs in symbol_at_idx.right_sides_list:
                 new_state = NFAState(LRItem(rs, 0, context))
 
                 key = str(new_state.lr_item)
