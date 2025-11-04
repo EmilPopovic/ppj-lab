@@ -488,45 +488,53 @@ class SAUtils:
         q0 = NFAState(LRItem(RightSide(left_side=starting_nonterminal), 0, set()))
 
         queue: List[NFAState] = []
-        created: Dict[str, NFAState] = {str(q0.lr_item) : q0}
-
-        # log(sorted(starting_nonterminal.right_sides, key=lambda rs: str(rs._symbols)))
+        created: Dict[tuple, NFAState] = {(q0.lr_item.right_side, 0): q0}
 
         for rs in starting_nonterminal.right_sides_list:
-            new_state = NFAState(
-                LRItem(rs, 0, {EOF})
-            )
+            key = (rs, 0)
+            
+            if key in created:
+                # State already exists, merge context
+                found_state = created[key]
+                old_context_size = len(found_state.lr_item.context)
+                found_state.lr_item.context.add(EOF)
+                if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
+                    queue.append(found_state)
+                    found_state.lr_item._repr = None
+                new_state = found_state
+            else:
+                new_state = NFAState(LRItem(rs, 0, {EOF}))
+                created[key] = new_state
+                queue.append(new_state)
 
             q0.add_epsilon(new_state)
-
-            created[str(new_state.lr_item)] = new_state
-            queue.append(new_state)
 
         while queue:
             state: NFAState = queue.pop(0)
             lr_item = state.lr_item
-
-            log(state.lr_item)
 
             if lr_item.is_complete():
                 continue
 
             symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
 
-            state2 = NFAState(
-                LRItem(
-                    lr_item.right_side,
-                    lr_item.dot_before_idx + 1,
-                    lr_item.context
-                )
-            )
-
-            state.add_move(symbol_at_idx, state2)
-
-            state2_key = str(state2.lr_item)
-            if state2_key not in created:
+            # Create or find state for next position
+            state2_key = (lr_item.right_side, lr_item.dot_before_idx + 1)
+            
+            if state2_key in created:
+                state2 = created[state2_key]
+                # Merge context
+                old_context_size = len(state2.lr_item.context)
+                state2.lr_item.context |= lr_item.context
+                if len(state2.lr_item.context) > old_context_size and state2 not in queue:
+                    queue.append(state2)
+                    state2.lr_item._repr = None
+            else:
+                state2 = NFAState(LRItem(lr_item.right_side, lr_item.dot_before_idx + 1, lr_item.context.copy()))
                 created[state2_key] = state2
                 queue.append(state2)
+
+            state.add_move(symbol_at_idx, state2)
 
             if isinstance(symbol_at_idx, Terminal):
                 continue
@@ -541,13 +549,21 @@ class SAUtils:
                 context |= lr_item.context
 
             for rs in symbol_at_idx.right_sides_list:
-                new_state = NFAState(LRItem(rs, 0, context))
-
-                key = str(new_state.lr_item)
-
+                # Key should NOT include context - states are identified by production + dot position only
+                key = (rs, 0)  # 0 is the dot position (start of production)
+                
                 if key in created:
                     found_state = created[key]
+                    # Merge contexts - if context expanded, re-add to queue for processing
+                    old_context_size = len(found_state.lr_item.context)
+                    found_state.lr_item.context |= context
+                    if len(found_state.lr_item.context) > old_context_size and found_state not in queue:
+                        # Context expanded, need to reprocess this state
+                        queue.append(found_state)
+                        # Clear cached string representation since context changed
+                        found_state.lr_item._repr = None
                 else:
+                    new_state = NFAState(LRItem(rs, 0, context.copy()))
                     created[key] = new_state
                     found_state = new_state
                     queue.append(found_state)
