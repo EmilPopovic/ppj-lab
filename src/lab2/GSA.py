@@ -2,6 +2,7 @@ import sys
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
+EOF = None
 
 SymbolTable = Dict['Nonterminal', Dict['Nonterminal | Terminal', bool]]
 Symbol = Optional['Nonterminal | Terminal']
@@ -17,9 +18,10 @@ def log(*args, **kwargs) -> None:
 
 class LRItem:
 
-    def __init__(self, right_side: 'RightSide', dot_before_idx: int) -> None:
+    def __init__(self, right_side: 'RightSide', dot_before_idx: int, context: Set[Optional['Terminal']]) -> None:
         self.right_side = right_side
         self.dot_before_idx = dot_before_idx
+        self.context: Set[Optional['Terminal']] = context
 
     def __repr__(self) -> str:
         result: str = str(self.right_side.left_side) + ' →'
@@ -27,14 +29,34 @@ class LRItem:
         for i, s in enumerate(self.right_side):
             if i == self.dot_before_idx:
                 result += ' •'
-
             result += f' {str(s)}'
 
         if self.is_complete():
             result += '•'
 
+        result += ', {'
+
+        # TODO: cache the __repr__ string for hashing
+        sorted_context = sorted(self.context, key=lambda s: str(s) if s is not None else '')
+        for s in sorted_context:
+            result += f' {str(s)}'
+
+        result += '}'
+
         return result
 
+    def __hash__(self) -> int:
+        return hash(str(self))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LRItem):
+            return False
+
+        return all({
+            self.right_side == other.right_side,
+            self.dot_before_idx == other.dot_before_idx,
+            self.context == other.context
+        })
 
     def is_complete(self) -> bool:
         return self.dot_before_idx == len(self.right_side._symbols)
@@ -48,6 +70,15 @@ class NFAState:
 
         self.lr_item = lr_item
         self.transitions: Dict[Symbol, Set[NFAState]] = {}
+
+    def __hash__(self) -> int:
+        return hash(self.lr_item)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, NFAState):
+            return False
+
+        return self.lr_item == other.lr_item
 
     def immediate_transition(self, symbol: Symbol) -> Set['NFAState']:
         return self.transitions.get(symbol, set())
@@ -132,7 +163,7 @@ class RightSide:
 
     def __init__(self, *args, left_side: 'Nonterminal', is_epsilon: bool = False, **kwargs) -> None:
         self.left_side: Nonterminal = left_side
-        self._symbols = list(*args, **kwargs)
+        self._symbols: List['Terminal | Nonterminal'] = list(*args, **kwargs)
         self.is_epsilon: bool = is_epsilon
         self.is_empty: Optional[bool] = None
         self.starts_with: Set[Terminal] = set()
@@ -140,6 +171,12 @@ class RightSide:
 
     def __hash__(self) -> int:
         return hash(str(self.left_side) + ';'.join(str(e) for e in self))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, RightSide):
+            return False
+
+        return self.left_side == other.left_side and self._symbols == other._symbols
 
     def __iter__(self) -> Iterator['Terminal | Nonterminal']:
         return iter(self._symbols)
@@ -153,35 +190,45 @@ class RightSide:
     def append(self, e: 'Terminal | Nonterminal') -> None:
         self._symbols.append(e)
 
-    def compile_states(self) -> None:
-        next_state: Optional[NFAState] = None
-
-        for idx in range(len(self._symbols), -1, -1):
-            state = NFAState(LRItem(self, idx))
-            self.states.append(state)
-
-            if next_state is not None:
-                state.add_transition(self._symbols[idx], next_state)
-
-            next_state = state
+    # def compile_states(self) -> None:
+    #     next_state: Optional[NFAState] = None
+    #
+    #     for idx in range(len(self._symbols), -1, -1):
+    #         state = NFAState(LRItem(self, idx))
+    #         self.states.append(state)
+    #
+    #         if next_state is not None:
+    #             state.add_transition(self._symbols[idx], next_state)
+    #
+    #         next_state = state
 
     @property
     def nonterminal_only(self) -> bool:
         return all(isinstance(e, Nonterminal) for e in self._symbols)
 
+    @staticmethod
+    def set_starts_with(symbols: List['Terminal | Nonterminal']) -> Set['Terminal']:
+        starts_with: Set['Terminal'] = set()
+
+        for s in symbols:
+            if isinstance(s, Terminal):
+                starts_with.add(s)
+
+                break
+            elif isinstance(s, Nonterminal):
+                starts_with.update(s.starts_with)
+
+                if not s.is_empty:
+                    break
+
+        return starts_with
+
     def calculate_starts_with(self) -> None:
         if self.is_epsilon:
             return
 
-        for s in self:
-            if isinstance(s, Terminal):
-                self.starts_with.add(s)
-                return
-            elif isinstance(s, Nonterminal):
-                self.starts_with.update(s.starts_with)
+        self.starts_with = RightSide.set_starts_with(self._symbols)
 
-                if not s.is_empty:
-                    return
 
 class Nonterminal:
 
@@ -227,7 +274,7 @@ class Nonterminal:
     def is_in_production_of(self, other: 'Nonterminal') -> bool:
         assert isinstance(self.in_nt_only_production_of, set)
         return other in self.in_nt_only_production_of
-    
+
     def _mark_empty(self, start: 'Nonterminal') -> bool:
         if self.is_empty is not None:
             return self.is_empty
@@ -239,17 +286,17 @@ class Nonterminal:
                 return True
             elif rs.is_empty is None:
                 return all(nt._mark_empty(start) for nt in rs if isinstance(nt, Nonterminal) and nt is not start)
-        
+
         return False
 
     def mark_empty(self) -> bool:
         return self._mark_empty(start=self)
-    
+
     def starts_directly_with(self, other: 'Nonterminal | Terminal') -> bool:
         for rs in self.right_sides:
             if rs.is_epsilon:
                 continue
-            
+
             i = 0
             while i < len(rs._symbols) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
                 if rs[i] == other:
@@ -311,7 +358,6 @@ def print_sym_table(table: SymbolTable) -> None:
             log()
 
 
-    
 class Terminal:
 
     def __init__(self, name: str) -> None:
@@ -321,7 +367,7 @@ class Terminal:
         return self.name
 
 class SA:
-    
+
     def __init__(self) -> None:
         self.starting_nonterminal: Optional[Nonterminal] = None
         self.nonterminals: Set[Nonterminal] = set()
@@ -337,7 +383,7 @@ class SA:
         terms = [t for t in self.terminals if t.name == name]
         assert len(terms) == 1
         return terms[0]
-    
+
     def to_bnf(self) -> str:
         return '\n'.join(n.to_bnf() for n in self.nonterminals)
 
@@ -424,8 +470,6 @@ class SAUtils:
 
         mark_starts_with(table_starts_with)
 
-        epsilon_nfa_states: Set[NFAState] = set()
-
         all_right_sides: Set[RightSide] = set.union(*(nt.right_sides for nt in sa.nonterminals))
 
         for nt in sa.nonterminals:
@@ -433,36 +477,125 @@ class SAUtils:
 
         for rs in all_right_sides:
             rs.calculate_starts_with()
-            rs.compile_states()
-            epsilon_nfa_states.update(rs.states)
+            # rs.compile_states()
+            # epsilon_nfa_states.update(rs.states)
 
-        for nt in sa.nonterminals:
-            nt.cache_states(all_right_sides)
+        # for nt in sa.nonterminals:
+        #     nt.cache_states(all_right_sides)
 
-        for state in epsilon_nfa_states:
-            if state.lr_item.is_complete():
-                continue
+        nfa: NFA  = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
 
-            symbol = state.lr_item.right_side[state.lr_item.dot_before_idx]
+        # epsilon_nfa_states: Set[NFAState] = set()
+        #
+        # for state in epsilon_nfa_states:
+        #     if state.lr_item.is_complete():
+        #         continue
+        #
+        #     symbol = state.lr_item.right_side[state.lr_item.dot_before_idx]
+        #
+        #     if isinstance(symbol, Nonterminal):
+        #         for destination_state in symbol.states:
+        #             state.add_epsilon(destination_state)
+        #
+        # start_state = NFAState(LRItem(RightSide(left_side=sa.starting_nonterminal), 0))
+        #
+        # for s in {rs.states[-1] for rs in sa.starting_nonterminal.right_sides}:
+        #     start_state.add_epsilon(s)
+        #
+        # epsilon_nfa_states.add(start_state)
 
-            if isinstance(symbol, Nonterminal):
-                for destination_state in symbol.states:
-                    state.add_epsilon(destination_state)
+        # epislon_nfa = NFA(epsilon_nfa_states, start_state, sa.nonterminals | sa.terminals)
+        #
+        # start_lr_items: Set[LRItem] = {
+        #     state.lr_item
+        #     for state in epislon_nfa.states
+        #     if state is not epislon_nfa.start_state
+        #         and state.lr_item.right_side.left_side == sa.starting_nonterminal
+        #         and state.lr_item.dot_before_idx == 0
+        # }
+        #
+        # for lr_item in start_lr_items:
+        #     lr_item.context = {EOF}
+        #
+        # log(start_lr_items)
+        #
+        # dfa: DFA = SAUtils.epsilon_nfa_to_dfa(epislon_nfa)
+        #
+        # log(len(dfa.states))
 
-        start_state = NFAState(LRItem(RightSide(left_side=sa.starting_nonterminal), 0))
-
-        for s in {rs.states[-1] for rs in sa.starting_nonterminal.right_sides}:
-            start_state.add_epsilon(s)
-
-        epsilon_nfa_states.add(start_state)
-
-        epislon_nfa = NFA(epsilon_nfa_states, start_state, sa.nonterminals | sa.terminals)
-
-        dfa: DFA = SAUtils.epsilon_nfa_to_dfa(epislon_nfa)
-
-        log(len(dfa.states))
+        # draw_automaton(nfa.states)
+        log(len(nfa.states))
 
         return sa
+
+    @staticmethod
+    def construct_epislon_nfa(nonterminals: Set[Nonterminal], terminals: Set[Terminal], starting_nonterminal: Nonterminal) -> NFA:
+        start_state = NFAState(LRItem(RightSide(left_side=starting_nonterminal), 0, set()))
+
+        queue: List[NFAState] = []
+        created: Dict[str, NFAState] = {str(start_state.lr_item) : start_state}
+
+        for rs in starting_nonterminal.right_sides:
+            new_state = NFAState(
+                LRItem(rs, 0, {EOF})
+            )
+
+            start_state.add_epsilon(new_state)
+
+            created[str(new_state.lr_item)] = new_state
+            queue.append(new_state)
+
+        while queue:
+            state: NFAState = queue.pop(0)
+            lr_item = state.lr_item
+
+            if lr_item.is_complete():
+                continue
+
+            symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
+
+            state2 = NFAState(
+                LRItem(
+                    lr_item.right_side,
+                    lr_item.dot_before_idx + 1,
+                    lr_item.context
+                )
+            )
+
+            state.add_transition(symbol_at_idx, state2)
+
+            state2_key = str(state2.lr_item)
+            if state2_key not in created:
+                created[state2_key] = state2
+                queue.append(state2)
+
+            if isinstance(symbol_at_idx, Terminal):
+                continue
+
+            beta: List[Terminal | Nonterminal] = lr_item.right_side._symbols[lr_item.dot_before_idx+1:]
+
+            context: Set[Optional[Terminal]] = {s for s in RightSide.set_starts_with(beta)}
+
+            beta_is_nullable: bool = not any(s for s in beta if isinstance(s, Terminal) or (isinstance(s, Nonterminal) and not s.is_empty))
+
+            if beta_is_nullable:
+                context |= lr_item.context
+
+            for rs in symbol_at_idx.right_sides:
+                new_state = NFAState(LRItem(rs, 0, context))
+
+                key = str(new_state.lr_item)
+
+                if key in created:
+                    found_state = created[key]
+                else:
+                    created[key] = new_state
+                    found_state = new_state
+                    queue.append(found_state)
+
+                state.add_epsilon(found_state)
+
+        return NFA(set(created.values()), start_state, nonterminals | terminals)
 
     @staticmethod
     def epsilon_nfa_to_dfa(epsilon_nfa: NFA) -> DFA:
@@ -511,6 +644,83 @@ class SAUtils:
         dfa.states.update(discovered_states)
 
         return dfa
+
+def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automaton"):
+    """Draw automaton using Graphviz for publication-quality output.
+    Works with both NFA and DFA states."""
+    try:
+        from graphviz import Digraph
+    except ImportError:
+        print("Install graphviz: pip install graphviz")
+        return
+    
+    def escape_label(text: str) -> str:
+        """Escape special characters for Graphviz DOT format"""
+        return text.replace('\\', '\\\\').replace('"', '\\"').replace('<', '\\<').replace('>', '\\>')
+    
+    # Detect state type from first state
+    if not states:
+        log("No states to draw")
+        return
+    
+    first_state = next(iter(states))
+    is_dfa = isinstance(first_state, DFAState)
+    
+    dot = Digraph(comment='Automaton')
+    dot.attr(rankdir='LR')  # Left to right layout
+    
+    # Add invisible start node for the start arrow
+    dot.node('', shape='none', width='0')
+    
+    # Add all states with properly escaped labels
+    for state in states:
+        if is_dfa:
+            # DFA states contain multiple LR items
+            label_parts = [escape_label(str(item)) for item in state.lr_items]
+            label = '\\n'.join(label_parts) if label_parts else f'State {state.id}'
+        else:
+            # NFA states contain a single LR item
+            label = escape_label(str(state.lr_item))
+        
+        dot.node(str(state.id), label=label, shape='circle')
+    
+    # Group transitions between same states
+    transitions_map = {}
+    
+    for state in states:
+        if is_dfa:
+            # DFA: transitions is Dict[Symbol, DFAState]
+            for symbol, target_state in state.transitions.items():
+                edge_key = (state.id, target_state.id)
+                display_symbol = 'ε' if symbol is None else str(symbol)
+                
+                if edge_key in transitions_map:
+                    transitions_map[edge_key].append(display_symbol)
+                else:
+                    transitions_map[edge_key] = [display_symbol]
+        else:
+            # NFA: transitions is Dict[Symbol, Set[NFAState]]
+            for symbol, target_states in state.transitions.items():
+                for target in target_states:
+                    edge_key = (state.id, target.id)
+                    display_symbol = 'ε' if symbol is None else str(symbol)
+                    
+                    if edge_key in transitions_map:
+                        transitions_map[edge_key].append(display_symbol)
+                    else:
+                        transitions_map[edge_key] = [display_symbol]
+    
+    # Add edges with combined labels (properly escaped)
+    for (from_id, to_id), symbols in transitions_map.items():
+        label = ', '.join(sorted(symbols, key=str))
+        label = escape_label(label)
+        dot.edge(str(from_id), str(to_id), label=label)
+    
+    # Render the graph
+    dot.render(filename, view=True, format='png', cleanup=True)
+    log(f"Saved to {filename}.png")
+    
+    return dot
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
