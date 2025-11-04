@@ -2,6 +2,7 @@ import sys
 import hashlib
 from enum import Enum
 from abc import ABC
+from collections import deque
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
@@ -68,7 +69,7 @@ class LRItem:
         })
 
     def is_complete(self) -> bool:
-        return self.dot_before_idx == len(self.right_side._symbols)
+        return self.dot_before_idx == len(self.right_side.symbols)
 
 class NFAState:
     __last_id = 0
@@ -169,7 +170,7 @@ class RightSide:
 
     def __init__(self, *args, left_side: 'Nonterminal', is_epsilon: bool = False, **kwargs) -> None:
         self.left_side: Nonterminal = left_side
-        self._symbols: List['Terminal | Nonterminal'] = list(*args, **kwargs)
+        self.symbols: List['Terminal | Nonterminal'] = list(*args, **kwargs)
         self.is_epsilon: bool = is_epsilon
         self.is_nullable: Optional[bool] = None
         self.first: Set[Terminal] = set()
@@ -182,23 +183,23 @@ class RightSide:
         if not isinstance(other, RightSide):
             return False
 
-        return self.left_side == other.left_side and self._symbols == other._symbols
+        return self.left_side == other.left_side and self.symbols == other.symbols
 
     def __iter__(self) -> Iterator['Terminal | Nonterminal']:
-        return iter(self._symbols)
+        return iter(self.symbols)
 
     def __getitem__(self, index) -> 'Terminal | Nonterminal':
-        return self._symbols[index]
+        return self.symbols[index]
 
     def __repr__(self) -> str:
-        return str(self._symbols)
+        return str(self.symbols)
 
     def append(self, e: 'Terminal | Nonterminal') -> None:
-        self._symbols.append(e)
+        self.symbols.append(e)
 
     @property
     def nonterminal_only(self) -> bool:
-        return all(isinstance(e, Nonterminal) for e in self._symbols)
+        return all(isinstance(e, Nonterminal) for e in self.symbols)
 
     @staticmethod
     def set_first(symbols: List['Terminal | Nonterminal']) -> Set['Terminal']:
@@ -221,7 +222,7 @@ class RightSide:
         if self.is_epsilon:
             return
 
-        self.first = RightSide.set_first(self._symbols)
+        self.first = RightSide.set_first(self.symbols)
 
 class Nonterminal:
 
@@ -301,12 +302,12 @@ class Nonterminal:
                 continue
 
             i = 0
-            while i < len(rs._symbols) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
+            while i < len(rs.symbols) and isinstance(rs[i], Nonterminal) and rs[i].is_empty: # pyright: ignore[reportAttributeAccessIssue]
                 if rs[i] == other:
                     return True
                 i += 1
 
-            if i == len(rs._symbols):
+            if i == len(rs.symbols):
                 continue
             elif rs[i] == other:
                 return True
@@ -429,7 +430,7 @@ class AST:
 
     def __init__(self, root: Nonterminal, parent: Optional[AST] = None) -> None:
         self.root: Nonterminal = root
-        self.children: List[AST | Terminal] = []
+        self.children: deque[AST | Terminal] = deque()
         self.parent: Optional[AST] = parent
 
 class SA:
@@ -462,7 +463,49 @@ class SA:
         return self.parse(tokens)
     
     def parse(self, tokens: List[Token]) -> AST:
-        ...
+        class StackItem:
+            def __init__(self, state: DFAState, symbol: Terminal | AST) -> None:
+                self.state = state
+                self.symbol = symbol
+
+        stack: List[StackItem] = []
+
+        assert self.starting_nonterminal is not None
+        ast = AST(self.starting_nonterminal)
+
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+
+            current_state = stack[-1].state
+            action = self.table_action[current_state][token.type]
+
+            if action.type == SAActionType.ACCEPT:
+                top_of_stack_symbol = stack[0].symbol
+                assert isinstance(top_of_stack_symbol, AST)
+                return top_of_stack_symbol
+
+            elif action.type == SAActionType.MOVE:
+                assert isinstance(action, SAActionMove)
+                stack.append(StackItem(action.state, token.type))
+                i += 1
+
+            elif action.type == SAActionType.REDUCE:
+                assert isinstance(action, SAActionReduce)
+
+                reduction = action.reduction
+                node = AST(reduction.left_side)
+                
+                if not reduction.is_epsilon:
+                    num_to_pop = len(reduction.symbols)
+
+                    for _ in range(num_to_pop):
+                        stack_item = stack.pop()
+                        node.children.appendleft(stack_item.symbol)
+
+                new_state = self.table_new_state[current_state][reduction.left_side]
+                assert new_state is not None
+                stack.append(StackItem(new_state, node))
 
     def get_nonterminal(self, name: str) -> Nonterminal:
         nonterms = [n for n in self.nonterminals if n.name == name]
@@ -758,7 +801,7 @@ class SAUtils:
             if isinstance(symbol_at_idx, Terminal):
                 continue
 
-            beta: List[Terminal | Nonterminal] = lr_item.right_side._symbols[lr_item.dot_before_idx+1:]
+            beta: List[Terminal | Nonterminal] = lr_item.right_side.symbols[lr_item.dot_before_idx+1:]
 
             context: Set[Optional[Terminal]] = {s for s in RightSide.set_first(beta)}
 
