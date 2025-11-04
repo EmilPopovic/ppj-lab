@@ -1,8 +1,12 @@
 import sys
+import hashlib
 from typing import Generator, Set, List, Optional, Iterator, Dict
 
 EPSILON = None
 EOF = None
+
+def deterministic_hash(s: str) -> int:
+    return int.from_bytes(hashlib.md5(s.encode('utf-8')).digest(), 'big')
 
 SymbolTable = Dict['Nonterminal', Dict['Nonterminal | Terminal', bool]]
 Symbol = Optional['Nonterminal | Terminal']
@@ -49,7 +53,7 @@ class LRItem:
         return result
 
     def __hash__(self) -> int:
-        return hash(str(self))
+        return deterministic_hash(str(self))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LRItem):
@@ -75,7 +79,7 @@ class NFAState:
         self.moves: Dict[Symbol, Set[NFAState]] = {}
 
     def __hash__(self) -> int:
-        return hash(self.lr_item)
+        return deterministic_hash(str(self.lr_item))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NFAState):
@@ -144,7 +148,7 @@ class DFAState:
         return self.lr_items == other.lr_items
 
     def __hash__(self) -> int:
-        return hash(frozenset(self.lr_items))
+        return deterministic_hash(str(sorted(list(self.lr_items), key=str)))
 
     def add_move(self, c: Symbol, other: 'DFAState') -> None:
         self.moves.setdefault(c, other)
@@ -170,7 +174,7 @@ class RightSide:
         self.states: List[NFAState] = []
 
     def __hash__(self) -> int:
-        return hash(str(self.left_side) + ';'.join(str(e) for e in self))
+        return deterministic_hash(str(self.left_side) + ';'.join(str(e) for e in self))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RightSide):
@@ -229,7 +233,12 @@ class Nonterminal:
         self.states: Set[NFAState] = set()
 
     def __hash__(self) -> int:
-        return hash(self.name)
+        return deterministic_hash(self.name)
+    
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Nonterminal):
+            return False
+        return self.name == other.name
 
     def __repr__(self) -> str:
         return f'<{self.name}>'
@@ -360,6 +369,14 @@ class Terminal:
 
     def __repr__(self) -> str:
         return self.name
+    
+    def __hash__(self) -> int:
+        return deterministic_hash(self.name)
+    
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Terminal):
+            return False
+        return self.name == other.name
 
 class SA:
 
@@ -474,10 +491,10 @@ class SAUtils:
             rs.calculate_first()
 
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
-        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+        # dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
 
         log(len(nfa.states))
-        log(len(dfa.states))
+        # log(len(dfa.states))
 
         # draw_automaton(dfa.states)
 
@@ -537,13 +554,15 @@ class SAUtils:
                 context |= lr_item.context
 
             for rs in symbol_at_idx.right_sides_list:
-                new_state = NFAState(LRItem(rs, 0, context))
-
-                key = str(new_state.lr_item)
+                # Create the LRItem first to generate the key
+                lr_item_new = LRItem(rs, 0, context)
+                key = str(lr_item_new)
 
                 if key in created:
                     found_state = created[key]
                 else:
+                    # Only create NFAState if it doesn't exist (to avoid incrementing ID counter unnecessarily)
+                    new_state = NFAState(lr_item_new)
                     created[key] = new_state
                     found_state = new_state
                     queue.append(found_state)
