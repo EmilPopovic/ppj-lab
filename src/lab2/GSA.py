@@ -482,12 +482,12 @@ class SA:
             if line.strip() == '':
                 break
 
-            terminal_name, line_number, source = line.split()
+            terminal_name, line_number, *source = line.split()
             tokens.append(
                 Token(
                     self.get_terminal(terminal_name),
                     int(line_number),
-                    source
+                    ' '.join(source)
                 )
             )
 
@@ -1089,8 +1089,6 @@ def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automato
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-
-    log(sa)
 
     ast = sa.parse_from_file(sys.argv[1])
 
