@@ -3,7 +3,7 @@ import hashlib
 from enum import Enum
 from abc import ABC
 from collections import deque
-from typing import Generator, Set, List, Optional, Iterator, Dict
+from typing import Generator, Set, List, Optional, Iterator, Dict, Tuple
 
 EPSILON = None
 EOF = None
@@ -167,8 +167,12 @@ class DFA:
         self.alphabet = alphabet
 
 class RightSide:
+    __last_id = 0
 
     def __init__(self, *args, left_side: 'Nonterminal', is_epsilon: bool = False, **kwargs) -> None:
+        self.id = RightSide.__last_id
+        RightSide.__last_id += 1
+
         self.left_side: Nonterminal = left_side
         self.symbols: List['Terminal | Nonterminal'] = list(*args, **kwargs)
         self.is_epsilon: bool = is_epsilon
@@ -614,20 +618,35 @@ class SA:
         self._make_table_action_keys(dfa)
 
         for state in dfa.states:
+            can_take_actions: List[Tuple[SAAction, Optional[Terminal]]] = []
+
             for lr_item in state.lr_items:
                 if lr_item.is_complete():
                     if lr_item.context == {None} and lr_item.right_side.left_side == self.starting_nonterminal:
-                        self.table_action[state][None] = SAActionAccept()
+                        can_take_actions.append((SAActionAccept(), EOF))
                         continue
 
                     for t in lr_item.context:
-                        self.table_action[state][t] = SAActionReduce(lr_item.right_side)
-                    continue
+                        can_take_actions.append((SAActionReduce(lr_item.right_side), t))
+                else:
+                    symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
+                    next_state = state.move(symbol_at_idx)
+                    if isinstance(symbol_at_idx, Terminal) and next_state is not None:
+                        can_take_actions.append((SAActionMove(next_state), symbol_at_idx))
 
-                symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
-                next_state = state.move(symbol_at_idx)
-                if isinstance(symbol_at_idx, Terminal) and next_state is not None:
-                    self.table_action[state][symbol_at_idx] = SAActionMove(next_state)
+            for action, terminal in can_take_actions:
+                existing = self.table_action[state][terminal]
+                
+                if isinstance(action, SAActionAccept):
+                    self.table_action[state][terminal] = action
+                elif isinstance(action, SAActionMove):
+                    if not isinstance(existing, SAActionAccept):
+                        self.table_action[state][terminal] = action
+                elif isinstance(action, SAActionReduce):
+                    if isinstance(existing, SAActionReject):
+                        self.table_action[state][terminal] = action
+                    elif isinstance(existing, SAActionReduce) and action.reduction.id < existing.reduction.id:
+                        self.table_action[state][terminal] = action
 
     def _make_table_new_state_keys(self, dfa: DFA) -> None:
         for state in dfa.states:
@@ -1070,6 +1089,8 @@ def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automato
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
+
+    log(sa)
 
     ast = sa.parse_from_file(sys.argv[1])
 
