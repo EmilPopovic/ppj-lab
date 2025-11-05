@@ -691,7 +691,7 @@ class SA:
         def format_action(action: SAAction) -> str:
             if action.type == SAActionType.SHIFT:
                 assert isinstance(action, SAActionShift)
-                return f'Move({action.state.id})'
+                return f'Shift({action.state.id})'
             elif action.type == SAActionType.REDUCE:
                 assert isinstance(action, SAActionReduce)
                 rs = action.reduction
@@ -948,7 +948,7 @@ class SAUtils:
 
             beta: List[Terminal | Nonterminal] = lr_item.right_side.symbols[lr_item.dot_before_idx+1:]
 
-            context: Set[Optional[Terminal]] = {s for s in RightSide.set_first(beta)}
+            context: Set[Optional[Terminal]] = RightSide.set_first(beta) # type: ignore
 
             beta_is_nullable: bool = not any(s for s in beta if isinstance(s, Terminal) or (isinstance(s, Nonterminal) and not s.is_empty))
 
@@ -1103,9 +1103,11 @@ def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automato
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
 
-    ast = sa.parse_from_file(sys.argv[1])
+    log(sa)
 
-    out(ast)
+    # ast = sa.parse_from_file(sys.argv[1])
+
+    # out(ast)
 
 if __name__ == '__main__':
     main()
