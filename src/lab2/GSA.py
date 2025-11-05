@@ -434,7 +434,7 @@ class AST:
         self.parent: Optional[AST] = parent
 
     def __repr__(self) -> str:
-        return self.__repr(0)
+        return self.__repr(0).strip()
 
     def __repr(self, indent: int) -> str:
         indent_str: str = ' ' * indent
@@ -491,12 +491,12 @@ class SA:
     
     def parse(self, tokens: List[Optional[Token]]) -> AST:
         class StackItem:
-            def __init__(self, state: DFAState, symbol: Optional[Token] | AST) -> None:
+            def __init__(self, state: DFAState, symbol: 'Optional[Token] | AST') -> None:
                 self.state = state
                 self.symbol = symbol
 
             def __repr__(self) -> str:
-                return f'{self.state.id} {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root}'
+                return f'({self.state.id}, {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root})'
         
         assert self.starting_nonterminal is not None
         assert self.starting_state is not None
@@ -547,7 +547,46 @@ class SA:
                 stack.append(StackItem(new_state, node))
 
             elif action.type == SAActionType.REJECT:
-                raise
+                assert token is not None
+                log(f'Syntax error on line {token.line_number}')
+                log(f'  Unexpected token {token.type} `{token.source}`')
+
+                while len(stack) > 1:
+                    current_state = stack[-1].state
+
+                    can_accept_sync = False
+                    for sync in self.sync_symbols:
+                        action = self.table_action[current_state][sync]
+                        if action.type != SAActionType.REJECT:
+                            can_accept_sync = True
+                            break
+
+                    if can_accept_sync:
+                        break
+
+                    stack_item = stack.pop()
+
+                recovered = False
+
+                while i < len(tokens) - 1:
+                    token = tokens[i]
+                    assert token is not None
+                    current_terminal = token.type
+                    current_state = stack[-1].state
+
+                    if current_terminal in self.sync_symbols:
+                        action = self.table_action[current_state][current_terminal]
+
+                        if action.type != SAActionType.REJECT:
+                            recovered = True
+                            break
+
+                    i += 1
+
+                if not recovered:
+                    log('Fatal error')
+                    log('  Unexpected EOF')
+                    raise Exception('Unexpected EOF')
 
     def get_nonterminal(self, name: str) -> Nonterminal:
         nonterms = [n for n in self.nonterminals if n.name == name]
