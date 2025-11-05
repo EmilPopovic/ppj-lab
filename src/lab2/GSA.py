@@ -435,7 +435,7 @@ class AST:
         self.parent: Optional[AST] = parent
 
     def __repr__(self) -> str:
-        return self.__repr_inner(0).strip()
+        return self.__repr_inner(0)[:-1]
 
     def __repr_inner(self, indent: int) -> str:
         indent_str = ' ' * indent
@@ -473,15 +473,13 @@ class SA:
         lines = string.split('\n')
         tokens: List[Optional[Token]] = []
         for line in lines:
-            if line.strip() == '':
-                break
-            parts = line.split()
-            if not parts:
-                break
-            terminal_name = parts[0]
-            line_number = int(parts[1])
-            source = ' '.join(parts[2:]) if len(parts) > 2 else ''
-            tokens.append(Token(self.get_terminal(terminal_name), line_number, source))
+            parts = line.split(' ', 2)
+            if len(parts) == 3:
+                terminal_name, line_number, source = parts
+            else:
+                continue
+
+            tokens.append(Token(self.get_terminal(terminal_name), int(line_number), source))
         return self.parse(tokens)
 
     def parse(self, tokens: List[Optional[Token]]) -> AST:
@@ -772,7 +770,7 @@ class SAUtils:
                 current_nonterminal = sa.get_nonterminal(row[1:-1])
             elif row.startswith(' '):
                 assert current_nonterminal is not None
-                elem_strs = row.strip().split()
+                elem_strs = row.split()
                 rs = RightSide(left_side=current_nonterminal)
                 for e in elem_strs:
                     if e == '$':
@@ -948,7 +946,7 @@ class SAUtils:
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-    log(sa)
+    # log(sa)
     if len(sys.argv) < 2:
         log("No input file provided to parse. Exiting.")
         return
