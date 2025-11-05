@@ -145,7 +145,7 @@ class DFAState:
         self.moves: Dict[Symbol, 'DFAState'] = {}
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, 'DFAState'):
+        if not isinstance(other, DFAState):
             return False
 
         return self.lr_items == other.lr_items
@@ -428,10 +428,27 @@ class Token:
 
 class AST:
 
-    def __init__(self, root: Nonterminal, parent: Optional[AST] = None) -> None:
+    def __init__(self, root: Nonterminal, parent: 'Optional[AST]' = None) -> None:
         self.root: Nonterminal = root
-        self.children: deque[AST | Terminal] = deque()
+        self.children: deque[AST | Optional[Token]] = deque()
         self.parent: Optional[AST] = parent
+
+    def __repr__(self) -> str:
+        return self.__repr(0)
+
+    def __repr(self, indent: int) -> str:
+        indent_str: str = ' ' * indent
+        result = f'{indent_str}{self.root}\n'
+
+        for child in self.children:
+            if child is None:
+                result += f'{indent_str} $\n'
+            elif isinstance(child, Token):
+                result += f'{indent_str} {child}\n'
+            else:
+                result += child.__repr(indent + 1)
+    
+        return result
 
 class SA:
 
@@ -441,13 +458,23 @@ class SA:
         self.terminals: Set[Terminal] = set()
         self.sync_symbols: Set[Terminal] = set()
 
+        self.starting_state: Optional[DFAState] = None
+
         self.table_action: Dict[DFAState, Dict[Optional[Terminal], SAAction]] = {}
         self.table_new_state: Dict[DFAState, Dict[Nonterminal, Optional[DFAState]]] = {}
 
     def parse_from_stdin(self) -> AST:
-        stdin_lines = sys.stdin.read().split('\n')
+        return self.parse_from_string(sys.stdin.read())
+        
+    def parse_from_file(self, filename: str) -> AST:
+        with open(filename, 'r') as f:
+            content = f.read()
+        return self.parse_from_string(content)
+
+    def parse_from_string(self, string: str) -> AST:
+        lines = string.split('\n')
         tokens = []
-        for line in stdin_lines:
+        for line in lines:
             if line.strip() == '':
                 break
 
@@ -462,32 +489,40 @@ class SA:
 
         return self.parse(tokens)
     
-    def parse(self, tokens: List[Token]) -> AST:
+    def parse(self, tokens: List[Optional[Token]]) -> AST:
         class StackItem:
-            def __init__(self, state: DFAState, symbol: Terminal | AST) -> None:
+            def __init__(self, state: DFAState, symbol: Optional[Token] | AST) -> None:
                 self.state = state
                 self.symbol = symbol
 
-        stack: List[StackItem] = []
-
+            def __repr__(self) -> str:
+                return f'{self.state.id} {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root}'
+        
         assert self.starting_nonterminal is not None
-        ast = AST(self.starting_nonterminal)
+        assert self.starting_state is not None
+
+        stack: List[StackItem] = [
+            StackItem(
+                self.starting_state,
+                None
+            )
+        ]
 
         i = 0
-        while i < len(tokens):
-            token = tokens[i]
+        while True:
+            token = tokens[i] if i < len(tokens) else None
 
             current_state = stack[-1].state
-            action = self.table_action[current_state][token.type]
+            action = self.table_action[current_state][token.type if token is not None else None]
 
             if action.type == SAActionType.ACCEPT:
-                top_of_stack_symbol = stack[0].symbol
+                top_of_stack_symbol = stack[-1].symbol
                 assert isinstance(top_of_stack_symbol, AST)
                 return top_of_stack_symbol
 
             elif action.type == SAActionType.MOVE:
                 assert isinstance(action, SAActionMove)
-                stack.append(StackItem(action.state, token.type))
+                stack.append(StackItem(action.state, token if token is not None else None))
                 i += 1
 
             elif action.type == SAActionType.REDUCE:
@@ -502,10 +537,17 @@ class SA:
                     for _ in range(num_to_pop):
                         stack_item = stack.pop()
                         node.children.appendleft(stack_item.symbol)
+                else:
+                    node.children = deque([None])
 
-                new_state = self.table_new_state[current_state][reduction.left_side]
+                new_top_of_stack_state = stack[-1].state
+
+                new_state = self.table_new_state[new_top_of_stack_state][reduction.left_side]
                 assert new_state is not None
                 stack.append(StackItem(new_state, node))
+
+            elif action.type == SAActionType.REJECT:
+                raise
 
     def get_nonterminal(self, name: str) -> Nonterminal:
         nonterms = [n for n in self.nonterminals if n.name == name]
@@ -518,6 +560,7 @@ class SA:
         return terms[0]
     
     def compile(self, dfa: DFA) -> None:
+        self.starting_state = dfa.start_state
         self._compile_table_action(dfa)
         self._compile_table_new_state(dfa)
 
@@ -619,7 +662,7 @@ class SA:
         lines = []
         
         # Header row
-        header = ' ' * state_col_width + ' │'
+        header = ' ' * (state_col_width + 1) + ' │'
         for t in sorted_terminals:
             t_name = t.name if t else 'EOF'
             header += f' {t_name:>{action_widths[t]-1}}'
@@ -629,7 +672,7 @@ class SA:
         lines.append(header)
         
         # Separator
-        separator = '─' * state_col_width + '─┼'
+        separator = '─' * (state_col_width + 1) + '─┼'
         separator += '─' * sum(action_widths.values())
         separator += '─╫'
         separator += '─' * sum(newstate_widths.values())
@@ -637,7 +680,7 @@ class SA:
         
         # Data rows
         for state in sorted_states:
-            row = f'State {state.id:<{state_col_width-6}} │'
+            row = f'State {state.id:<{state_col_width-6}}{"*" if state == self.starting_state else " "} │'
             
             # Action table entries
             for t in sorted_terminals:
@@ -658,6 +701,35 @@ class SA:
         return '\n'.join(lines)
 
 class SAUtils:
+
+    @staticmethod
+    def augment_grammar(sa: SA) -> None:
+        assert sa.starting_nonterminal is not None
+        
+        original_start = sa.starting_nonterminal
+        
+        augmented_name = original_start.name + "'"
+        
+        existing_names = {nt.name for nt in sa.nonterminals}
+        while augmented_name in existing_names:
+            augmented_name += "'"
+        
+        augmented_start = Nonterminal(augmented_name)
+        
+        right_side = RightSide(left_side=augmented_start)
+        right_side.append(original_start)
+        
+        augmented_start.right_sides.add(right_side)
+        
+        augmented_start.is_empty = False
+        augmented_start.calculate_in_nt_only_production_of(sa.nonterminals | {augmented_start})
+        
+        augmented_start.first = original_start.first.copy()
+        
+        right_side.calculate_first()
+        
+        sa.nonterminals.add(augmented_start)
+        sa.starting_nonterminal = augmented_start
 
     @staticmethod
     def from_stdin() -> SA:
@@ -747,6 +819,8 @@ class SAUtils:
 
         for rs in all_right_sides:
             rs.calculate_first()
+
+        SAUtils.augment_grammar(sa)
 
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
         dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
@@ -957,8 +1031,10 @@ def draw_automaton(states: Set['NFAState | DFAState'], filename: str = "automato
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-    # log(sa.to_bnf())
-    out(repr(sa))
+
+    ast = sa.parse_from_file(sys.argv[1])
+
+    out(ast)
 
 if __name__ == '__main__':
     main()
