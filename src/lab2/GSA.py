@@ -634,19 +634,32 @@ class SA:
                     if isinstance(symbol_at_idx, Terminal) and next_state is not None:
                         can_take_actions.append((SAActionMove(next_state), symbol_at_idx))
 
+            actions_by_terminal: Dict[Optional[Terminal], List[SAAction]] = {}
             for action, terminal in can_take_actions:
-                existing = self.table_action[state][terminal]
+                if terminal not in actions_by_terminal:
+                    actions_by_terminal[terminal] = []
+                actions_by_terminal[terminal].append(action)
+            
+            for terminal, actions in actions_by_terminal.items():
+                accept_action = None
+                move_action = None
+                reduce_action = None
                 
-                if isinstance(action, SAActionAccept):
-                    self.table_action[state][terminal] = action
-                elif isinstance(action, SAActionMove):
-                    if not isinstance(existing, SAActionAccept):
-                        self.table_action[state][terminal] = action
-                elif isinstance(action, SAActionReduce):
-                    if isinstance(existing, SAActionReject):
-                        self.table_action[state][terminal] = action
-                    elif isinstance(existing, SAActionReduce) and action.reduction.id < existing.reduction.id:
-                        self.table_action[state][terminal] = action
+                for action in actions:
+                    if isinstance(action, SAActionAccept):
+                        accept_action = action
+                    elif isinstance(action, SAActionMove):
+                        move_action = action
+                    elif isinstance(action, SAActionReduce):
+                        if reduce_action is None or action.reduction.id < reduce_action.reduction.id:
+                            reduce_action = action
+                
+                if accept_action is not None:
+                    self.table_action[state][terminal] = accept_action
+                elif move_action is not None:
+                    self.table_action[state][terminal] = move_action
+                elif reduce_action is not None:
+                    self.table_action[state][terminal] = reduce_action
 
     def _make_table_new_state_keys(self, dfa: DFA) -> None:
         for state in dfa.states:
