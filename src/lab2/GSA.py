@@ -386,7 +386,7 @@ class Terminal:
         return self.name == other.name
     
 class SAActionType(str, Enum):
-    MOVE = 'move'
+    SHIFT = 'shift'
     REDUCE = 'reduce'
     ACCEPT = 'accept'
     REJECT = 'reject'
@@ -394,8 +394,8 @@ class SAActionType(str, Enum):
 class SAAction(ABC):
     type: SAActionType
 
-class SAActionMove(SAAction):
-    type = SAActionType.MOVE
+class SAActionShift(SAAction):
+    type = SAActionType.SHIFT
 
     def __init__(self, state: DFAState) -> None:
         super().__init__()
@@ -524,8 +524,8 @@ class SA:
                 assert isinstance(top_of_stack_symbol, AST)
                 return top_of_stack_symbol
 
-            elif action.type == SAActionType.MOVE:
-                assert isinstance(action, SAActionMove)
+            elif action.type == SAActionType.SHIFT:
+                assert isinstance(action, SAActionShift)
                 stack.append(StackItem(action.state, token if token is not None else None))
                 i += 1
 
@@ -632,7 +632,7 @@ class SA:
                     symbol_at_idx = lr_item.right_side[lr_item.dot_before_idx]
                     next_state = state.move(symbol_at_idx)
                     if isinstance(symbol_at_idx, Terminal) and next_state is not None:
-                        can_take_actions.append((SAActionMove(next_state), symbol_at_idx))
+                        can_take_actions.append((SAActionShift(next_state), symbol_at_idx))
 
             actions_by_terminal: Dict[Optional[Terminal], List[SAAction]] = {}
             for action, terminal in can_take_actions:
@@ -642,22 +642,22 @@ class SA:
             
             for terminal, actions in actions_by_terminal.items():
                 accept_action = None
-                move_action = None
+                shift_action = None
                 reduce_action = None
                 
                 for action in actions:
                     if isinstance(action, SAActionAccept):
                         accept_action = action
-                    elif isinstance(action, SAActionMove):
-                        move_action = action
+                    elif isinstance(action, SAActionShift):
+                        shift_action = action
                     elif isinstance(action, SAActionReduce):
                         if reduce_action is None or action.reduction.id < reduce_action.reduction.id:
                             reduce_action = action
                 
                 if accept_action is not None:
                     self.table_action[state][terminal] = accept_action
-                elif move_action is not None:
-                    self.table_action[state][terminal] = move_action
+                elif shift_action is not None:
+                    self.table_action[state][terminal] = shift_action
                 elif reduce_action is not None:
                     self.table_action[state][terminal] = reduce_action
 
@@ -689,8 +689,8 @@ class SA:
         sorted_nonterminals = sorted(self.nonterminals, key=lambda nt: nt.name)
         
         def format_action(action: SAAction) -> str:
-            if action.type == SAActionType.MOVE:
-                assert isinstance(action, SAActionMove)
+            if action.type == SAActionType.SHIFT:
+                assert isinstance(action, SAActionShift)
                 return f'Move({action.state.id})'
             elif action.type == SAActionType.REDUCE:
                 assert isinstance(action, SAActionReduce)
