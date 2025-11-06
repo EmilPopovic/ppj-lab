@@ -1,6 +1,7 @@
 import inspect
 import os
 from collections import OrderedDict
+from typing import Generator, Tuple, FrozenSet
 
 # begin preamble
 import sys
@@ -10,7 +11,7 @@ import pickle
 from enum import Enum
 from abc import ABC
 from collections import deque
-from typing import Generator, Set, List, Optional, Iterator, Dict, Tuple, FrozenSet
+from typing import Set, List, Optional, Iterator, Dict
 
 SA_PICKLE_BASE64 = '{{ SA_PICKLE_BASE64 }}'
 
@@ -220,7 +221,8 @@ class RightSide:
 
     def __hash__(self) -> int:
         syms = tuple((s.name if hasattr(s, 'name') else str(s)) for s in self.symbols)
-        return tuple_hash((self.left_side.name, syms))
+        left_name = self.left_side.name if hasattr(self.left_side, 'name') else str(self.left_side)
+        return tuple_hash((left_name, syms))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RightSide):
@@ -279,7 +281,7 @@ class Nonterminal:
         self.states: Set[NFAState] = set()
 
     def __hash__(self) -> int:
-        return tuple_hash((self.name,))
+        return tuple_hash((self.name if hasattr(self, 'name') else id(self),))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Nonterminal):
@@ -288,7 +290,7 @@ class Nonterminal:
         return self.name == other.name
 
     def __repr__(self) -> str:
-        return f'<{self.name}>'
+        return f'<{self.name if hasattr(self, "name") else "Nonterminal"}>'
 
     def to_bnf(self) -> str:
         result = f'{str(self)}{"*" if self.is_empty else ""} ::= '
@@ -403,10 +405,10 @@ class Terminal:
         self.name: str = name
 
     def __repr__(self) -> str:
-        return self.name
+        return self.name if hasattr(self, 'name') else 'Terminal'
 
     def __hash__(self) -> int:
-        return tuple_hash((self.name,))
+        return tuple_hash((self.name if hasattr(self, 'name') else id(self),))
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Terminal):
@@ -646,87 +648,6 @@ class SA:
         assert len(matches) == 1, f'Terminal not found: {name}'
         return matches[0]
 
-    def compile(self, dfa: DFA) -> None:
-        self.starting_state = dfa.start_state
-        self._compile_table_action(dfa)
-        self._compile_table_new_state(dfa)
-
-    def _make_table_action_keys(self, dfa: DFA) -> None:
-        for state in dfa.states:
-            row: Dict[Optional[Terminal], SAAction] = {}
-
-            for t in (self.terminals | {None}):
-                row[t] = SAActionReject()
-
-            self.table_action[state] = row
-
-    def _compile_table_action(self, dfa: DFA) -> None:
-        self._make_table_action_keys(dfa)
-
-        for state in dfa.states:
-            can_take_actions: List[Tuple[SAAction, Optional[Terminal]]] = []
-
-            for lr_item in state.lr_items:
-                if lr_item.is_complete():
-                    if lr_item.context == frozenset({None}) and lr_item.right_side.left_side == self.starting_nonterminal:
-                        can_take_actions.append((SAActionAccept(), None))
-                        continue
-
-                    for t in lr_item.context:
-                        can_take_actions.append((SAActionReduce(lr_item.right_side), t))
-                else:
-                    symbol_at_idx = lr_item.right_side.symbols[lr_item.dot_before_idx]
-                    next_state = state.move(symbol_at_idx)
-
-                    if isinstance(symbol_at_idx, Terminal) and next_state is not None:
-                        can_take_actions.append((SAActionShift(next_state), symbol_at_idx))
-
-            actions_by_terminal: Dict[Optional[Terminal], List[SAAction]] = {}
-
-            for action, terminal in can_take_actions:
-                actions_by_terminal.setdefault(terminal, []).append(action)
-
-            for terminal, actions in actions_by_terminal.items():
-                chosen: Optional[SAAction] = None
-
-                for a in actions:
-                    if isinstance(a, SAActionAccept):
-                        chosen = a
-                        break
-
-                if chosen is None:
-                    for a in actions:
-                        if isinstance(a, SAActionShift):
-                            chosen = a
-                            break
-
-                if chosen is None:
-                    reduces = [a for a in actions if isinstance(a, SAActionReduce)]
-
-                    if reduces:
-                        reduces.sort(key=lambda r: r.reduction.id)
-                        chosen = reduces[0]
-
-                if chosen is not None:
-                    self.table_action[state][terminal] = chosen
-
-    def _make_table_new_state_keys(self, dfa: DFA) -> None:
-        for state in dfa.states:
-            row: Dict[Nonterminal, Optional[DFAState]] = {}
-
-            for nt in self.nonterminals:
-                row[nt] = None
-
-            self.table_new_state[state] = row
-
-    def _compile_table_new_state(self, dfa: DFA) -> None:
-        self._make_table_new_state_keys(dfa)
-
-        for state in dfa.states:
-            for symbol, target in state.moves.items():
-                if isinstance(symbol, Nonterminal):
-                    self.table_new_state[state][symbol] = target
-
     def to_bnf(self) -> str:
         return '\n'.join(n.to_bnf() for n in sorted(self.nonterminals, key=lambda x: x.name))
     
@@ -879,7 +800,7 @@ class SAUtils:
         log(f'[Timing] Convert NFA to DFA: {(end_dfa - start_dfa) * 1000:.2f} ms')
 
         start_compile = time.time()
-        sa.compile(dfa)
+        SAUtils.compile(sa, dfa)
         end_compile = time.time()
         log(f'[Timing] Compile parsing tables: {(end_compile - start_compile) * 1000:.2f} ms')
 
@@ -1033,6 +954,92 @@ class SAUtils:
 
         start_state = key_map[start_key]
         return DFA(dfa_states, start_state, epsilon_nfa.alphabet)
+    
+    @staticmethod
+    def compile(sa: SA, dfa: DFA) -> None:
+        sa.starting_state = dfa.start_state
+        SAUtils._compile_table_action(sa, dfa)
+        SAUtils._compile_table_new_state(sa, dfa)
+
+    @staticmethod
+    def _make_table_action_keys(sa: SA, dfa: DFA) -> None:
+        for state in dfa.states:
+            row: Dict[Optional[Terminal], SAAction] = {}
+
+            for t in (sa.terminals | {None}):
+                row[t] = SAActionReject()
+
+            sa.table_action[state] = row
+
+    @staticmethod
+    def _compile_table_action(sa: SA, dfa: DFA) -> None:
+        SAUtils._make_table_action_keys(sa, dfa)
+
+        for state in dfa.states:
+            can_take_actions: List[Tuple[SAAction, Optional[Terminal]]] = []
+
+            for lr_item in state.lr_items:
+                if lr_item.is_complete():
+                    if lr_item.context == frozenset({None}) and lr_item.right_side.left_side == sa.starting_nonterminal:
+                        can_take_actions.append((SAActionAccept(), None))
+                        continue
+
+                    for t in lr_item.context:
+                        can_take_actions.append((SAActionReduce(lr_item.right_side), t))
+                else:
+                    symbol_at_idx = lr_item.right_side.symbols[lr_item.dot_before_idx]
+                    next_state = state.move(symbol_at_idx)
+
+                    if isinstance(symbol_at_idx, Terminal) and next_state is not None:
+                        can_take_actions.append((SAActionShift(next_state), symbol_at_idx))
+
+            actions_by_terminal: Dict[Optional[Terminal], List[SAAction]] = {}
+
+            for action, terminal in can_take_actions:
+                actions_by_terminal.setdefault(terminal, []).append(action)
+
+            for terminal, actions in actions_by_terminal.items():
+                chosen: Optional[SAAction] = None
+
+                for a in actions:
+                    if isinstance(a, SAActionAccept):
+                        chosen = a
+                        break
+
+                if chosen is None:
+                    for a in actions:
+                        if isinstance(a, SAActionShift):
+                            chosen = a
+                            break
+
+                if chosen is None:
+                    reduces = [a for a in actions if isinstance(a, SAActionReduce)]
+
+                    if reduces:
+                        reduces.sort(key=lambda r: r.reduction.id)
+                        chosen = reduces[0]
+
+                if chosen is not None:
+                    sa.table_action[state][terminal] = chosen
+
+    @staticmethod
+    def _make_table_new_state_keys(sa: SA, dfa: DFA) -> None:
+        for state in dfa.states:
+            row: Dict[Nonterminal, Optional[DFAState]] = {}
+
+            for nt in sa.nonterminals:
+                row[nt] = None
+
+            sa.table_new_state[state] = row
+
+    @staticmethod
+    def _compile_table_new_state(sa: SA, dfa: DFA) -> None:
+        SAUtils._make_table_new_state_keys(sa, dfa)
+
+        for state in dfa.states:
+            for symbol, target in state.moves.items():
+                if isinstance(symbol, Nonterminal):
+                    sa.table_new_state[state][symbol] = target
 
 def make_sa_file(filename: str, sa: SA) -> None:
     b64_sa: str = base64.b64encode(pickle.dumps(sa)).decode('utf-8')
@@ -1043,10 +1050,12 @@ def make_sa_file(filename: str, sa: SA) -> None:
 
     src = OrderedDict([
         ('preamble_src', preamble.replace('{{ SA_PICKLE_BASE64 }}', b64_sa)),
+        ('tuple_hash_src', inspect.getsource(tuple_hash)),
         ('out_src', inspect.getsource(out)),
         ('log_src', inspect.getsource(log)),
         ('lr_item_src', inspect.getsource(LRItem)),
         ('right_side_src', inspect.getsource(RightSide)),
+        ('nfa_state_src', inspect.getsource(NFAState)),
         ('dfa_state_src', inspect.getsource(DFAState)),
         ('nonterminal_src', inspect.getsource(Nonterminal)),
         ('terminal_src', inspect.getsource(Terminal)),
