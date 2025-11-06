@@ -114,10 +114,12 @@ class NFAState:
 
         while stack:
             s = stack.pop()
-            for state in s.immediate_move(EPSILON):
-                if state not in closure:
-                    closure.add(state)
-                    stack.append(state)
+            epsilon_moves = s.moves.get(EPSILON)
+            if epsilon_moves:
+                for state in epsilon_moves:
+                    if state not in closure:
+                        closure.add(state)
+                        stack.append(state)
 
         return closure
 
@@ -954,6 +956,26 @@ class SAUtils:
             start_state = DFAState(set())
             return DFA({start_state}, start_state, epsilon_nfa.alphabet)
 
+        epsilon_cache: Dict[int, FrozenSet[NFAState]] = {}
+        for nfa_state in epsilon_nfa.states:
+            epsilon_cache[nfa_state.id] = frozenset(nfa_state.epsilon())
+
+        state_symbols: Dict[int, Set[Symbol]] = {}
+        state_moves: Dict[Tuple[int, Symbol], FrozenSet[NFAState]] = {}
+
+        for nfa_state in epsilon_nfa.states:
+            symbols = set(nfa_state.moves.keys()) - {EPSILON}
+            state_symbols[nfa_state.id] = symbols
+
+            for symbol in symbols:
+                immediates = nfa_state.moves.get(symbol, set())
+                closure: Set[NFAState] = set()
+
+                for immediate in immediates:
+                    closure.update(epsilon_cache[immediate.id])
+                    
+                state_moves[(nfa_state.id, symbol)] = frozenset(closure)
+
         start_state = DFAState({s.lr_item for s in start_closure})
 
         dfa_states: Set[DFAState] = {start_state}
@@ -964,26 +986,24 @@ class SAUtils:
         key_map[start_key] = start_state
         queue.append(start_key)
 
-        epsilon_cache: Dict[int, Set[NFAState]] = {}
-
-        def epsilon_of(state: NFAState) -> Set[NFAState]:
-            if state.id not in epsilon_cache:
-                epsilon_cache[state.id] = state.epsilon()
-            return epsilon_cache[state.id]
-
         while queue:
             current_key = queue.popleft()
             current_dfa = key_map[current_key]
 
-            for symbol in epsilon_nfa.alphabet:
+            symbol_to_states: Dict[Symbol, List[FrozenSet[NFAState]]] = {}
+            
+            for nfa_state in current_key:
+                for symbol in state_symbols.get(nfa_state.id, set()):
+                    move_result = state_moves.get((nfa_state.id, symbol))
+                    
+                    if move_result:
+                        symbol_to_states.setdefault(symbol, []).append(move_result)
+
+            for symbol, move_results in symbol_to_states.items():
                 next_set: Set[NFAState] = set()
-
-                for nfa_state in current_key:
-                    for immediate in nfa_state.immediate_move(symbol):
-                        next_set.update(epsilon_of(immediate))
-
-                if not next_set:
-                    continue
+                
+                for move_result in move_results:
+                    next_set.update(move_result)
 
                 next_key = frozenset(next_set)
 
@@ -1004,7 +1024,7 @@ def main() -> None:
 
     ast = sa.parse_from_file(sys.argv[1])
 
-    # out(ast)
+    out(ast)
 
 if __name__ == '__main__':
     main()
