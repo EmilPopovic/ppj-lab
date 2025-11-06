@@ -38,8 +38,19 @@ for dict in $pattern; do
         continue
     fi
 
-    python3.8 src/lab2/GSA.py "$dict/test.in" <"$dict/test.san" >output.txt 2>/dev/null
+    # Step 1: Run GSA.py with .san file on stdin to generate SA.py
+    python3.8 src/lab2/GSA.py <"$dict/test.san" 2>/dev/null
 
+    if [[ ! -f "src/lab2/analizator/SA.py" ]]; then
+        echo -e "${RED}  ⚠ Failed to generate SA.py${RESET}\n"
+        ((fail_count++))
+        continue
+    fi
+
+    # Step 2: Run the generated SA.py with .in file on stdin
+    python3.8 src/lab2/analizator/SA.py <"$dict/test.in" >output.txt 2>/dev/null
+
+    # Step 3: Compare stdout with .out file
     if diff -q output.txt "$dict/test.out" >/dev/null; then
         echo -e "${GREEN}  ✔ PASS${RESET}\n"
         ((pass_count++))
@@ -49,6 +60,9 @@ for dict in $pattern; do
         echo
         ((fail_count++))
     fi
+
+    # Clean up generated SA.py for next test
+    rm -f src/lab2/analizator/SA.py
 done
 
 if [ "$found_any" = false ]; then

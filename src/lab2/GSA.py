@@ -1,4 +1,5 @@
 import inspect
+import os
 from collections import OrderedDict
 
 # begin preamble
@@ -730,8 +731,9 @@ class SA:
         return '\n'.join(n.to_bnf() for n in sorted(self.nonterminals, key=lambda x: x.name))
     
     @staticmethod
-    def from_pickle(b64_pickle: str) -> SA:
-        ...
+    def from_pickle(b64_pickle: str) -> 'SA':
+        sa: SA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
+        return sa
 
 class SAUtils:
     @staticmethod
@@ -1044,6 +1046,7 @@ def make_sa_file(filename: str, sa: SA) -> None:
         ('out_src', inspect.getsource(out)),
         ('log_src', inspect.getsource(log)),
         ('lr_item_src', inspect.getsource(LRItem)),
+        ('right_side_src', inspect.getsource(RightSide)),
         ('dfa_state_src', inspect.getsource(DFAState)),
         ('nonterminal_src', inspect.getsource(Nonterminal)),
         ('terminal_src', inspect.getsource(Terminal)),
@@ -1074,7 +1077,13 @@ def sa_main() -> None:
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-    make_sa_file(OUTPUT_FILENAME, sa)
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(script_dir, OUTPUT_FILENAME)
+    
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    make_sa_file(output_path, sa)
 
 if __name__ == '__main__':
     main()
