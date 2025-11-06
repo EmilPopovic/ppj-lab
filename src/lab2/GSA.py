@@ -364,10 +364,14 @@ class Nonterminal:
 
             i = 0
 
-            while i < len(rs.symbols) and isinstance(rs[i], Nonterminal) and rs[i].is_empty:
-                if rs[i] == other:
+            while i < len(rs.symbols):
+                symbol = rs[i]
+                if not isinstance(symbol, Nonterminal):
+                    break
+                if not symbol.is_empty:
+                    break
+                if symbol == other:
                     return True
-
                 i += 1
 
             if i < len(rs.symbols) and rs[i] == other:
@@ -817,7 +821,7 @@ class SAUtils:
         queue: deque[NFAState] = deque()
 
         for rs in starting_nonterminal.right_sides_list:
-            item = LRItem(rs, 0, frozenset({EOF}))
+            item = LRItem(rs, 0, set([EOF]))
             st = NFAState(item)
 
             q0.add_epsilon(st)
@@ -855,7 +859,7 @@ class SAUtils:
 
             beta = lr_item.right_side.symbols[lr_item.dot_before_idx+1:]
             beta_first = RightSide.set_first(beta)
-            context = set(beta_first)
+            context: Set[Optional[Terminal]] = set(beta_first)
 
             beta_is_nullable = all(
                 isinstance(s, Nonterminal) and s.is_empty
