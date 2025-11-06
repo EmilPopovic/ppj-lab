@@ -1,15 +1,25 @@
-#!/usr/bin/env python3
+import inspect
+from collections import OrderedDict
+
+# begin preamble
 import sys
 import time
+import base64
+import pickle
 from enum import Enum
 from abc import ABC
 from collections import deque
 from typing import Generator, Set, List, Optional, Iterator, Dict, Tuple, FrozenSet
 
+SA_PICKLE_BASE64 = '{{ SA_PICKLE_BASE64 }}'
+
 EPSILON = None
 EOF = None
 
 Symbol = Optional['Nonterminal | Terminal']
+# end preamble
+
+OUTPUT_FILENAME = 'analizator/SA.py'
 
 def tuple_hash(t: tuple) -> int:
     return hash(t)
@@ -718,6 +728,10 @@ class SA:
 
     def to_bnf(self) -> str:
         return '\n'.join(n.to_bnf() for n in sorted(self.nonterminals, key=lambda x: x.name))
+    
+    @staticmethod
+    def from_pickle(b64_pickle: str) -> SA:
+        ...
 
 class SAUtils:
     @staticmethod
@@ -1018,13 +1032,49 @@ class SAUtils:
         start_state = key_map[start_key]
         return DFA(dfa_states, start_state, epsilon_nfa.alphabet)
 
+def make_sa_file(filename: str, sa: SA) -> None:
+    b64_sa: str = base64.b64encode(pickle.dumps(sa)).decode('utf-8')
+
+    all_src = inspect.getsource(sys.modules[__name__])
+    before_preamble_end = all_src.split('# end preamble', 1)[0]
+    preamble = before_preamble_end.split('# begin preamble', 1)[1]
+
+    src = OrderedDict([
+        ('preamble_src', preamble.replace('{{ SA_PICKLE_BASE64 }}', b64_sa)),
+        ('out_src', inspect.getsource(out)),
+        ('log_src', inspect.getsource(log)),
+        ('lr_item_src', inspect.getsource(LRItem)),
+        ('dfa_state_src', inspect.getsource(DFAState)),
+        ('nonterminal_src', inspect.getsource(Nonterminal)),
+        ('terminal_src', inspect.getsource(Terminal)),
+        ('sa_action_type_src', inspect.getsource(SAActionType)),
+        ('sa_action_src', inspect.getsource(SAAction)),
+        ('sa_action_reduce_src', inspect.getsource(SAActionReduce)),
+        ('sa_action_shift_src', inspect.getsource(SAActionShift)),
+        ('sa_action_accept_src', inspect.getsource(SAActionAccept)),
+        ('sa_action_reject_src', inspect.getsource(SAActionReject)),
+        ('token_src', inspect.getsource(Token)),
+        ('ast_src', inspect.getsource(AST)),
+        ('sa_src', inspect.getsource(SA)),
+        ('sa_main_src', inspect.getsource(sa_main)),
+        ('entrypoint_src', 'if __name__ == \'__main__\':\n    sa_main()')
+    ])
+
+    src_str = ''    
+    for _, class_src in src.items():
+        src_str += class_src + '\n'
+
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(src_str)
+
+def sa_main() -> None:
+    sa = SA.from_pickle(SA_PICKLE_BASE64)
+    ast = sa.parse_from_stdin()
+    out(ast)
 
 def main() -> None:
     sa: SA = SAUtils.from_stdin()
-
-    ast = sa.parse_from_file(sys.argv[1])
-
-    out(ast)
+    make_sa_file(OUTPUT_FILENAME, sa)
 
 if __name__ == '__main__':
     main()
