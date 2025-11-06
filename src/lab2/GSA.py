@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import time
 from enum import Enum
 from abc import ABC
 from collections import deque
@@ -497,6 +498,7 @@ class SA:
         return self.parse_from_string(content)
 
     def parse_from_string(self, string: str) -> AST:
+        start_tokenize = time.time()
         lines = string.split('\n')
         tokens: List[Optional[Token]] = []
 
@@ -510,9 +512,14 @@ class SA:
 
             tokens.append(Token(self.get_terminal(terminal_name), int(line_number), source))
 
+        end_tokenize = time.time()
+        log(f'[Timing] Tokenization: {(end_tokenize - start_tokenize) * 1000:.2f} ms')
+
         return self.parse(tokens)
 
     def parse(self, tokens: List[Optional[Token]]) -> AST:
+        start_parse = time.time()
+        
         class StackItem:
             __slots__ = ('state', 'symbol')
 
@@ -538,6 +545,8 @@ class SA:
             if action.type == SAActionType.ACCEPT:
                 top_of_stack_symbol = stack[-1].symbol
                 assert isinstance(top_of_stack_symbol, AST)
+                end_parse = time.time()
+                log(f'[Timing] Parse tokens to AST: {(end_parse - start_parse) * 1000:.2f} ms')
                 return top_of_stack_symbol
 
             elif action.type == SAActionType.SHIFT:
@@ -736,6 +745,8 @@ class SAUtils:
 
     @staticmethod
     def from_stdin() -> SA:
+        start_total = time.time()
+        
         def read_input() -> Generator[str, None, None]:
             while True:
                 try:
@@ -743,6 +754,7 @@ class SAUtils:
                 except EOFError:
                     break
 
+        start_parse_input = time.time()
         sa = SA()
         data = read_input()
         current_nonterminal: Optional[Nonterminal] = None
@@ -786,6 +798,10 @@ class SAUtils:
 
                 current_nonterminal.right_sides.add(rs)
 
+        end_parse_input = time.time()
+        log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
+
+        start_calculate_properties = time.time()
         for nt in sa.nonterminals:
             nt.calculate_in_nt_only_production_of(sa.nonterminals)
 
@@ -826,12 +842,32 @@ class SAUtils:
         for rs in all_right_sides:
             rs.calculate_first()
 
+        end_calculate_properties = time.time()
+        log(f'[Timing] Calculate grammar properties: {(end_calculate_properties - start_calculate_properties) * 1000:.2f} ms')
+
+        start_augment = time.time()
         SAUtils.augment_grammar(sa)
+        end_augment = time.time()
+        log(f'[Timing] Augment grammar: {(end_augment - start_augment) * 1000:.2f} ms')
 
+        start_nfa = time.time()
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
-        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+        end_nfa = time.time()
+        log(f'[Timing] Construct epsilon-NFA: {(end_nfa - start_nfa) * 1000:.2f} ms')
 
+        start_dfa = time.time()
+        dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
+        end_dfa = time.time()
+        log(f'[Timing] Convert NFA to DFA: {(end_dfa - start_dfa) * 1000:.2f} ms')
+
+        start_compile = time.time()
         sa.compile(dfa)
+        end_compile = time.time()
+        log(f'[Timing] Compile parsing tables: {(end_compile - start_compile) * 1000:.2f} ms')
+
+        end_total = time.time()
+        log(f'[Timing] Total SA construction: {(end_total - start_total) * 1000:.2f} ms')
+        
         return sa
 
     @staticmethod
@@ -968,7 +1004,7 @@ def main() -> None:
 
     ast = sa.parse_from_file(sys.argv[1])
 
-    out(ast)
+    # out(ast)
 
 if __name__ == '__main__':
     main()
