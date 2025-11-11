@@ -589,7 +589,7 @@ class SA:
                     node.children = deque([None])
 
                 new_top_of_stack_state = stack[-1].state_id
-                new_state = self.table_new_state[new_top_of_stack_state][reduction.left_side]
+                new_state = self.table_new_state.get(new_top_of_stack_state, {}).get(reduction.left_side)
 
                 assert new_state is not None
                 stack.append(StackItem(new_state, node))
@@ -966,18 +966,7 @@ class SAUtils:
         SAUtils._compile_table_new_state(sa, dfa)
 
     @staticmethod
-    def _make_table_action_keys(sa: SA, dfa: DFA) -> None:
-        for state in dfa.states:
-            row: Dict[Optional[Terminal], SAAction] = {}
-
-            for t in (sa.terminals | {None}):
-                row[t] = SAActionReject()
-
-            sa.table_action[state.id] = row
-
-    @staticmethod
     def _compile_table_action(sa: SA, dfa: DFA) -> None:
-        SAUtils._make_table_action_keys(sa, dfa)
 
         for state in dfa.states:
             can_take_actions: List[Tuple[SAAction, Optional[Terminal]]] = []
@@ -1024,26 +1013,14 @@ class SAUtils:
                         chosen = reduces[0]
 
                 if chosen is not None:
-                    sa.table_action[state.id][terminal] = chosen
-
-    @staticmethod
-    def _make_table_new_state_keys(sa: SA, dfa: DFA) -> None:
-        for state in dfa.states:
-            row: Dict[Nonterminal, Optional[int]] = {}
-
-            for nt in sa.nonterminals:
-                row[nt] = None
-
-            sa.table_new_state[state.id] = row
+                    sa.table_action.setdefault(state.id, {})[terminal] = chosen
 
     @staticmethod
     def _compile_table_new_state(sa: SA, dfa: DFA) -> None:
-        SAUtils._make_table_new_state_keys(sa, dfa)
-
         for state in dfa.states:
             for symbol, target in state.moves.items():
                 if isinstance(symbol, Nonterminal):
-                    sa.table_new_state[state.id][symbol] = target.id
+                    sa.table_new_state.setdefault(state.id, {})[symbol] = target.id
 
 def make_sa_file(filename: str, sa: SA) -> None:
     b64_sa: str = base64.b64encode(pickle.dumps(sa)).decode('utf-8')
