@@ -270,9 +270,12 @@ class RightSide:
         self.first = RightSide.set_first(self.symbols)
 
 class Nonterminal:
-    __slots__ = ('name', 'right_sides', '_right_sides_list', 'is_empty', 'in_nt_only_production_of', 'first', 'states')
+    __last_id = 0
+    __slots__ = ('id', 'name', 'right_sides', '_right_sides_list', 'is_empty', 'in_nt_only_production_of', 'first', 'states')
 
     def __init__(self, name: str) -> None:
+        self.id = Nonterminal.__last_id
+        Nonterminal.__last_id += 1
         self.name = name
         self.right_sides: Set[RightSide] = set()
         self._right_sides_list: Optional[List[RightSide]] = None
@@ -404,9 +407,12 @@ def mark_first(table_directly_first: Dict['Nonterminal', Dict['Terminal | Nonter
                 changed = True
 
 class Terminal:
-    __slots__ = ('name',)
+    __last_id = 0
+    __slots__ = ('id', 'name')
 
     def __init__(self, name: str) -> None:
+        self.id = Terminal.__last_id
+        Terminal.__last_id += 1
         self.name: str = name
 
     def __repr__(self) -> str:
@@ -505,8 +511,13 @@ class SA:
 
         self.starting_state_id: Optional[int] = None
 
-        self.table_action: Dict[int, Dict[Optional[Terminal], SAAction]] = {}
-        self.table_new_state: Dict[int, Dict[Nonterminal, Optional[int]]] = {}
+        # Tables can store either objects or IDs depending on optimization
+        self.table_action: Dict[int, Dict[Optional[Terminal] | int, SAAction]] = {}
+        self.table_new_state: Dict[int, Dict[Nonterminal | int, Optional[int]]] = {}
+        
+        # ID mappings for optimized tables (set during optimization)
+        self._terminal_id_map: Optional[List[Optional[Terminal]]] = None
+        self._nonterminal_id_map: Optional[List[Nonterminal]] = None
 
     def parse_from_stdin(self) -> AST:
         return self.parse_from_string(sys.stdin.read())
@@ -537,6 +548,33 @@ class SA:
 
         return self.parse(tokens)
 
+    def _is_optimized(self) -> bool:
+        """Check if tables are using optimized ID-based storage"""
+        return self._terminal_id_map is not None
+
+    def _get_action(self, state_id: int, terminal: Optional[Terminal]) -> SAAction:
+        """Get action from table, handling both optimized and non-optimized formats"""
+        state_actions = self.table_action.get(state_id, {})
+        
+        if self._is_optimized():
+            # Tables use terminal IDs as keys
+            terminal_id = terminal.id if terminal is not None else -1
+            return state_actions.get(terminal_id, SAActionReject())
+        else:
+            # Tables use terminal objects as keys
+            return state_actions.get(terminal, SAActionReject())
+
+    def _get_new_state(self, state_id: int, nonterminal: Nonterminal) -> Optional[int]:
+        """Get new state from table, handling both optimized and non-optimized formats"""
+        state_moves = self.table_new_state.get(state_id, {})
+        
+        if self._is_optimized():
+            # Tables use nonterminal IDs as keys
+            return state_moves.get(nonterminal.id)
+        else:
+            # Tables use nonterminal objects as keys
+            return state_moves.get(nonterminal)
+
     def parse(self, tokens: List[Optional[Token]]) -> AST:
         start_parse = time.time()
         
@@ -560,7 +598,7 @@ class SA:
         while True:
             token = tokens[i] if i < len(tokens) else None
             current_state = stack[-1].state_id
-            action = self.table_action[current_state].get(token.type if token is not None else None, SAActionReject())
+            action = self._get_action(current_state, token.type if token is not None else None)
 
             if action.type == SAActionType.ACCEPT:
                 top_of_stack_symbol = stack[-1].symbol
@@ -590,7 +628,7 @@ class SA:
                     node.children = deque([None])
 
                 new_top_of_stack_state = stack[-1].state_id
-                new_state = self.table_new_state.get(new_top_of_stack_state, {}).get(reduction.left_side)
+                new_state = self._get_new_state(new_top_of_stack_state, reduction.left_side)
 
                 assert new_state is not None
                 stack.append(StackItem(new_state, node))
@@ -608,7 +646,7 @@ class SA:
                     can_accept_sync = False
 
                     for sync in self.sync_symbols:
-                        action_test = self.table_action[current_state].get(sync, SAActionReject())
+                        action_test = self._get_action(current_state, sync)
 
                         if action_test.type != SAActionType.REJECT:
                             can_accept_sync = True
@@ -631,7 +669,7 @@ class SA:
                     current_state = stack[-1].state_id
 
                     if current_terminal in self.sync_symbols:
-                        action_test = self.table_action[current_state].get(current_terminal, SAActionReject())
+                        action_test = self._get_action(current_state, current_terminal)
 
                         if action_test.type != SAActionType.REJECT:
                             recovered = True
@@ -967,10 +1005,12 @@ class SAUtils:
         sa.starting_state_id = dfa.start_state.id
         SAUtils._compile_table_action(sa, dfa)
         SAUtils._compile_table_new_state(sa, dfa)
+        SAUtils._optimize_tables(sa)
         SAUtils._cleanup_for_pickle(sa)
 
     @staticmethod
     def _cleanup_for_pickle(sa: SA) -> None:
+        """Remove data only needed during construction to reduce pickle size"""
         for nt in sa.nonterminals:
             for rs in nt.right_sides:
                 rs.states = []
@@ -981,6 +1021,47 @@ class SAUtils:
             nt.first = set()
             nt.in_nt_only_production_of = None
             nt._right_sides_list = None
+
+    @staticmethod
+    def _optimize_tables(sa: SA) -> None:
+        """Convert tables to use integer IDs instead of object references"""
+        # Create ID mappings
+        terminal_list = sorted(sa.terminals, key=lambda t: t.id)
+        nonterminal_list = sorted(sa.nonterminals, key=lambda nt: nt.id)
+        
+        # Store mappings for deserialization (EOF = None gets ID -1)
+        sa._terminal_id_map = terminal_list + [None]
+        sa._nonterminal_id_map = nonterminal_list
+        
+        # Optimize action table: Terminal/None -> int
+        optimized_action: Dict[int, Dict[int | Optional[Terminal], SAAction]] = {}
+        for state_id, actions in sa.table_action.items():
+            optimized_action[state_id] = {}
+            for terminal, action in actions.items():
+                if isinstance(terminal, int):
+                    # Already optimized
+                    terminal_id = terminal
+                else:
+                    # Convert object to ID
+                    terminal_id = terminal.id if terminal is not None else -1
+                optimized_action[state_id][terminal_id] = action
+        
+        sa.table_action = optimized_action  # type: ignore
+        
+        # Optimize new_state table: Nonterminal -> int
+        optimized_new_state: Dict[int, Dict[int | Nonterminal, Optional[int]]] = {}
+        for state_id, moves in sa.table_new_state.items():
+            optimized_new_state[state_id] = {}
+            for nonterminal, new_state in moves.items():
+                if isinstance(nonterminal, int):
+                    # Already optimized
+                    nt_id = nonterminal
+                else:
+                    # Convert object to ID
+                    nt_id = nonterminal.id
+                optimized_new_state[state_id][nt_id] = new_state
+        
+        sa.table_new_state = optimized_new_state  # type: ignore
 
     @staticmethod
     def _compile_table_action(sa: SA, dfa: DFA) -> None:
