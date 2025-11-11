@@ -431,11 +431,11 @@ class SAAction(ABC):
 
 class SAActionShift(SAAction):
     type = SAActionType.SHIFT
-    __slots__ = ('state',)
+    __slots__ = ('state_id',)
 
-    def __init__(self, state: DFAState) -> None:
+    def __init__(self, state_id: int) -> None:
         super().__init__()
-        self.state = state
+        self.state_id = state_id
 
 class SAActionReduce(SAAction):
     type = SAActionType.REDUCE
@@ -502,10 +502,10 @@ class SA:
         self.terminals: Set[Terminal] = set()
         self.sync_symbols: Set[Terminal] = set()
 
-        self.starting_state: Optional[DFAState] = None
+        self.starting_state_id: Optional[int] = None
 
-        self.table_action: Dict[DFAState, Dict[Optional[Terminal], SAAction]] = {}
-        self.table_new_state: Dict[DFAState, Dict[Nonterminal, Optional[DFAState]]] = {}
+        self.table_action: Dict[int, Dict[Optional[Terminal], SAAction]] = {}
+        self.table_new_state: Dict[int, Dict[Nonterminal, Optional[int]]] = {}
 
     def parse_from_stdin(self) -> AST:
         return self.parse_from_string(sys.stdin.read())
@@ -540,25 +540,25 @@ class SA:
         start_parse = time.time()
         
         class StackItem:
-            __slots__ = ('state', 'symbol')
+            __slots__ = ('state_id', 'symbol')
 
-            def __init__(self, state: DFAState, symbol: 'Optional[Token] | AST') -> None:
-                self.state = state
+            def __init__(self, state_id: int, symbol: 'Optional[Token] | AST') -> None:
+                self.state_id = state_id
                 self.symbol = symbol
 
             def __repr__(self) -> str:
-                return f'({self.state.id}, {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root})'
+                return f'({self.state_id}, {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root})'
 
         assert self.starting_nonterminal is not None
-        assert self.starting_state is not None
+        assert self.starting_state_id is not None
 
-        stack: List[StackItem] = [StackItem(self.starting_state, None)]
+        stack: List[StackItem] = [StackItem(self.starting_state_id, None)]
 
         i = 0
 
         while True:
             token = tokens[i] if i < len(tokens) else None
-            current_state = stack[-1].state
+            current_state = stack[-1].state_id
             action = self.table_action[current_state].get(token.type if token is not None else None, SAActionReject())
 
             if action.type == SAActionType.ACCEPT:
@@ -570,7 +570,7 @@ class SA:
 
             elif action.type == SAActionType.SHIFT:
                 assert isinstance(action, SAActionShift)
-                stack.append(StackItem(action.state, token if token is not None else None))
+                stack.append(StackItem(action.state_id, token if token is not None else None))
                 i += 1
 
             elif action.type == SAActionType.REDUCE:
@@ -588,7 +588,7 @@ class SA:
                 else:
                     node.children = deque([None])
 
-                new_top_of_stack_state = stack[-1].state
+                new_top_of_stack_state = stack[-1].state_id
                 new_state = self.table_new_state[new_top_of_stack_state][reduction.left_side]
 
                 assert new_state is not None
@@ -603,7 +603,7 @@ class SA:
                 log(f'  Unexpected token {token.type} `{token.source}`')
 
                 while len(stack) > 1:
-                    current_state = stack[-1].state
+                    current_state = stack[-1].state_id
                     can_accept_sync = False
 
                     for sync in self.sync_symbols:
@@ -627,7 +627,7 @@ class SA:
                         break
 
                     current_terminal = token.type
-                    current_state = stack[-1].state
+                    current_state = stack[-1].state_id
 
                     if current_terminal in self.sync_symbols:
                         action_test = self.table_action[current_state].get(current_terminal, SAActionReject())
@@ -961,7 +961,7 @@ class SAUtils:
     
     @staticmethod
     def compile(sa: SA, dfa: DFA) -> None:
-        sa.starting_state = dfa.start_state
+        sa.starting_state_id = dfa.start_state.id
         SAUtils._compile_table_action(sa, dfa)
         SAUtils._compile_table_new_state(sa, dfa)
 
@@ -973,7 +973,7 @@ class SAUtils:
             for t in (sa.terminals | {None}):
                 row[t] = SAActionReject()
 
-            sa.table_action[state] = row
+            sa.table_action[state.id] = row
 
     @staticmethod
     def _compile_table_action(sa: SA, dfa: DFA) -> None:
@@ -995,7 +995,7 @@ class SAUtils:
                     next_state = state.move(symbol_at_idx)
 
                     if isinstance(symbol_at_idx, Terminal) and next_state is not None:
-                        can_take_actions.append((SAActionShift(next_state), symbol_at_idx))
+                        can_take_actions.append((SAActionShift(next_state.id), symbol_at_idx))
 
             actions_by_terminal: Dict[Optional[Terminal], List[SAAction]] = {}
 
@@ -1024,17 +1024,17 @@ class SAUtils:
                         chosen = reduces[0]
 
                 if chosen is not None:
-                    sa.table_action[state][terminal] = chosen
+                    sa.table_action[state.id][terminal] = chosen
 
     @staticmethod
     def _make_table_new_state_keys(sa: SA, dfa: DFA) -> None:
         for state in dfa.states:
-            row: Dict[Nonterminal, Optional[DFAState]] = {}
+            row: Dict[Nonterminal, Optional[int]] = {}
 
             for nt in sa.nonterminals:
                 row[nt] = None
 
-            sa.table_new_state[state] = row
+            sa.table_new_state[state.id] = row
 
     @staticmethod
     def _compile_table_new_state(sa: SA, dfa: DFA) -> None:
@@ -1043,10 +1043,12 @@ class SAUtils:
         for state in dfa.states:
             for symbol, target in state.moves.items():
                 if isinstance(symbol, Nonterminal):
-                    sa.table_new_state[state][symbol] = target
+                    sa.table_new_state[state.id][symbol] = target.id
 
 def make_sa_file(filename: str, sa: SA) -> None:
     b64_sa: str = base64.b64encode(pickle.dumps(sa)).decode('utf-8')
+
+    log(f'[Info] Generated SA size: {len(b64_sa)}')
 
     all_src = inspect.getsource(sys.modules[__name__])
     before_preamble_end = all_src.split('# end preamble', 1)[0]
@@ -1060,7 +1062,6 @@ def make_sa_file(filename: str, sa: SA) -> None:
         ('lr_item_src', inspect.getsource(LRItem)),
         ('right_side_src', inspect.getsource(RightSide)),
         ('nfa_state_src', inspect.getsource(NFAState)),
-        ('dfa_state_src', inspect.getsource(DFAState)),
         ('nonterminal_src', inspect.getsource(Nonterminal)),
         ('terminal_src', inspect.getsource(Terminal)),
         ('sa_action_type_src', inspect.getsource(SAActionType)),
