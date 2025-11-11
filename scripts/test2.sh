@@ -75,8 +75,8 @@ for dict in $pattern; do
         ((fail_count++))
     fi
 
-    # Clean up generated SA.py for next test
-    rm -f src/lab2/analizator/SA.py
+    # Clean up generated analizator directory for next test
+    rm -rf src/lab2/analizator
 done
 
 # End total timer
