@@ -1153,7 +1153,7 @@ def sa_main() -> None:
     out(ast)
 
 def main() -> None:
-    print(f'[Info] Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
+    log(f'[Info] Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
 
     sa: SA = SAUtils.from_stdin()
     
