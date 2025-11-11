@@ -26,6 +26,12 @@ fi
 
 found_any=false
 
+# Create analizator directory if it doesn't exist
+mkdir -p src/lab1/analizator
+
+# Start total timer (in milliseconds)
+total_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+
 for dict in $pattern; do
     [ -d "$dict" ] || continue
     found_any=true
@@ -38,25 +44,54 @@ for dict in $pattern; do
         continue
     fi
 
-    python3.8 src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
-    python3.8 LA.py <"$dict/test.in" >output.txt 2>/dev/null
+    # Start test timer (in milliseconds)
+    test_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
 
+    # Step 1: Run GLA.py with .lan file on stdin to generate LA.py
+    python3.8 src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
+
+    if [[ ! -f "src/lab1/analizator/LA.py" ]]; then
+        echo -e "${RED}  ⚠ Failed to generate LA.py${RESET}\n"
+        ((fail_count++))
+        continue
+    fi
+
+    # Get size of generated file
+    la_size=$(wc -c < "src/lab1/analizator/LA.py")
+    
+    # Step 2: Run the generated LA.py with .in file on stdin
+    python3.8 src/lab1/analizator/LA.py <"$dict/test.in" >output.txt 2>/dev/null
+
+    # End test timer
+    test_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    test_time_ms=$((test_end - test_start))
+    test_time=$(awk "BEGIN {printf \"%.3f\", $test_time_ms / 1000}")
+
+    # Step 3: Compare stdout with .out file
     if diff -q output.txt "$dict/test.out" >/dev/null; then
-        echo -e "${GREEN}  ✔ PASS${RESET}\n"
+        echo -e "${GREEN}  ✔ PASS${RESET} (${test_time}s, LA.py: ${la_size} bytes)\n"
         ((pass_count++))
     else
-        echo -e "${RED}  ✘ FAIL${RESET}"
+        echo -e "${RED}  ✘ FAIL${RESET} (${test_time}s, LA.py: ${la_size} bytes)"
         diff --color=always output.txt "$dict/test.out" | sed 's/^/    /'
         echo
         ((fail_count++))
     fi
+
+    # Clean up generated LA.py for next test
+    rm -f src/lab1/analizator/LA.py
 done
+
+# End total timer
+total_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+total_time_ms=$((total_end - total_start))
+total_time=$(awk "BEGIN {printf \"%.3f\", $total_time_ms / 1000}")
 
 if [ "$found_any" = false ]; then
     echo -e "${RED}No matching tests found for pattern: ${pattern}${RESET}"
 fi
 
-rm -f output.txt LA.py
+rm -f output.txt
 
 total=$((pass_count + fail_count))
 echo -e "${BOLD}${BLUE}==============================${RESET}"
@@ -64,4 +99,6 @@ echo -e " ${BOLD}Test Summary:${RESET}"
 echo -e "   ${GREEN}✔ Passed:${RESET} $pass_count"
 echo -e "   ${RED}✘ Failed:${RESET} $fail_count"
 echo -e "   ${BOLD}Total:${RESET} $total"
+echo -e "   ${BOLD}Total Time:${RESET} ${total_time}s"
 echo -e "${BOLD}${BLUE}==============================${RESET}"
+

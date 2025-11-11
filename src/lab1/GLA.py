@@ -1,3 +1,4 @@
+import os
 import inspect
 from collections import OrderedDict
 
@@ -560,7 +561,12 @@ def main() -> None:
     la = LAUtils.from_stdin()
 
     if la.re_automaton:
-        make_la_file(OUTPUT_FILENAME, la)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, OUTPUT_FILENAME)
+        
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+        make_la_file(output_path, la)
     else:
         raise Exception('LA must be compiled before generating file')
     

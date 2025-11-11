@@ -26,6 +26,9 @@ fi
 
 found_any=false
 
+# Start total timer (in milliseconds)
+total_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+
 for dict in $pattern; do
     [ -d "$dict" ] || continue
     found_any=true
@@ -38,6 +41,9 @@ for dict in $pattern; do
         continue
     fi
 
+    # Start test timer (in milliseconds)
+    test_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+
     # Step 1: Run GSA.py with .san file on stdin to generate SA.py
     python3.8 src/lab2/GSA.py <"$dict/test.san" 2>/dev/null
 
@@ -47,15 +53,23 @@ for dict in $pattern; do
         continue
     fi
 
+    # Get size of generated file
+    sa_size=$(wc -c < "src/lab2/analizator/SA.py")
+    
     # Step 2: Run the generated SA.py with .in file on stdin
     python3.8 src/lab2/analizator/SA.py <"$dict/test.in" >output.txt 2>/dev/null
 
+    # End test timer
+    test_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    test_time_ms=$((test_end - test_start))
+    test_time=$(awk "BEGIN {printf \"%.3f\", $test_time_ms / 1000}")
+
     # Step 3: Compare stdout with .out file
     if diff -q output.txt "$dict/test.out" >/dev/null; then
-        echo -e "${GREEN}  ✔ PASS${RESET}\n"
+        echo -e "${GREEN}  ✔ PASS${RESET} (${test_time}s, SA.py: ${sa_size} bytes)\n"
         ((pass_count++))
     else
-        echo -e "${RED}  ✘ FAIL${RESET}"
+        echo -e "${RED}  ✘ FAIL${RESET} (${test_time}s, SA.py: ${sa_size} bytes)"
         diff -y --color=always output.txt "$dict/test.out" | sed 's/^/    /'
         echo
         ((fail_count++))
@@ -64,6 +78,11 @@ for dict in $pattern; do
     # Clean up generated SA.py for next test
     rm -f src/lab2/analizator/SA.py
 done
+
+# End total timer
+total_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+total_time_ms=$((total_end - total_start))
+total_time=$(awk "BEGIN {printf \"%.3f\", $total_time_ms / 1000}")
 
 if [ "$found_any" = false ]; then
     echo -e "${RED}No matching tests found for pattern: ${pattern}${RESET}"
@@ -77,4 +96,6 @@ echo -e " ${BOLD}Test Summary:${RESET}"
 echo -e "   ${GREEN}✔ Passed:${RESET} $pass_count"
 echo -e "   ${RED}✘ Failed:${RESET} $fail_count"
 echo -e "   ${BOLD}Total:${RESET} $total"
+echo -e "   ${BOLD}Total Time:${RESET} ${total_time}s"
 echo -e "${BOLD}${BLUE}==============================${RESET}"
+
