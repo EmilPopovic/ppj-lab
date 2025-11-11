@@ -6,6 +6,7 @@ from typing import Generator, Tuple, FrozenSet
 # begin preamble
 import sys
 import time
+import zlib
 import base64
 import pickle
 from enum import Enum
@@ -657,7 +658,9 @@ class SA:
     
     @staticmethod
     def from_pickle(b64_pickle: str) -> 'SA':
-        sa: SA = pickle.loads(base64.b64decode(b64_pickle.encode('utf-8')))
+        compressed = base64.b64decode(b64_pickle.encode('utf-8'))
+        pickled = zlib.decompress(compressed)
+        sa: SA = pickle.loads(pickled)
         return sa
 
 class SAUtils:
@@ -964,6 +967,20 @@ class SAUtils:
         sa.starting_state_id = dfa.start_state.id
         SAUtils._compile_table_action(sa, dfa)
         SAUtils._compile_table_new_state(sa, dfa)
+        SAUtils._cleanup_for_pickle(sa)
+
+    @staticmethod
+    def _cleanup_for_pickle(sa: SA) -> None:
+        for nt in sa.nonterminals:
+            for rs in nt.right_sides:
+                rs.states = []
+                rs.first = set()
+                rs.is_nullable = None
+            
+            nt.states = set()
+            nt.first = set()
+            nt.in_nt_only_production_of = None
+            nt._right_sides_list = None
 
     @staticmethod
     def _compile_table_action(sa: SA, dfa: DFA) -> None:
@@ -1023,7 +1040,9 @@ class SAUtils:
                     sa.table_new_state.setdefault(state.id, {})[symbol] = target.id
 
 def make_sa_file(filename: str, sa: SA) -> None:
-    b64_sa: str = base64.b64encode(pickle.dumps(sa)).decode('utf-8')
+    pickled = pickle.dumps(sa)
+    compressed = zlib.compress(pickled, level=9)
+    b64_sa: str = base64.b64encode(compressed).decode('utf-8')
 
     log(f'[Info] Generated SA size: {len(b64_sa)}')
 
