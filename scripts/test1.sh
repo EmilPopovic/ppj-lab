@@ -19,7 +19,7 @@ pass_count=0
 fail_count=0
 
 if [ -n "$1" ]; then
-    pattern="tests/lab1_teza/${1}_*"
+    pattern="tests/lab1_teza/${1}*"
 else
     pattern="tests/lab1_teza/*"
 fi
@@ -44,11 +44,15 @@ for dict in $pattern; do
         continue
     fi
 
-    # Start test timer (in milliseconds)
-    test_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    # Start generation timer (in milliseconds)
+    gen_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
 
     # Step 1: Run GLA.py with .lan file on stdin to generate LA.py
     python3.8 src/lab1/GLA.py <"$dict/test.lan" 2>/dev/null
+
+    # End generation timer
+    gen_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    gen_time_ms=$((gen_end - gen_start))
 
     if [[ ! -f "src/lab1/analizator/LA.py" ]]; then
         echo -e "${RED}  ⚠ Failed to generate LA.py${RESET}\n"
@@ -59,20 +63,22 @@ for dict in $pattern; do
     # Get size of generated file
     la_size=$(wc -c < "src/lab1/analizator/LA.py")
     
+    # Start lexing timer (in milliseconds)
+    lex_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    
     # Step 2: Run the generated LA.py with .in file on stdin
     python3.8 src/lab1/analizator/LA.py <"$dict/test.in" >output.txt 2>/dev/null
 
-    # End test timer
-    test_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
-    test_time_ms=$((test_end - test_start))
-    test_time=$(awk "BEGIN {printf \"%.3f\", $test_time_ms / 1000}")
+    # End lexing timer
+    lex_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    lex_time_ms=$((lex_end - lex_start))
 
     # Step 3: Compare stdout with .out file
     if diff -q output.txt "$dict/test.out" >/dev/null; then
-        echo -e "${GREEN}  ✔ PASS${RESET} (${test_time}s, LA.py: ${la_size} bytes)\n"
+        echo -e "${GREEN}  ✔ PASS${RESET} (gen: ${gen_time_ms}ms, lex: ${lex_time_ms}ms, LA.py: ${la_size} bytes)\n"
         ((pass_count++))
     else
-        echo -e "${RED}  ✘ FAIL${RESET} (${test_time}s, LA.py: ${la_size} bytes)"
+        echo -e "${RED}  ✘ FAIL${RESET} (gen: ${gen_time_ms}ms, lex: ${lex_time_ms}ms, LA.py: ${la_size} bytes)"
         diff --color=always output.txt "$dict/test.out" | sed 's/^/    /'
         echo
         ((fail_count++))

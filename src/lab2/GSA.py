@@ -511,11 +511,9 @@ class SA:
 
         self.starting_state_id: Optional[int] = None
 
-        # Tables can store either objects or IDs depending on optimization
         self.table_action: Dict[int, Dict[Optional[Terminal] | int, SAAction]] = {}
         self.table_new_state: Dict[int, Dict[Nonterminal | int, Optional[int]]] = {}
         
-        # ID mappings for optimized tables (set during optimization)
         self._terminal_id_map: Optional[List[Optional[Terminal]]] = None
         self._nonterminal_id_map: Optional[List[Nonterminal]] = None
 
@@ -557,11 +555,9 @@ class SA:
         state_actions = self.table_action.get(state_id, {})
         
         if self._is_optimized():
-            # Tables use terminal IDs as keys
             terminal_id = terminal.id if terminal is not None else -1
             return state_actions.get(terminal_id, SAActionReject())
         else:
-            # Tables use terminal objects as keys
             return state_actions.get(terminal, SAActionReject())
 
     def _get_new_state(self, state_id: int, nonterminal: Nonterminal) -> Optional[int]:
@@ -569,10 +565,8 @@ class SA:
         state_moves = self.table_new_state.get(state_id, {})
         
         if self._is_optimized():
-            # Tables use nonterminal IDs as keys
             return state_moves.get(nonterminal.id)
         else:
-            # Tables use nonterminal objects as keys
             return state_moves.get(nonterminal)
 
     def parse(self, tokens: List[Optional[Token]]) -> AST:
@@ -1025,43 +1019,35 @@ class SAUtils:
     @staticmethod
     def _optimize_tables(sa: SA) -> None:
         """Convert tables to use integer IDs instead of object references"""
-        # Create ID mappings
         terminal_list = sorted(sa.terminals, key=lambda t: t.id)
         nonterminal_list = sorted(sa.nonterminals, key=lambda nt: nt.id)
         
-        # Store mappings for deserialization (EOF = None gets ID -1)
         sa._terminal_id_map = terminal_list + [None]
         sa._nonterminal_id_map = nonterminal_list
         
-        # Optimize action table: Terminal/None -> int
         optimized_action: Dict[int, Dict[int | Optional[Terminal], SAAction]] = {}
         for state_id, actions in sa.table_action.items():
             optimized_action[state_id] = {}
             for terminal, action in actions.items():
                 if isinstance(terminal, int):
-                    # Already optimized
                     terminal_id = terminal
                 else:
-                    # Convert object to ID
                     terminal_id = terminal.id if terminal is not None else -1
                 optimized_action[state_id][terminal_id] = action
         
-        sa.table_action = optimized_action  # type: ignore
+        sa.table_action = optimized_action
         
-        # Optimize new_state table: Nonterminal -> int
         optimized_new_state: Dict[int, Dict[int | Nonterminal, Optional[int]]] = {}
         for state_id, moves in sa.table_new_state.items():
             optimized_new_state[state_id] = {}
             for nonterminal, new_state in moves.items():
                 if isinstance(nonterminal, int):
-                    # Already optimized
                     nt_id = nonterminal
                 else:
-                    # Convert object to ID
                     nt_id = nonterminal.id
                 optimized_new_state[state_id][nt_id] = new_state
         
-        sa.table_new_state = optimized_new_state  # type: ignore
+        sa.table_new_state = optimized_new_state
 
     @staticmethod
     def _compile_table_action(sa: SA, dfa: DFA) -> None:

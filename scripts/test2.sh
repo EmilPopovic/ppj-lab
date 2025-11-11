@@ -19,7 +19,7 @@ pass_count=0
 fail_count=0
 
 if [ -n "$1" ]; then
-    pattern="tests/lab2_teza/${1}_*"
+    pattern="tests/lab2_teza/${1}*"
 else
     pattern="tests/lab2_teza/*"
 fi
@@ -41,11 +41,15 @@ for dict in $pattern; do
         continue
     fi
 
-    # Start test timer (in milliseconds)
-    test_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    # Start generation timer (in milliseconds)
+    gen_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
 
     # Step 1: Run GSA.py with .san file on stdin to generate SA.py
     python3.8 src/lab2/GSA.py <"$dict/test.san" 2>/dev/null
+
+    # End generation timer
+    gen_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    gen_time_ms=$((gen_end - gen_start))
 
     if [[ ! -f "src/lab2/analizator/SA.py" ]]; then
         echo -e "${RED}  ⚠ Failed to generate SA.py${RESET}\n"
@@ -56,20 +60,22 @@ for dict in $pattern; do
     # Get size of generated file
     sa_size=$(wc -c < "src/lab2/analizator/SA.py")
     
+    # Start parsing timer (in milliseconds)
+    parse_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    
     # Step 2: Run the generated SA.py with .in file on stdin
     python3.8 src/lab2/analizator/SA.py <"$dict/test.in" >output.txt 2>/dev/null
 
-    # End test timer
-    test_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
-    test_time_ms=$((test_end - test_start))
-    test_time=$(awk "BEGIN {printf \"%.3f\", $test_time_ms / 1000}")
+    # End parsing timer
+    parse_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    parse_time_ms=$((parse_end - parse_start))
 
     # Step 3: Compare stdout with .out file
     if diff -q output.txt "$dict/test.out" >/dev/null; then
-        echo -e "${GREEN}  ✔ PASS${RESET} (${test_time}s, SA.py: ${sa_size} bytes)\n"
+        echo -e "${GREEN}  ✔ PASS${RESET} (gen: ${gen_time_ms}ms, parse: ${parse_time_ms}ms, SA.py: ${sa_size} bytes)\n"
         ((pass_count++))
     else
-        echo -e "${RED}  ✘ FAIL${RESET} (${test_time}s, SA.py: ${sa_size} bytes)"
+        echo -e "${RED}  ✘ FAIL${RESET} (gen: ${gen_time_ms}ms, parse: ${parse_time_ms}ms, SA.py: ${sa_size} bytes)"
         diff -y --color=always output.txt "$dict/test.out" | sed 's/^/    /'
         echo
         ((fail_count++))

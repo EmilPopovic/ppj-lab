@@ -1,13 +1,16 @@
-test1:
-	./scripts/test1.sh
+1:
+	./scripts/test1.sh $(filter-out 1,$(MAKECMDGOALS))
 
-test2:
-	./scripts/test2.sh
+2:
+	./scripts/test2.sh $(filter-out 2,$(MAKECMDGOALS))
 
-test3:
-	./scripts/test3.sh
+3:
+	./scripts/test3.sh $(filter-out 3,$(MAKECMDGOALS))
 
-test4:
-	./scripts/test4.sh
+4:
+	./scripts/test4.sh $(filter-out 4,$(MAKECMDGOALS))
 
-.PHONY: test1 test2 test3 test4
+%:
+	@:
+
+.PHONY: 1 2 3 4
