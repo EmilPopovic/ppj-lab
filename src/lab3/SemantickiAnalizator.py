@@ -54,40 +54,8 @@ class ParseTree:
     def add_child(self, child: 'ParseTree | Token | None') -> None:
         self.children.append(child)
 
-    @staticmethod
-    def from_stdin() -> 'ParseTree':
-        return ParseTree.from_iter(iter(sys.stdin))
-
-    @staticmethod
-    def from_iter(lines: Iterator[str]) -> 'ParseTree':
-        starting_nt, _ = get_line(lines)
-        if starting_nt is None:
-            raise ValueError('[FATAL] Empty file')
-        return ParseTree.__from_str_inner(starting_nt, None, lines, depth=0)[0]
-    
-    @staticmethod
-    def __from_str_inner(curr_root: str, parent: 'ParseTree | None', lines: Iterator[str], depth: int) -> 'tuple[ParseTree, str | None, int]':
-        tree = ParseTree(Nonterminal(curr_root), parent)
-        do_next = True
-        line = curr_root
-        inner_depth = depth
-
-        while True:
-            if do_next:
-                line, inner_depth = get_line(lines)
-            do_next = True
-
-            if inner_depth <= depth or line is None:
-                return tree, line, inner_depth
-
-            if line.startswith('<'):
-                subtree, line, inner_depth = ParseTree.__from_str_inner(line, tree, lines, depth+1)
-                tree.add_child(subtree)
-                do_next = False
-            elif line.startswith('$'):
-                tree.add_child(None)
-            else:
-                tree.add_child(Token.from_str(line))
+    def validate(self) -> str | None:
+        ...
     
     def __repr__(self) -> str:
         return self.__repr_inner(0)[:-1]
@@ -106,10 +74,45 @@ class ParseTree:
 
         return result
 
-def main() -> None:
-    tree = ParseTree.from_stdin()
+class ParseTreeFactory:
+    @staticmethod
+    def from_stdin() -> 'ParseTree':
+        return ParseTreeFactory.from_iter(iter(sys.stdin))
 
-    log(tree)
+    @staticmethod
+    def from_iter(lines: Iterator[str]) -> 'ParseTree':
+        starting_nt, _ = get_line(lines)
+        if starting_nt is None:
+            raise ValueError('[FATAL] Empty file')
+        return ParseTreeFactory.__from_str_inner(starting_nt, None, lines, depth=0)[0]
+    
+    @staticmethod
+    def __from_str_inner(curr_root: str, parent: 'ParseTree | None', lines: Iterator[str], depth: int) -> 'tuple[ParseTree, str | None, int]':
+        tree = ParseTree(Nonterminal(curr_root), parent)
+        do_next = True
+        line = curr_root
+        inner_depth = depth
+
+        while True:
+            if do_next:
+                line, inner_depth = get_line(lines)
+            do_next = True
+
+            if inner_depth <= depth or line is None:
+                return tree, line, inner_depth
+
+            if line.startswith('<'):
+                subtree, line, inner_depth = ParseTreeFactory.__from_str_inner(line, tree, lines, depth+1)
+                tree.add_child(subtree)
+                do_next = False
+            elif line.startswith('$'):
+                tree.add_child(None)
+            else:
+                tree.add_child(Token.from_str(line))
+
+def main() -> None:
+    tree = ParseTreeFactory.from_stdin()
+    tree.validate()
 
 if __name__ == '__main__':
     main()
