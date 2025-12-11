@@ -333,11 +333,41 @@ class ParseTree:
             self.root.add_attr('type', Type('int'))
             self.root.add_attr('is_l_expr', False)
 
+    def validate_lista_argumenata(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<izraz_pridruzivanja>':
+            nested_error = first_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            first_child_type = first_child.root.get_attr('type')
+            assert isinstance(first_child_type, Type)
+            
+            self.root.add_attr('types', [first_child_type])
+        
+        elif first_child.name == '<lista_argumenata>':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = first_child.validate_lista_argumenata() or third_child.validate_izraz()
+            if nested_error:
+                return nested_error
+            
+            first_child_types = first_child.root.get_attr('types')
+            assert isinstance(first_child_types, list)
+
+            third_child_type = third_child.root.get_attr('type')
+            assert isinstance(third_child_type, Type)
+
+            first_child_types.append(third_child_type)
+    
+    def validate_izraz_pridruzivanja(self) -> str | None:
+        ...
+
     def validate_izraz(self) -> str | None:
         ... 
-
-    def validate_lista_argumenata(self) -> str | None:
-        ...
 
     @property
     def error_str(self) -> str:
