@@ -374,16 +374,15 @@ class ParseTree:
 
     def validate_unarni_izraz(self) -> str | None:
         first_child = self.children[0]
-        assert isinstance(first_child, ParseTree)
 
-        if first_child.name == '<postfiks_izraz>':
+        if isinstance(first_child, ParseTree) and first_child.name == '<postfiks_izraz>':
             nested_error = first_child.validate_postfiks_izraz()
             if nested_error:
                 return nested_error
             
             self.root.copy_attr_from(first_child.root, ['type', 'is_l_expr'])
 
-        elif first_child.name in ['OP_INC', 'OP_DEC']:
+        elif isinstance(first_child, Token) and first_child.name in ['OP_INC', 'OP_DEC']:
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
@@ -403,7 +402,7 @@ class ParseTree:
             self.root.add_attr('type', Type('int'))
             self.root.add_attr('is_l_expr', False)
 
-        elif first_child.name == '<unarni_operator>':
+        elif isinstance(first_child, ParseTree) and first_child.name == '<unarni_operator>':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
@@ -422,16 +421,15 @@ class ParseTree:
 
     def validate_cast_izraz(self) -> str | None:
         first_child = self.children[0]
-        assert isinstance(first_child, ParseTree)
 
-        if first_child.name == '<unarni_izraz>':
+        if isinstance(first_child, ParseTree) and first_child.name == '<unarni_izraz>':
             nested_error = first_child.validate_unarni_izraz()
             if nested_error:
                 return nested_error
             
             self.root.copy_attr_from(first_child.root, ['type', 'is_l_expr'])
 
-        elif first_child.name == 'L_ZAGRADA':
+        elif isinstance(first_child, Token) and first_child.name == 'L_ZAGRADA':
             second_child = self.children[1]
             fourth_child = self.children[3]
             assert isinstance(second_child, ParseTree)
@@ -454,9 +452,8 @@ class ParseTree:
     
     def validate_ime_tipa(self) -> str | None:
         first_child = self.children[0]
-        assert isinstance(first_child, ParseTree)
 
-        if first_child.name == '<specifikator_tipa>':
+        if isinstance(first_child, ParseTree) and first_child.name == '<specifikator_tipa>':
             nested_error = first_child.validate_specifikator_tipa()
             if nested_error:
                 return nested_error
@@ -466,7 +463,7 @@ class ParseTree:
             
             self.root.add_attr('type', first_child_type)
 
-        elif first_child.name == 'KR_CONST':
+        elif isinstance(first_child, Token) and first_child.name == 'KR_CONST':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
@@ -483,7 +480,17 @@ class ParseTree:
             self.root.add_attr('type', Type(second_child_type.name, is_const=True, nested_type=second_child_type.nested_type))
 
     def validate_specifikator_tipa(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, Token)
+
+        if first_child.name == 'KR_VOID':
+            self.root.add_attr('type', Type('void'))
+        
+        elif first_child.name == 'KR_CHAR':
+            self.root.add_attr('type', Type('char'))
+
+        elif first_child.name == 'KR_INT':
+            self.root.add_attr('type', Type('int'))
 
     def validate_izraz_pridruzivanja(self) -> str | None:
         ...
