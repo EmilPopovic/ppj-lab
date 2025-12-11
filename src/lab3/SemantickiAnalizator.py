@@ -193,24 +193,13 @@ class ParseTree:
     def add_child(self, child: 'ParseTree | Token') -> None:
         self.children.append(child)
 
-    @property
-    def validators(self) -> dict[str, Callable[[], str | None]]:
-        return {
-            'prijevodna_jedinica': self.validate_prijevodna_jedinica,
-        }
-
     def validate(self) -> str | None:
-        for child in self.children:
-            if not isinstance(child, ParseTree):
-                continue
-            
-            error = self.validators.get(child.name, child.validate)()
-            if error:
-                return error
+        nested_error = self.validate_prijevodna_jedinica()
+        if nested_error:
+            return nested_error
         
-        if self.parent:
-            self.parent.root.attributes.update(self.root.attributes)
-    
+        ...
+
     def validate_primarni_izraz(self) -> str | None:
         first_child = self.children[0]
         assert isinstance(first_child, Token)
