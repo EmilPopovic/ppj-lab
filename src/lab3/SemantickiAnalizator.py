@@ -975,10 +975,97 @@ class ParseTree:
             self.root.add_attr('type', first_child_type)
 
     def validate_naredba_grananja(self) -> str | None:
-        ...
+        third_child = self.children[2]
+        assert isinstance(third_child, ParseTree)
+
+        nested_error = third_child.validate_izraz()
+        if nested_error:
+            return nested_error
+        
+        third_child_type = third_child.root.get_attr('type')
+        assert isinstance(third_child_type, Type)
+
+        if not third_child_type.implicitly_reduces_to(Type('int')):
+            return self.error_str
+        
+        fifth_child = self.children[4]
+        assert isinstance(fifth_child, ParseTree)
+
+        nested_error = fifth_child.validate_naredba()
+        if nested_error:
+            return nested_error
+
+        if len(self.children) > 5:
+            seventh_child = self.children[6]
+            assert isinstance(seventh_child, ParseTree)
+
+            nested_error = third_child.validate_naredba()
+            if nested_error:
+                return nested_error
 
     def validate_naredba_petlje(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, Token)
+
+        if first_child.name == 'KR_WHILE':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = third_child.validate_izraz()
+            if nested_error:
+                return nested_error
+            
+            third_child_type = third_child.root.get_attr('type')
+            assert isinstance(third_child_type, Type)
+
+            if not third_child_type.implicitly_reduces_to(Type('int')):
+                return self.error_str
+            
+            fifth_child = self.children[4]
+            assert isinstance(fifth_child, ParseTree)
+
+            nested_error = fifth_child.validate_naredba()
+            if nested_error:
+                return nested_error
+            
+        elif first_child.name == 'KR_FOR':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+            fourth_child = self.children[3]
+            assert isinstance(fourth_child, ParseTree)
+
+            nested_error = third_child.validate_izraz_naredba() or fourth_child.validate_izraz_naredba()
+            if nested_error:
+                return nested_error
+            
+            fourth_child_type = fourth_child.root.get_attr('type')
+            assert isinstance(fourth_child_type, Type)
+
+            if not fourth_child_type.implicitly_reduces_to(Type('int')):
+                return self.error_str
+
+            if self.children[4].name == 'D_ZAGRADA':
+                sixth_child = self.children[5]
+                assert isinstance(sixth_child, ParseTree)
+
+                nested_error = sixth_child.validate_naredba()
+                if nested_error:
+                    return nested_error
+
+            elif self.children[4].name == '<izraz>':
+                fifth_child = self.children[4]
+                assert isinstance(fifth_child, ParseTree)
+
+                nested_error = fifth_child.validate_izraz()
+                if nested_error:
+                    return nested_error
+                
+                seventh_child = self.children[6]
+                assert isinstance(seventh_child, ParseTree)
+
+                nested_error = seventh_child.validate_izraz()
+                if nested_error:
+                    return nested_error
 
     def validate_naredba_skoka(self) -> str | None:
         ...
