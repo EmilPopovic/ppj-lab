@@ -901,6 +901,91 @@ class ParseTree:
             self.root.add_attr('type', third_child_type)
             self.root.add_attr('is_l_expr', False)
 
+    def validate_slozena_naredba(self) -> str | None:
+        second_child = self.children[1]
+        assert isinstance(second_child, ParseTree)
+
+        if second_child.name == '<lista_naredbi>':
+            nested_error = second_child.validate_lista_naredbi()
+            if nested_error:
+                return nested_error
+            
+        elif second_child.name == '<lista_deklaracija>':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = second_child.validate_lista_deklaracija() or third_child.validate_lista_naredbi()
+            if nested_error:
+                return nested_error
+
+    def validate_lista_naredbi(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<naredba>':
+            nested_error = first_child.validate_naredba()
+            if nested_error:
+                return nested_error
+            
+        elif first_child.name == '<lista_naredbi>':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+
+            nested_error = first_child.validate_lista_naredbi() or second_child.validate_naredba()
+            if nested_error:
+                return nested_error
+            
+    def validate_naredba(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        nested_error = None
+
+        if first_child.name == '<slozena_naredba>':
+            nested_error = first_child.validate_slozena_naredba()
+
+        elif first_child.name == '<izraz_naredba>':
+            nested_error = first_child.validate_izraz_naredba()
+
+        elif first_child.name == '<naredba_grananja>':
+            nested_error = first_child.validate_naredba_grananja()
+            
+        elif first_child.name == '<naredba_petlje>':
+            nested_error = first_child.validate_naredba_petlje()
+        
+        elif first_child.name == '<naredba_skoka>':
+            nested_error = first_child.validate_naredba_skoka()
+
+        return nested_error
+    
+    def validate_izraz_naredba(self) -> str | None:
+        first_child = self.children[0]
+
+        if isinstance(first_child, Token) and first_child.name == 'TOCKAZAREZ':
+            self.root.add_attr('type', Type('int'))
+
+        elif isinstance(first_child, ParseTree) and first_child.name == '<izraz>':
+            nested_error = first_child.validate_izraz()
+            if nested_error:
+                return nested_error
+            
+            first_child_type = first_child.root.get_attr('type')
+            assert isinstance(first_child_type, Type)
+            
+            self.root.add_attr('type', first_child_type)
+
+    def validate_naredba_grananja(self) -> str | None:
+        ...
+
+    def validate_naredba_petlje(self) -> str | None:
+        ...
+
+    def validate_naredba_skoka(self) -> str | None:
+        ...
+
+    def validate_lista_deklaracija(self) -> str | None:
+        ...
+
     @property
     def error_str(self) -> str:
         res = f'{self.name} ::='
