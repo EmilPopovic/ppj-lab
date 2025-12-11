@@ -1,5 +1,5 @@
 import sys
-from typing import Iterator, Callable
+from typing import Iterator
 
 def out(*args, **kwargs) -> None:
     """Use this function for program output"""
