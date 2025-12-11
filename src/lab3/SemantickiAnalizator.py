@@ -20,7 +20,7 @@ def get_line(iter: Iterator[str]) -> tuple[str | None, int]:
         return None, -1
 
 class Type:
-    def __init__(self, name: str, is_const: bool = False, nested_type: 'Type | None' = None) -> None:
+    def __init__(self, name: str, is_const: bool = False, nested_type: 'Type | FuncSignature | None' = None) -> None:
         self.name: str = name
         self.is_const: bool = is_const
         self.nested_type: Type | FuncSignature | None = nested_type
@@ -453,6 +453,36 @@ class ParseTree:
             self.root.add_attr('is_l_expr', False)
     
     def validate_ime_tipa(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<specifikator_tipa>':
+            nested_error = first_child.validate_specifikator_tipa()
+            if nested_error:
+                return nested_error
+            
+            first_child_type = first_child.root.get_attr('type')
+            assert isinstance(first_child_type, Type)
+            
+            self.root.add_attr('type', first_child_type)
+
+        elif first_child.name == 'KR_CONST':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+
+            nested_error = second_child.validate_specifikator_tipa()
+            if nested_error:
+                return nested_error
+            
+            second_child_type = second_child.root.get_attr('type')
+            assert isinstance(second_child_type, Type)
+
+            if second_child_type.name == 'void':
+                return self.error_str
+            
+            self.root.add_attr('type', Type(second_child_type.name, is_const=True, nested_type=second_child_type.nested_type))
+
+    def validate_specifikator_tipa(self) -> str | None:
         ...
 
     def validate_izraz_pridruzivanja(self) -> str | None:
