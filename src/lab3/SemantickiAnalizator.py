@@ -211,9 +211,6 @@ class ParseTree:
         if self.parent:
             self.parent.root.attributes.update(self.root.attributes)
     
-    def validate_prijevodna_jedinica(self) -> str | None:
-        ...
-    
     def validate_primarni_izraz(self) -> str | None:
         first_child = self.children[0]
         assert isinstance(first_child, Token)
@@ -1070,7 +1067,65 @@ class ParseTree:
     def validate_naredba_skoka(self) -> str | None:
         ...
 
+    def validate_prijevodna_jedinica(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<vanjska_deklaracija>':
+            nested_error = first_child.validate_vanjska_deklaracija()
+            if nested_error:
+                return nested_error
+
+        elif first_child.name == '<prijevodna_jedinica>':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+
+            nested_error = first_child.validate_prijevodna_jedinica() or second_child.validate_vanjska_deklaracija()
+            if nested_error:
+                return nested_error
+
+    def validate_vanjska_deklaracija(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        nested_error = None
+
+        if first_child.name == '<definicija_funkcije>':
+            nested_error = first_child.validate_definicija_funkcije()
+
+        elif first_child.name == '<deklaracija>':
+            nested_error = first_child.validate_deklaracija()
+
+        return nested_error
+
+    def validate_definicija_funkcije(self) -> str | None:
+        ...
+
+    def validate_lista_parametara(self) -> str | None:
+        ...
+
+    def validate_deklaracija_parametara(self) -> str | None:
+        ...
+
     def validate_lista_deklaracija(self) -> str | None:
+        ...
+
+    def validate_deklaracija(self) -> str | None:
+        ...
+
+    def validate_lista_init_deklaratora(self) -> str | None:
+        ...
+
+    def validate_init_deklarator(self) -> str | None:
+        ...
+
+    def validate_izravni_deklarator(self) -> str | None:
+        ...
+
+    def validate_inicijalizator(self) -> str | None:
+        ...
+
+    def validate_lista_izraza_pridruzivanja(self) -> str | None:
         ...
 
     @property
