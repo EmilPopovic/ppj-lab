@@ -530,6 +530,44 @@ class ParseTree:
             self.root.add_attr('type', Type('int'))
             self.root.add_attr('is_l_expr', False)
 
+    def validate_aditivni_izraz(self) -> str | None:
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<multiplikativni_izraz>':
+            nested_error = first_child.validate_multiplikativni_izraz()
+            if nested_error:
+                return nested_error
+            
+            self.root.copy_attr_from(first_child.root, ['type', 'is_l_expr'])
+
+        elif first_child.name == '<aditivni_izraz>':
+            nested_error = first_child.validate_aditivni_izraz()
+            if nested_error:
+                return nested_error
+            
+            first_child_type = first_child.root.get_attr('type')
+            assert isinstance(first_child_type, Type)
+
+            if not first_child_type.implicitly_reduces_to(Type('int')):
+                return self.error_str
+
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+            
+            nested_error = third_child.validate_multiplikativni_izraz()
+            if nested_error:
+                return nested_error
+            
+            third_child_type = third_child.root.get_attr('type')
+            assert isinstance(third_child_type, Type)
+
+            if not third_child_type.implicitly_reduces_to(Type('int')):
+                return self.error_str
+            
+            self.root.add_attr('type', Type('int'))
+            self.root.add_attr('is_l_expr', False)
+
     def validate_izraz_pridruzivanja(self) -> str | None:
         ...
 
