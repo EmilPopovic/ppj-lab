@@ -19,12 +19,55 @@ def get_line(iter: Iterator[str]) -> tuple[str | None, int]:
     except StopIteration:
         return None, -1
 
+class Type:
+    def __init__(self, name: str, is_const: bool = False, nested_type: 'Type | None' = None) -> None:
+        self.name: str = name
+        self.is_const: bool = is_const
+        self.nested_type: Type | None = nested_type
+
 class Token:
     def __init__(self, name: str, line_number: int, source: str, symbol: 'Symbol | None' = None) -> None:
         self.name: str = name
         self.line_number: int = line_number
         self.source: str = source
         self.symbol: Symbol | None = symbol
+
+    @property
+    def is_int(self) -> bool:
+        try:
+            num = int(self.source)
+            return num < 2 ** 31 and num >= -(2 ** 31)
+        except ValueError:
+            return False
+        
+    @property
+    def is_char(self) -> bool:
+        try:
+            if self.source.startswith('\\'):
+                escape_map = {
+                    '\\t': '\t',
+                    '\\n': '\n',
+                    '\\0': '\0',
+                    "\\'": "'",
+                    '\\"': '"',
+                    '\\\\': '\\'
+                }
+                char = escape_map.get(self.source, self.source[1:])
+            else:
+                char = self.source
+            
+            ascii_val = ord(char) if len(char) == 1 else -1
+            return 0 <= ascii_val < 2 ** 8
+        except (TypeError, IndexError):
+            return False
+        
+    @property
+    def is_valid_str(self) -> bool:
+        without_backslash = self.source.replace('\\\\', '')[1:-2]
+        for i, c in enumerate(without_backslash):
+            if c == '\\' and (i == len(without_backslash) or without_backslash[i+1] not in ['t', 'n', '0', '\'', '"']):
+                return False
+        return True 
 
     @staticmethod
     def from_str(s: str, symbol: 'Symbol | None' = None) -> 'Token':
@@ -40,13 +83,30 @@ class Nonterminal:
         self.scope = scope
         self.attributes: dict[str, object] = {}
 
+    def add_attr(self, key: str, value: object) -> None:
+        self.attributes[key] = value
+
+    def get_attr(self, key: str) -> object:
+        return self.attributes[key]
+
+    def copy_attr_from(self, src: Nonterminal | Symbol, names: list[str]) -> None:
+        for name in names:
+            self.add_attr(name, src.get_attr(name))
+
     def __repr__(self) -> str:
         return self.name
     
 class Symbol:
-    def __init__(self, name: str, type: str | None) -> None:
+    def __init__(self, name: str, type: Type | None) -> None:
         self.name: str = name
-        self.type: str | None = type
+        self.type: Type | None = type
+        self.attributes: dict[str, object] = {}
+
+    def add_attr(self, key: str, value: object) -> None:
+        self.attributes[key] = value
+
+    def get_attr(self, key: str) -> object:
+        return self.attributes[key]
 
 class Scope:
     def __init__(self, parent: 'Scope | None', type: str) -> None:
@@ -56,6 +116,14 @@ class Scope:
 
     def add_child(self, child: 'Symbol | Scope') -> None:
         self.children.append(child)
+
+    def get_symbol(self, name: str) -> Symbol | None:        
+        with_name = [c for c in self.children if isinstance(c, Symbol) and c.name == name]
+        if len(with_name) > 0:
+            return with_name[0]
+        elif self.parent:
+            return self.parent.get_symbol(name)
+        return None
 
     def __repr__(self) -> str:
         return self.__repr_inner(0)[:-1]
@@ -78,6 +146,7 @@ class ParseTree:
     def __init__(self, root: Nonterminal, parent: 'ParseTree | None') -> None:
         self.root: Nonterminal = root
         self.name: str = self.root.name
+        self.scope: Scope = self.root.scope
         self.children: list[ParseTree | Token] = []
         self.parent: ParseTree | None = parent
 
@@ -107,9 +176,42 @@ class ParseTree:
     
     def validate_primarni_izraz(self) -> str | None:
         first_child = self.children[0]
-        if first_child.name == 'IDN':
-            ...
+        assert isinstance(first_child, Token)
+        symbol = self.scope.get_symbol(first_child.source)
 
+        if first_child.name == 'IDN':
+            if symbol is None:
+                return f'<primarni_izraz> ::= IDN({first_child.line_number},{first_child.source})'
+            self.root.copy_attr_from(symbol, ['type', 'is_l_expr'])
+            
+        elif first_child.name == 'BROJ':
+            if not first_child.is_int:
+                return f'<primarni_izraz> ::= BROJ({first_child.line_number},{first_child.source})'
+            self.root.add_attr('type', Type('int'))
+            self.root.add_attr('is_l_expr', False)
+
+        elif first_child.name == 'ZNAK':
+            if not first_child.is_char:
+                return f'<primarni_izraz> ::= ZNAK({first_child.line_number},{first_child.source})'
+            self.root.add_attr('type', Type('char'))
+            self.root.add_attr('is_l_expr', False)
+
+        elif first_child == 'NIZ_ZNAKOVA':
+            if not first_child.is_valid_str:
+                return f'<primarni_izraz> ::= NIZ_ZNAKOVA({first_child.line_number},{first_child.source})'
+            self.root.add_attr('type', Type('arr', nested_type=Type('char', is_const=True)))
+
+        elif first_child == 'L_ZAGRADA':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+            nested_error = second_child.validate_izraz()
+            if nested_error:
+                return nested_error
+            self.root.copy_attr_from(second_child.root, ['type', 'is_l_expr'])
+
+    def validate_izraz(self) -> str | None:
+        ... 
+            
 class TreeFactory:
     @staticmethod
     def from_stdin() -> 'tuple[ParseTree, Scope]':
