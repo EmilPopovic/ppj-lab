@@ -873,7 +873,33 @@ class ParseTree:
             self.root.add_attr('is_l_expr', False)
 
     def validate_izraz(self) -> str | None:
-        ... 
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<izraz_pridruzivanja>':
+            nested_error = first_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            self.root.copy_attr_from(first_child.root, ['type', 'is_l_expr'])
+
+        elif first_child.name == '<izraz>':
+            nested_error = first_child.validate_izraz()
+            if nested_error:
+                return nested_error
+
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+            
+            nested_error = third_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            third_child_type = third_child.root.get_attr('type')
+            assert isinstance(third_child_type, Type)
+            
+            self.root.add_attr('type', third_child_type)
+            self.root.add_attr('is_l_expr', False)
 
     @property
     def error_str(self) -> str:
