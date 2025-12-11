@@ -1,0 +1,2 @@
+# Ignore frisc simulator in laguage statistics
+scripts/frisc_sim/*.js linguist-vendored
