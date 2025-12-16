@@ -1478,6 +1478,8 @@ class ParseTree:
                 arg_types=[]
             )
 
+            self.root.add_attr('type', Type('function', nested_type=new_signature))
+
             if declared:
                 assert isinstance(declared.type, Type)                
 
@@ -1516,6 +1518,8 @@ class ParseTree:
                 return_type=root_ntype,
                 arg_types=third_child_types
             )
+
+            self.root.add_attr('type', Type('function', nested_type=new_signature))
 
             if declared:
                 assert isinstance(declared.type, Type)                
