@@ -1056,7 +1056,66 @@ class ParseTree:
                     return nested_error
 
     def validate_naredba_skoka(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, Token)
+
+        if first_child.name in ('KR_CONTINUE', 'KR_BREAK'):
+            loop: ParseTree | None = self
+            while loop and loop.name == '<naredba_petlje>':
+                loop = loop.parent
+
+            if loop is None:
+                return self.error_str
+
+        elif self.children[1].name == 'TOCKAZAREZ':
+            definition: ParseTree | None = self
+            while definition and definition.name == '<definicija_funkcije>':
+                definition = definition.parent
+
+            if definition is None:
+                return self.error_str
+            
+            definition_idn = definition.children[1]
+            assert isinstance(definition_idn, Token)
+
+            func = self.scope.get_symbol(definition_idn.source)
+            assert func is not None
+            assert func.type is not None
+            assert isinstance(func.type.nested_type, FuncSignature)
+            func_signature = func.type.nested_type
+
+            if func_signature.return_type != Type('void'):
+                return self.error_str
+
+        elif self.children[1].name == '<izraz>':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+
+            nested_error = second_child.validate_izraz()
+            if nested_error:
+                return nested_error
+
+            definition: ParseTree | None = self
+            while definition and definition.name == '<definicija_funkcije>':
+                definition = definition.parent
+
+            if definition is None:
+                return self.error_str
+            
+            definition_idn = definition.children[1]
+            assert isinstance(definition_idn, Token)
+
+            func = self.scope.get_symbol(definition_idn.source)
+            assert func is not None
+            assert func.type is not None
+            assert isinstance(func.type.nested_type, FuncSignature)
+            func_signature = func.type.nested_type
+
+            second_child_type = second_child.root.get_attr('type')
+            assert isinstance(second_child_type, Type)
+
+            if not second_child_type.implicitly_reduces_to(func_signature.return_type):
+                return self.error_str
 
     def validate_prijevodna_jedinica(self) -> str | None:
         first_child = self.children[0]
