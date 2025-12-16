@@ -1092,7 +1092,7 @@ class ParseTree:
                 seventh_child = self.children[6]
                 assert isinstance(seventh_child, ParseTree)
 
-                nested_error = seventh_child.validate_izraz()
+                nested_error = seventh_child.validate_naredba()
                 if nested_error:
                     return nested_error
 
@@ -1502,7 +1502,7 @@ class ParseTree:
             self.root.add_attr('elem_count', third_child_int)
 
         elif self.children[2].name == 'KR_VOID':
-            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.name]
+            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.source]
             
             new_signature = FuncSignature(
                 return_type=root_ntype,
@@ -1515,7 +1515,7 @@ class ParseTree:
                 declared = declared[0]
                 assert isinstance(declared.type, Type)                
 
-                if declared.type != 'function':
+                if declared.type.name != 'function':
                     return self.error_str
                 
                 declared_signature = declared.type.nested_type
@@ -1541,7 +1541,7 @@ class ParseTree:
             if nested_error:
                 return nested_error
             
-            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.name]
+            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.source]
 
             third_child_types = third_child.root.get_attr('types')
             assert isinstance(third_child_types, list)
@@ -1557,7 +1557,7 @@ class ParseTree:
                 declared = declared[0]
                 assert isinstance(declared.type, Type)                
 
-                if declared.type != 'function':
+                if declared.type.name != 'function':
                     return self.error_str
                 
                 declared_signature = declared.type.nested_type
