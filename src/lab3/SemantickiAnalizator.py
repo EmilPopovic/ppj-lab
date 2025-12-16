@@ -42,7 +42,7 @@ class Type:
         return False
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, 'Type'):
+        if isinstance(other, Type):
             return self.name == other.name and self.nested_type == other.nested_type
         return False
     
@@ -70,6 +70,9 @@ class FuncSignature:
         if isinstance(other, 'FuncSignature'):
             return self.return_type == other.return_type and self.arg_types == other.arg_types
         return False
+    
+    def __repr__(self) -> str:
+        return f'{self.arg_types} -> {self.return_type}'
 
 class Token:
     def __init__(self, name: str, line_number: int, source: str, symbol: Optional['Symbol'] = None) -> None:
@@ -150,7 +153,11 @@ class Symbol:
         self.is_l_expr: bool = is_l_expr
 
     def __repr__(self) -> str:
-        return f'[{self.type}] {self.name}'
+        if self.type and isinstance(self.type.nested_type, FuncSignature):
+            type = self.type.nested_type
+        else:
+            type = self.type
+        return f'[{type}] {self.name}'
 
 class Scope:
     root: Optional['Scope']
@@ -253,6 +260,23 @@ class ParseTree:
                 return nested_error
             self.root.copy_attr_from(first_child.root, ['type', 'is_l_expr'])
 
+        elif first_child.name == '<postfiks_izraz>' and self.children[1].name in ['OP_INC', 'OP_DEC']:
+            nested_error = first_child.validate_postfiks_izraz()
+            if nested_error:
+                return nested_error
+            
+            if not first_child.root.get_attr('is_l_expr'):
+                return self.error_str
+            
+            first_child_type = first_child.root.get_attr('type')
+            assert isinstance(first_child_type, Type)
+
+            if not first_child_type.implicitly_reduces_to(Type('int')):
+                return self.error_str
+            
+            self.root.add_attr('type', Type('int'))
+            self.root.add_attr('is_l_expr', False)
+
         elif first_child.name == '<postfiks_izraz>' and self.children[2].name == '<izraz>':
             nested_error = first_child.validate_postfiks_izraz()
             if nested_error:
@@ -319,22 +343,6 @@ class ParseTree:
             self.root.add_attr('type', first_child_return_type)
             self.root.add_attr('is_l_expr', False)
 
-        elif first_child.name == '<postfiks_izraz>' and self.children[1] in ['OP_INC', 'OP_DEC']:
-            nested_error = first_child.validate_postfiks_izraz()
-            if nested_error:
-                return nested_error
-            
-            if not first_child.root.get_attr('is_l_expr'):
-                return self.error_str
-            
-            first_child_type = first_child.root.get_attr('type')
-            assert isinstance(first_child_type, Type)
-
-            if not first_child_type.implicitly_reduces_to(Type('int')):
-                return self.error_str
-            
-            self.root.add_attr('type', Type('int'))
-            self.root.add_attr('is_l_expr', False)
 
     def validate_lista_argumenata(self) -> Optional[str]:
         first_child = self.children[0]
@@ -994,7 +1002,7 @@ class ParseTree:
             seventh_child = self.children[6]
             assert isinstance(seventh_child, ParseTree)
 
-            nested_error = third_child.validate_naredba()
+            nested_error = seventh_child.validate_naredba()
             if nested_error:
                 return nested_error
 
@@ -1195,7 +1203,7 @@ class ParseTree:
                     type=Type(
                         'function',
                         nested_type=FuncSignature(
-                            return_type=Type('void'),
+                            return_type=first_child_type,
                             arg_types=[]
                         )
                     ),
