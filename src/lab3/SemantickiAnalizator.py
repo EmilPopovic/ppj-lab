@@ -129,7 +129,7 @@ class Nonterminal:
     def get_attr(self, key: str) -> object:
         return self.attributes[key]
 
-    def copy_attr_from(self, src: Nonterminal | Symbol, names: list[str]) -> None:
+    def copy_attr_from(self, src: 'Nonterminal | Symbol', names: list[str]) -> None:
         for name in names:
             self.add_attr(name, src.get_attr(name))
 
@@ -149,6 +149,8 @@ class Symbol:
         return self.attributes[key]
 
 class Scope:
+    root: Scope | None
+
     def __init__(self, parent: 'Scope | None', type: str) -> None:
         self.parent: Scope | None = parent
         self.type: str = type
@@ -1088,13 +1090,143 @@ class ParseTree:
         return nested_error
 
     def validate_definicija_funkcije(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        nested_error = first_child.validate_ime_tipa()
+        if nested_error:
+            return nested_error
+        
+        first_child_type = first_child.root.get_attr('type')
+        assert isinstance(first_child_type, Type)
+
+        if first_child_type.is_const:
+            return self.error_str
+        
+        fourth_child = self.children[3]
+
+        second_child = self.children[1]
+        assert isinstance(second_child, Token)
+        
+        assert Scope.root is not None
+        root_func = Scope.root.get_symbol(second_child.source)
+
+        sixth_child = self.children[5]
+        assert isinstance(sixth_child, ParseTree)
+        
+        if isinstance(fourth_child, Token) and fourth_child.name == 'KR_VOID':
+            if root_func:
+                assert root_func.type is not None
+                func = root_func.type.nested_type
+                assert isinstance(func, FuncSignature)
+
+                if root_func.type != first_child_type or func.arg_types != []:
+                    return self.error_str
+
+            else:
+                root_func = Symbol(
+                    name=second_child.source,
+                    type=Type(
+                        'function',
+                        nested_type=FuncSignature(
+                            return_type=Type('void'),
+                            arg_types=[]
+                        )
+                    )
+                )
+
+                Scope.root.add_child(root_func)
+            
+        elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
+            nested_error = fourth_child.validate_lista_parametara()
+            if nested_error:
+                return nested_error
+            
+            if root_func:
+                assert root_func.type is not None
+                func = root_func.type.nested_type
+                assert isinstance(func, FuncSignature)
+
+                if fourth_child.root.get_attr('types') != func.arg_types:
+                    return self.error_str
+                
+                else:
+                    root_func = Symbol(
+                    name=second_child.source,
+                    type=Type(
+                        'function',
+                        nested_type=FuncSignature(
+                            return_type=Type('void'),
+                            arg_types=func.arg_types
+                        )
+                    )
+                )
+
+                Scope.root.add_child(root_func)
+
+                names = fourth_child.root.get_attr('names')
+                assert isinstance(names, list)
+                for type, name in zip(func.arg_types, names):
+                    sixth_child.scope.add_child(Symbol(name, type))
+
+        nested_error = sixth_child.validate_slozena_naredba()
+        if nested_error:
+            return nested_error
 
     def validate_lista_parametara(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<deklaracija_parametara>':
+            nested_error = first_child.validate_deklaracija_parametara()
+            if nested_error:
+                return nested_error
+            
+            self.root.add_attr('types', [first_child.root.get_attr('type')])
+            self.root.add_attr('names', [first_child.root.get_attr('name')])
+
+        elif first_child.name == '<lista_parametara>':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = first_child.validate_lista_parametara() or third_child.validate_deklaracija_parametara()
+            if nested_error:
+                return nested_error
+            
+            names = third_child.root.get_attr('names')
+            assert isinstance(names, list)
+            if first_child.root.get_attr('name') in names:
+                return self.error_str
+            
+            types = third_child.root.get_attr('types')
+            assert isinstance(types, list)
+
+            names = [first_child.root.get_attr('name')] + names
+            types = [first_child.root.get_attr('type')] + types
 
     def validate_deklaracija_parametara(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        nested_error = first_child.validate_ime_tipa()
+        if nested_error:
+            return nested_error
+
+        type = first_child.root.get_attr('type')
+        assert isinstance(type, Type)
+
+        if type.name == 'void':
+            return self.error_str
+        
+        name = first_child.root.get_attr('name')
+        self.root.add_attr('name', name)
+
+
+        if len(self.children) == 2:
+            self.root.add_attr('type', type)
+
+        else:
+            self.root.add_attr('type', Type('arr', nested_type=type))
 
     def validate_lista_deklaracija(self) -> str | None:
         ...
@@ -1136,6 +1268,7 @@ class TreeFactory:
             raise ValueError('[FATAL] Empty file')
         
         root_scope = Scope(None, 'root')
+        Scope.root = root_scope
 
         return TreeFactory.__from_str_inner(
             curr_root=starting_nt,
