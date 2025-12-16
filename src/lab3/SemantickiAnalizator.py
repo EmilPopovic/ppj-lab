@@ -159,7 +159,7 @@ class Scope:
     def add_child(self, child: 'Symbol | Scope') -> None:
         self.children.append(child)
 
-    def get_symbol(self, name: str) -> Symbol | None:        
+    def get_symbol(self, name: str) -> Symbol | None:
         with_name = [c for c in self.children if isinstance(c, Symbol) and c.name == name]
         if len(with_name) > 0:
             return with_name[0]
@@ -1643,8 +1643,8 @@ class TreeFactory:
 
 def main() -> None:
     parse_tree, scope_tree = TreeFactory.from_stdin()
-    # parse_tree.validate()
-    print(scope_tree)
+    error = parse_tree.validate()
+    out(error)
 
 if __name__ == '__main__':
     main()
