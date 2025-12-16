@@ -215,8 +215,29 @@ class ParseTree:
 
         if main is None or main.type != Type('function', nested_type=FuncSignature(return_type=Type('int'), arg_types=[])):
             return 'main'
+        
+        stack = [c for c in self.scope.children if isinstance(c, Scope)]
 
-        ...
+        while stack:
+            c: Scope = stack.pop()
+            
+            for sym in [s for s in c.children if isinstance(s, Symbol) and s.type and s.type.name == 'function']:
+                f = self.scope.get_symbol(sym.name)
+                if f is None:
+                    return 'funkcija'
+                
+                assert isinstance(sym, Symbol)
+                assert isinstance(sym.type, Type)
+                sym_signature = sym.type.nested_type
+
+                assert isinstance(f, Symbol)
+                assert isinstance(f.type, Type)
+                f_signature = f.type.nested_type
+
+                if sym_signature != f_signature:
+                    return 'funkcija'
+
+            stack.extend([d for d in c.children if isinstance(d, Scope)])
 
     def validate_primarni_izraz(self) -> Optional[str]:
         first_child = self.children[0]
@@ -1702,7 +1723,6 @@ class TreeFactory:
 def main() -> None:
     parse_tree, scope_tree = TreeFactory.from_stdin()
     error = parse_tree.validate()
-    log(scope_tree)
     if error:
         out(error)
 
