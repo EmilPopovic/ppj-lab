@@ -67,7 +67,7 @@ class FuncSignature:
         return True
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, 'FuncSignature'):
+        if isinstance(other, FuncSignature):
             return self.return_type == other.return_type and self.arg_types == other.arg_types
         return False
     
@@ -211,6 +211,11 @@ class ParseTree:
         if nested_error:
             return nested_error
         
+        main = self.scope.get_symbol('main')
+
+        if main is None or main.type != Type('function', nested_type=FuncSignature(return_type=Type('int'), arg_types=[])):
+            return 'main'
+
         ...
 
     def validate_primarni_izraz(self) -> Optional[str]:
