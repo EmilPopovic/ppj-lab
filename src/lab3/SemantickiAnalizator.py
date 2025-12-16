@@ -224,12 +224,13 @@ class ParseTree:
             self.root.add_attr('type', Type('char'))
             self.root.add_attr('is_l_expr', False)
 
-        elif first_child == 'NIZ_ZNAKOVA':
+        elif first_child.name == 'NIZ_ZNAKOVA':
             if not first_child.is_valid_str:
                 return self.error_str
             self.root.add_attr('type', Type('arr', nested_type=Type('char', is_const=True)))
+            self.root.add_attr('is_l_expr', False)
 
-        elif first_child == 'L_ZAGRADA':
+        elif first_child.name == 'L_ZAGRADA':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
             nested_error = second_child.validate_izraz()
@@ -265,7 +266,7 @@ class ParseTree:
             
             third_child_type = third_child.root.get_attr('type')
             assert isinstance(third_child_type, Type)
-            if third_child_type not in [Type('int'), Type('Char'), Type('int', is_const=True), Type('Char', is_const=True)]:
+            if third_child_type.implicitly_reduces_to(Type('int')):
                 return self.error_str
             
             assert isinstance(first_child_type.nested_type, Type)
@@ -359,6 +360,7 @@ class ParseTree:
             assert isinstance(third_child_type, Type)
 
             first_child_types.append(third_child_type)
+            self.root.add_attr('types', first_child_types)
 
     def validate_unarni_izraz(self) -> str | None:
         first_child = self.children[0]
@@ -428,7 +430,7 @@ class ParseTree:
                 return nested_error
             
             second_child_type = second_child.root.get_attr('type')
-            fourth_child_type = second_child.root.get_attr('type')
+            fourth_child_type = fourth_child.root.get_attr('type')
             assert isinstance(second_child_type, Type)
             assert isinstance(fourth_child_type, Type)
 
