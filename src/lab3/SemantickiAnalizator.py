@@ -1084,7 +1084,7 @@ class ParseTree:
 
         elif self.children[1].name == 'TOCKAZAREZ':
             definition: Optional[ParseTree] = self
-            while definition and definition.name == '<definicija_funkcije>':
+            while definition and definition.name != '<definicija_funkcije>':
                 definition = definition.parent
 
             if definition is None:
@@ -1092,6 +1092,8 @@ class ParseTree:
             
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
+
+            log(definition_idn)
 
             func = self.scope.get_symbol(definition_idn.source)
             assert func is not None
