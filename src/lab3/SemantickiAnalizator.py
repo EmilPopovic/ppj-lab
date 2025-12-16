@@ -149,7 +149,7 @@ class Symbol:
         return self.attributes[key]
 
 class Scope:
-    root: Scope | None
+    root: 'Scope | None'
 
     def __init__(self, parent: 'Scope | None', type: str) -> None:
         self.parent: Scope | None = parent
