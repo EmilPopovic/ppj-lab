@@ -27,7 +27,7 @@ fi
 found_any=false
 
 # Start total timer (in milliseconds)
-total_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+total_start=$(($(date +%s) * 1000 + 10#$(date +%N) / 1000000))
 
 for dict in $pattern; do
     [ -d "$dict" ] || continue
@@ -42,13 +42,15 @@ for dict in $pattern; do
     fi
 
     # Start analysis timer (in milliseconds)
-    analysis_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
-    
+    analysis_start=$(($(date +%s) * 1000 + 10#$(date +%N) / 1000000))
+
     # Run SemantickiAnalizator.py with .in file on stdin
     python3.8 src/lab3/SemantickiAnalizator.py <"$dict/test.in" >output.txt 2>/dev/null
 
+    cat output.txt
+
     # End analysis timer
-    analysis_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+    analysis_end=$(($(date +%s) * 1000 + 10#$(date +%N) / 1000000))
     analysis_time_ms=$((analysis_end - analysis_start))
 
     # Compare stdout with .out file
@@ -64,7 +66,7 @@ for dict in $pattern; do
 done
 
 # End total timer
-total_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
+total_end=$(($(date +%s) * 1000 + 10#$(date +%N) / 1000000))
 total_time_ms=$((total_end - total_start))
 total_time=$(awk "BEGIN {printf \"%.3f\", $total_time_ms / 1000}")
 

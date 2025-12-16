@@ -1267,16 +1267,16 @@ class ParseTree:
             if nested_error:
                 return nested_error
             
-            names = third_child.root.get_attr('names')
+            names = first_child.root.get_attr('names')
             assert isinstance(names, list)
-            if first_child.root.get_attr('name') in names:
+            if third_child.root.get_attr('name') in names:
                 return self.error_str
             
-            types = third_child.root.get_attr('types')
+            types = first_child.root.get_attr('types')
             assert isinstance(types, list)
 
-            self.root.add_attr('names', [first_child.root.get_attr('name')] + names)
-            self.root.add_attr('types', [first_child.root.get_attr('type')] + types)
+            self.root.add_attr('names', [third_child.root.get_attr('name')] + names)
+            self.root.add_attr('types', [third_child.root.get_attr('type')] + types)
 
     def validate_deklaracija_parametra(self) -> Optional[str]:
         first_child = self.children[0]
