@@ -47,8 +47,6 @@ for dict in $pattern; do
     # Run SemantickiAnalizator.py with .in file on stdin
     python3.8 src/lab3/SemantickiAnalizator.py <"$dict/test.in" >output.txt 2>/dev/null
 
-    cat output.txt
-
     # End analysis timer
     analysis_end=$(($(date +%s) * 1000 + 10#$(date +%N) / 1000000))
     analysis_time_ms=$((analysis_end - analysis_start))

@@ -271,7 +271,7 @@ class ParseTree:
             
             third_child_type = third_child.root.get_attr('type')
             assert isinstance(third_child_type, Type)
-            if third_child_type.implicitly_reduces_to(Type('int')):
+            if not third_child_type.implicitly_reduces_to(Type('int')):
                 return self.error_str
             
             assert isinstance(first_child_type.nested_type, Type)
@@ -354,7 +354,7 @@ class ParseTree:
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
-            nested_error = first_child.validate_lista_argumenata() or third_child.validate_izraz()
+            nested_error = first_child.validate_lista_argumenata() or third_child.validate_izraz_pridruzivanja()
             if nested_error:
                 return nested_error
             
@@ -1121,9 +1121,6 @@ class ParseTree:
             second_child_type = second_child.root.get_attr('type')
             assert isinstance(second_child_type, Type)
 
-            log(second_child_type)
-            log(func_signature.return_type)
-
             if not second_child_type.implicitly_reduces_to(func_signature.return_type):
                 return self.error_str
 
@@ -1275,8 +1272,8 @@ class ParseTree:
             types = first_child.root.get_attr('types')
             assert isinstance(types, list)
 
-            self.root.add_attr('names', [third_child.root.get_attr('name')] + names)
-            self.root.add_attr('types', [third_child.root.get_attr('type')] + types)
+            self.root.add_attr('names', names + [third_child.root.get_attr('name')])
+            self.root.add_attr('types', types + [third_child.root.get_attr('type')])
 
     def validate_deklaracija_parametra(self) -> Optional[str]:
         first_child = self.children[0]
@@ -1449,13 +1446,13 @@ class ParseTree:
             assert isinstance(third_child, Token)
             third_child_int = int(third_child.source)
 
-            if not (0 > third_child_int <= 1024):
+            if not (0 < third_child_int <= 1024):
                 return self.error_str
             
             self.scope.add_child(
                 Symbol(
                     name=first_child.source,
-                    type=root_ntype,
+                    type=Type('arr', nested_type=root_ntype),
                     is_l_expr=not root_ntype.is_const
                 )
             )
