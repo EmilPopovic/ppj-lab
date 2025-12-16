@@ -45,6 +45,12 @@ class Type:
         if isinstance(other, 'Type'):
             return self.name == other.name and self.nested_type == other.nested_type
         return False
+    
+    def __repr__(self) -> str:
+        res = f'{self.name}'
+        if isinstance(self.nested_type, Type):
+            res += f'[{self.nested_type.name}]'
+        return res
 
 class FuncSignature:
     def __init__(self, return_type: Type, arg_types: List[Type]) -> None:
@@ -83,7 +89,8 @@ class Token:
     @property
     def is_char(self) -> bool:
         try:
-            if self.source.startswith('\\'):
+            no_quotes = self.source[1:-1]
+            if no_quotes.startswith('\\'):
                 escape_map = {
                     '\\t': '\t',
                     '\\n': '\n',
@@ -92,10 +99,10 @@ class Token:
                     '\\"': '"',
                     '\\\\': '\\'
                 }
-                char = escape_map.get(self.source, self.source[1:])
+                char = escape_map.get(no_quotes, no_quotes[1:])
             else:
-                char = self.source
-            
+                char = no_quotes
+
             ascii_val = ord(char) if len(char) == 1 else -1
             return 0 <= ascii_val < 2 ** 8
         except (TypeError, IndexError):
@@ -103,7 +110,7 @@ class Token:
         
     @property
     def is_valid_str(self) -> bool:
-        without_backslash = self.source.replace('\\\\', '')[1:-2]
+        without_backslash = self.source.replace('\\\\', '')[1:-1]
         for i, c in enumerate(without_backslash):
             if c == '\\' and (i == len(without_backslash) or without_backslash[i+1] not in ['t', 'n', '0', '\'', '"']):
                 return False
@@ -129,24 +136,21 @@ class Nonterminal:
     def get_attr(self, key: str) -> object:
         return self.attributes[key]
 
-    def copy_attr_from(self, src: 'Nonterminal | Symbol', names: List[str]) -> None:
+    def copy_attr_from(self, src: 'Nonterminal', names: List[str]) -> None:
         for name in names:
             self.add_attr(name, src.get_attr(name))
 
     def __repr__(self) -> str:
-        return self.name
+        return f'{self.name} {self.attributes}'
     
 class Symbol:
-    def __init__(self, name: str, type: Optional[Type]) -> None:
+    def __init__(self, name: str, type: Optional[Type], is_l_expr: bool) -> None:
         self.name: str = name
         self.type: Optional[Type] = type
-        self.attributes: Dict[str, object] = {}
+        self.is_l_expr: bool = is_l_expr
 
-    def add_attr(self, key: str, value: object) -> None:
-        self.attributes[key] = value
-
-    def get_attr(self, key: str) -> object:
-        return self.attributes[key]
+    def __repr__(self) -> str:
+        return f'[{self.type}] {self.name}'
 
 class Scope:
     root: Optional['Scope']
@@ -210,7 +214,8 @@ class ParseTree:
         if first_child.name == 'IDN':
             if symbol is None:
                 return self.error_str
-            self.root.copy_attr_from(symbol, ['type', 'is_l_expr'])
+            self.root.add_attr('type', symbol.type)
+            self.root.add_attr('is_l_expr', symbol.is_l_expr)
             
         elif first_child.name == 'BROJ':
             if not first_child.is_int:
@@ -1098,7 +1103,7 @@ class ParseTree:
                 return nested_error
 
             definition: Optional[ParseTree] = self
-            while definition and definition.name == '<definicija_funkcije>':
+            while definition and definition.name != '<definicija_funkcije>':
                 definition = definition.parent
 
             if definition is None:
@@ -1115,6 +1120,9 @@ class ParseTree:
 
             second_child_type = second_child.root.get_attr('type')
             assert isinstance(second_child_type, Type)
+
+            log(second_child_type)
+            log(func_signature.return_type)
 
             if not second_child_type.implicitly_reduces_to(func_signature.return_type):
                 return self.error_str
@@ -1193,7 +1201,8 @@ class ParseTree:
                             return_type=Type('void'),
                             arg_types=[]
                         )
-                    )
+                    ),
+                    is_l_expr=False
                 )
 
                 Scope.root.add_child(root_func)
@@ -1202,33 +1211,37 @@ class ParseTree:
             nested_error = fourth_child.validate_lista_parametara()
             if nested_error:
                 return nested_error
-            
+                        
+            decl_types = fourth_child.root.get_attr('types')
+            assert isinstance(decl_types, list)
+
             if root_func:
                 assert root_func.type is not None
                 func = root_func.type.nested_type
                 assert isinstance(func, FuncSignature)
 
-                if fourth_child.root.get_attr('types') != func.arg_types:
+                if decl_types != func.arg_types:
                     return self.error_str
                 
-                else:
-                    root_func = Symbol(
+            else:
+                root_func = Symbol(
                     name=second_child.source,
                     type=Type(
                         'function',
                         nested_type=FuncSignature(
-                            return_type=Type('void'),
-                            arg_types=func.arg_types
+                            return_type=first_child_type,
+                            arg_types=decl_types
                         )
-                    )
+                    ),
+                    is_l_expr=False
                 )
 
                 Scope.root.add_child(root_func)
 
                 names = fourth_child.root.get_attr('names')
                 assert isinstance(names, list)
-                for type, name in zip(func.arg_types, names):
-                    sixth_child.scope.add_child(Symbol(name, type))
+                for type, name in zip(decl_types, names):
+                    self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
 
         nested_error = sixth_child.validate_slozena_naredba()
         if nested_error:
@@ -1238,8 +1251,8 @@ class ParseTree:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
-        if first_child.name == '<deklaracija_parametara>':
-            nested_error = first_child.validate_deklaracija_parametara()
+        if first_child.name == '<deklaracija_parametra>':
+            nested_error = first_child.validate_deklaracija_parametra()
             if nested_error:
                 return nested_error
             
@@ -1250,7 +1263,7 @@ class ParseTree:
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
-            nested_error = first_child.validate_lista_parametara() or third_child.validate_deklaracija_parametara()
+            nested_error = first_child.validate_lista_parametara() or third_child.validate_deklaracija_parametra()
             if nested_error:
                 return nested_error
             
@@ -1262,10 +1275,10 @@ class ParseTree:
             types = third_child.root.get_attr('types')
             assert isinstance(types, list)
 
-            names = [first_child.root.get_attr('name')] + names
-            types = [first_child.root.get_attr('type')] + types
+            self.root.add_attr('names', [first_child.root.get_attr('name')] + names)
+            self.root.add_attr('types', [first_child.root.get_attr('type')] + types)
 
-    def validate_deklaracija_parametara(self) -> Optional[str]:
+    def validate_deklaracija_parametra(self) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
@@ -1279,9 +1292,10 @@ class ParseTree:
         if type.name == 'void':
             return self.error_str
         
-        name = first_child.root.get_attr('name')
-        self.root.add_attr('name', name)
+        second_child = self.children[1]
+        assert isinstance(second_child, Token)
 
+        self.root.add_attr('name', second_child.source)
 
         if len(self.children) == 2:
             self.root.add_attr('type', type)
@@ -1293,7 +1307,7 @@ class ParseTree:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
-        if len(first_child.children) == 1:
+        if len(self.children) == 1:
             nested_error = first_child.validate_deklaracija()
             if nested_error:
                 return nested_error
@@ -1378,11 +1392,7 @@ class ParseTree:
             third_child_type = third_child.root.get_attr('type')
             assert isinstance(third_child_type, Type)
             
-            if (first_child_type.name != 'arr'
-                    and not third_child_type.implicitly_reduces_to(first_child_type)
-            ):
-                return self.error_str
-            else:
+            if first_child_type.name == 'arr':
                 first_child_elem_count = first_child.root.get_attr('elem_count')
                 assert isinstance(first_child_elem_count, int)
                 third_child_elem_count = third_child.root.get_attr('elem_count')
@@ -1398,6 +1408,9 @@ class ParseTree:
                     assert isinstance(t, Type)
                     if not t.implicitly_reduces_to(first_child_type):
                         return self.error_str
+
+            elif not third_child_type.implicitly_reduces_to(first_child_type):
+                return self.error_str
 
     def validate_izravni_deklarator(self) -> Optional[str]:
         first_child = self.children[0]
@@ -1417,7 +1430,8 @@ class ParseTree:
             self.scope.add_child(
                 Symbol(
                     name=first_child.source,
-                    type=root_ntype
+                    type=root_ntype,
+                    is_l_expr=not root_ntype.is_const
                 )
             )
 
@@ -1441,7 +1455,8 @@ class ParseTree:
             self.scope.add_child(
                 Symbol(
                     name=first_child.source,
-                    type=root_ntype
+                    type=root_ntype,
+                    is_l_expr=not root_ntype.is_const
                 )
             )
 
@@ -1472,7 +1487,8 @@ class ParseTree:
                 self.root.scope.add_child(
                     Symbol(
                         name=first_child.source,
-                        type=Type('function', nested_type=new_signature)
+                        type=Type('function', nested_type=new_signature),
+                        is_l_expr=False
                     )
                 )
 
@@ -1510,7 +1526,8 @@ class ParseTree:
                 self.root.scope.add_child(
                     Symbol(
                         name=first_child.source,
-                        type=Type('function', nested_type=new_signature)
+                        type=Type('function', nested_type=new_signature),
+                        is_l_expr=False
                     )
                 )
 
@@ -1522,6 +1539,10 @@ class ParseTree:
             while isinstance(nested_child, ParseTree):
                 nested_child = nested_child.children[0]
 
+            nested_error = first_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+
             if nested_child.name == 'NIZ_ZNAKOVA':
                 elem_count = len(nested_child.source) + 1
                 self.root.add_attr('elem_count', elem_count)
@@ -1529,9 +1550,6 @@ class ParseTree:
             else:
                 self.root.add_attr('type', first_child.root.get_attr('type'))
 
-            nested_error = first_child.validate_izraz_pridruzivanja()
-            if nested_error:
-                return nested_error
 
         elif isinstance(first_child, Token) and first_child.name == 'L_VIT_ZAGRADA':
             second_child = self.children[1]
@@ -1575,8 +1593,25 @@ class ParseTree:
     def error_str(self) -> str:
         res = f'{self.name} ::='
         for child in self.children:
-            res += f' {child}'
+            res += f' {child.name}' if isinstance(child, ParseTree) else f' {child}'
         return res
+    
+    def __repr__(self) -> str:
+        return self.__repr_inner(0)[:-1]
+
+    def __repr_inner(self, indent: int) -> str:
+        indent_str = ' ' * indent
+        result = f'{indent_str}{self.root}\n'
+
+        for child in self.children:
+            if child is None:
+                result += f'{indent_str} $\n'
+            elif isinstance(child, Token):
+                result += f'{indent_str} {child}\n'
+            else:
+                result += child.__repr_inner(indent + 1)
+
+        return result
             
 class TreeFactory:
     @staticmethod
@@ -1644,6 +1679,7 @@ class TreeFactory:
 def main() -> None:
     parse_tree, scope_tree = TreeFactory.from_stdin()
     error = parse_tree.validate()
+    log(scope_tree)
     out(error)
 
 if __name__ == '__main__':
