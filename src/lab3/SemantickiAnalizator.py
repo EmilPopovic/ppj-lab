@@ -1076,7 +1076,7 @@ class ParseTree:
 
         if first_child.name in ('KR_CONTINUE', 'KR_BREAK'):
             loop: Optional[ParseTree] = self
-            while loop and loop.name == '<naredba_petlje>':
+            while loop and loop.name != '<naredba_petlje>':
                 loop = loop.parent
 
             if loop is None:
@@ -1685,7 +1685,8 @@ def main() -> None:
     parse_tree, scope_tree = TreeFactory.from_stdin()
     error = parse_tree.validate()
     log(scope_tree)
-    out(error)
+    if error:
+        out(error)
 
 if __name__ == '__main__':
     main()
