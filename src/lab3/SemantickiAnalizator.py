@@ -1229,25 +1229,286 @@ class ParseTree:
             self.root.add_attr('type', Type('arr', nested_type=type))
 
     def validate_lista_deklaracija(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if len(first_child.children) == 1:
+            nested_error = first_child.validate_deklaracija()
+            if nested_error:
+                return nested_error
+            
+        else:
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+            
+            nested_error = first_child.validate_lista_deklaracija() or second_child.validate_deklaracija()
+            if nested_error:
+                return nested_error
 
     def validate_deklaracija(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+        nested_error = first_child.validate_ime_tipa()
+        if nested_error:
+            return nested_error
+
+        second_child = self.children[1]
+        assert isinstance(second_child, ParseTree)
+
+        second_child.root.add_attr('ntype', first_child.root.get_attr('type'))
+
+        nested_error = second_child.validate_lista_init_deklaratora()
+        if nested_error:
+            return nested_error
 
     def validate_lista_init_deklaratora(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        first_child.root.add_attr('ntype', self.root.get_attr('ntype'))
+
+        if first_child.name == '<init_deklarator>':
+            nested_error = first_child.validate_init_deklarator()
+            if nested_error:
+                return nested_error
+
+        elif first_child.name == '<lista_init_deklaratora>':
+            nested_error = first_child.validate_lista_init_deklaratora()
+            if nested_error:
+                return nested_error
+            
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            third_child.root.add_attr('ntype', self.root.get_attr('ntype'))
+
+            nested_error = third_child.validate_init_deklarator()
+            if nested_error:
+                return nested_error
 
     def validate_init_deklarator(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        first_child.root.add_attr('ntype', self.root.get_attr('ntype'))
+        nested_error = first_child.validate_izravni_deklarator()
+        if nested_error:
+            return nested_error
+        
+        first_child_type = first_child.root.get_attr('type')
+        assert isinstance(first_child_type, Type)
+
+        if len(self.children) == 1:
+            if first_child_type.is_const or (
+                    first_child_type.name == 'arr'
+                    and isinstance(first_child_type.nested_type, Type)
+                    and first_child_type.nested_type.is_const
+            ):
+                return self.error_str
+
+        else:
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = third_child.validate_inicijalizator()
+            if nested_error:
+                return nested_error
+            
+            third_child_type = third_child.root.get_attr('type')
+            assert isinstance(third_child_type, Type)
+            
+            if (first_child_type.name != 'arr'
+                    and not third_child_type.implicitly_reduces_to(first_child_type)
+            ):
+                return self.error_str
+            else:
+                first_child_elem_count = first_child.root.get_attr('elem_count')
+                assert isinstance(first_child_elem_count, int)
+                third_child_elem_count = third_child.root.get_attr('elem_count')
+                assert isinstance(third_child_elem_count, int)
+
+                if third_child_elem_count > first_child_elem_count:
+                    return self.error_str
+                
+                third_child_types = third_child.root.get_attr('types')
+                assert isinstance(third_child_types, list)
+
+                for t in third_child_types:
+                    assert isinstance(t, Type)
+                    if not t.implicitly_reduces_to(first_child_type):
+                        return self.error_str
 
     def validate_izravni_deklarator(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, Token)
+
+        root_ntype = self.root.get_attr('ntype')
+        assert isinstance(root_ntype, Type)
+
+        if len(self.children) == 1:
+            if root_ntype.name == 'void':
+                return self.error_str
+            
+            declared = self.scope.get_symbol(first_child.source)
+            if declared:
+                return self.error_str
+            
+            self.scope.add_child(
+                Symbol(
+                    name=first_child.source,
+                    type=root_ntype
+                )
+            )
+
+            self.root.add_attr('type', root_ntype)
+
+        elif self.children[2].name == 'BROJ':
+            if root_ntype.name == 'void':
+                return self.error_str
+            
+            declared = self.scope.get_symbol(first_child.source)
+            if declared:
+                return self.error_str
+            
+            third_child = self.children[2]
+            assert isinstance(third_child, Token)
+            third_child_int = int(third_child.source)
+
+            if not (0 > third_child_int <= 1024):
+                return self.error_str
+            
+            self.scope.add_child(
+                Symbol(
+                    name=first_child.source,
+                    type=root_ntype
+                )
+            )
+
+            self.root.add_attr('type', Type('arr', nested_type=root_ntype))
+            self.root.add_attr('elem_count', third_child_int)
+
+        elif self.children[2].name == 'KR_VOID':
+            declared = self.scope.get_symbol(first_child.source)
+            
+            new_signature = FuncSignature(
+                return_type=root_ntype,
+                arg_types=[]
+            )
+
+            if declared:
+                assert isinstance(declared.type, Type)                
+
+                if declared.type != 'function':
+                    return self.error_str
+                
+                declared_signature = declared.type.nested_type
+                assert isinstance(declared_signature, FuncSignature)
+
+                if declared_signature != new_signature:
+                    return self.error_str
+                
+            else:
+                self.root.scope.add_child(
+                    Symbol(
+                        name=first_child.source,
+                        type=Type('function', nested_type=new_signature)
+                    )
+                )
+
+        elif self.children[2].name == '<lista_parametara>':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = third_child.validate_lista_parametara()
+            if nested_error:
+                return nested_error
+            
+            declared = self.scope.get_symbol(first_child.source)
+
+            third_child_types = third_child.root.get_attr('types')
+            assert isinstance(third_child_types, list)
+            
+            new_signature = FuncSignature(
+                return_type=root_ntype,
+                arg_types=third_child_types
+            )
+
+            if declared:
+                assert isinstance(declared.type, Type)                
+
+                if declared.type != 'function':
+                    return self.error_str
+                
+                declared_signature = declared.type.nested_type
+                assert isinstance(declared_signature, FuncSignature)
+
+                if declared_signature != new_signature:
+                    return self.error_str
+
+            else:
+                self.root.scope.add_child(
+                    Symbol(
+                        name=first_child.source,
+                        type=Type('function', nested_type=new_signature)
+                    )
+                )
 
     def validate_inicijalizator(self) -> str | None:
-        ...
+        first_child = self.children[0]
+    
+        if isinstance(first_child, ParseTree) and first_child.name == '<izraz_pridruzivanja>':
+            nested_child = first_child
+            while isinstance(nested_child, ParseTree):
+                nested_child = nested_child.children[0]
+
+            if nested_child.name == 'NIZ_ZNAKOVA':
+                elem_count = len(nested_child.source) + 1
+                self.root.add_attr('elem_count', elem_count)
+                self.root.add_attr('types', [Type('char')] * elem_count)
+            else:
+                self.root.add_attr('type', first_child.root.get_attr('type'))
+
+            nested_error = first_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+
+        elif isinstance(first_child, Token) and first_child.name == 'L_VIT_ZAGRADA':
+            second_child = self.children[1]
+            assert isinstance(second_child, ParseTree)
+
+            nested_error = second_child.validate_lista_izraza_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            self.root.copy_attr_from(second_child.root, ['elem_count', 'types'])
 
     def validate_lista_izraza_pridruzivanja(self) -> str | None:
-        ...
+        first_child = self.children[0]
+        assert isinstance(first_child, ParseTree)
+
+        if first_child.name == '<izraz_pridruzivanja>':
+            nested_error = first_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            self.root.add_attr('types', [first_child.root.get_attr('type')])
+            self.root.add_attr('elem_count', 1)
+
+        elif first_child.name == 'lista_izraza_pridruzivanja':
+            third_child = self.children[2]
+            assert isinstance(third_child, ParseTree)
+
+            nested_error = first_child.validate_lista_izraza_pridruzivanja() or third_child.validate_izraz_pridruzivanja()
+            if nested_error:
+                return nested_error
+            
+            first_child_types = first_child.root.get_attr('types')
+            assert isinstance(first_child_types, list)
+            first_child_elem_count = first_child.root.get_attr('elem_count')
+            assert isinstance(first_child_elem_count, int)
+            
+            self.root.add_attr('types', first_child_types.append(third_child.root.get_attr('type')))
+            self.root.add_attr('elem_count', first_child_elem_count + 1)
 
     @property
     def error_str(self) -> str:
