@@ -1396,28 +1396,33 @@ class ParseTree:
             if nested_error:
                 return nested_error
             
-            third_child_type = third_child.root.get_attr('type')
-            assert isinstance(third_child_type, Type)
-            
             if first_child_type.name == 'arr':
                 first_child_elem_count = first_child.root.get_attr('elem_count')
                 assert isinstance(first_child_elem_count, int)
                 third_child_elem_count = third_child.root.get_attr('elem_count')
                 assert isinstance(third_child_elem_count, int)
 
+                log(first_child_elem_count)
+                log(third_child_elem_count)
+
                 if third_child_elem_count > first_child_elem_count:
                     return self.error_str
                 
                 third_child_types = third_child.root.get_attr('types')
                 assert isinstance(third_child_types, list)
+                assert isinstance(first_child_type.nested_type, Type)
 
                 for t in third_child_types:
                     assert isinstance(t, Type)
-                    if not t.implicitly_reduces_to(first_child_type):
+                    if not t.implicitly_reduces_to(first_child_type.nested_type):
                         return self.error_str
+            
+            else:
+                third_child_type = third_child.root.get_attr('type')
+                assert isinstance(third_child_type, Type)
 
-            elif not third_child_type.implicitly_reduces_to(first_child_type):
-                return self.error_str
+                if not third_child_type.implicitly_reduces_to(first_child_type):
+                    return self.error_str
 
     def validate_izravni_deklarator(self) -> Optional[str]:
         first_child = self.children[0]
@@ -1557,7 +1562,7 @@ class ParseTree:
                 return nested_error
 
             if nested_child.name == 'NIZ_ZNAKOVA':
-                elem_count = len(nested_child.source) + 1
+                elem_count = len(nested_child.source) - 1
                 self.root.add_attr('elem_count', elem_count)
                 self.root.add_attr('types', [Type('char')] * elem_count)
             else:
@@ -1586,7 +1591,7 @@ class ParseTree:
             self.root.add_attr('types', [first_child.root.get_attr('type')])
             self.root.add_attr('elem_count', 1)
 
-        elif first_child.name == 'lista_izraza_pridruzivanja':
+        elif first_child.name == '<lista_izraza_pridruzivanja>':
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
@@ -1599,7 +1604,7 @@ class ParseTree:
             first_child_elem_count = first_child.root.get_attr('elem_count')
             assert isinstance(first_child_elem_count, int)
             
-            self.root.add_attr('types', first_child_types.append(third_child.root.get_attr('type')))
+            self.root.add_attr('types', first_child_types + [third_child.root.get_attr('type')])
             self.root.add_attr('elem_count', first_child_elem_count + 1)
 
     @property
