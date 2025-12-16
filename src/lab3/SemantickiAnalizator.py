@@ -1430,7 +1430,7 @@ class ParseTree:
             if root_ntype.name == 'void':
                 return self.error_str
             
-            declared = self.scope.get_symbol(first_child.source)
+            declared = first_child.source in [c.name for c in self.scope.children if isinstance(c, Symbol)]
             if declared:
                 return self.error_str
             
@@ -1448,7 +1448,7 @@ class ParseTree:
             if root_ntype.name == 'void':
                 return self.error_str
             
-            declared = self.scope.get_symbol(first_child.source)
+            declared = first_child.source in [c.name for c in self.scope.children if isinstance(c, Symbol)]
             if declared:
                 return self.error_str
             
@@ -1471,7 +1471,7 @@ class ParseTree:
             self.root.add_attr('elem_count', third_child_int)
 
         elif self.children[2].name == 'KR_VOID':
-            declared = self.scope.get_symbol(first_child.source)
+            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.name]
             
             new_signature = FuncSignature(
                 return_type=root_ntype,
@@ -1481,6 +1481,7 @@ class ParseTree:
             self.root.add_attr('type', Type('function', nested_type=new_signature))
 
             if declared:
+                declared = declared[0]
                 assert isinstance(declared.type, Type)                
 
                 if declared.type != 'function':
@@ -1509,7 +1510,7 @@ class ParseTree:
             if nested_error:
                 return nested_error
             
-            declared = self.scope.get_symbol(first_child.source)
+            declared = [c for c in self.scope.children if isinstance(c, Symbol) and c.name == first_child.name]
 
             third_child_types = third_child.root.get_attr('types')
             assert isinstance(third_child_types, list)
@@ -1522,6 +1523,7 @@ class ParseTree:
             self.root.add_attr('type', Type('function', nested_type=new_signature))
 
             if declared:
+                declared = declared[0]
                 assert isinstance(declared.type, Type)                
 
                 if declared.type != 'function':
@@ -1667,7 +1669,7 @@ class TreeFactory:
                     '<definicija_funkcije>',
                     '<naredba_petlje>',
                     '<naredba_grananja>',
-                ):
+                ) and tree.root.name != '<definicija_funkcije>':
                     new_scope = Scope(scope, line)
                     scope.add_child(new_scope)
                 else:
