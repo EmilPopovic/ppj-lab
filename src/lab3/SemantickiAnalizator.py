@@ -1267,12 +1267,12 @@ class ParseTree:
                     is_l_expr=False
                 )
 
-                Scope.root.add_child(root_func)
+            Scope.root.add_child(root_func)
 
-                names = fourth_child.root.get_attr('names')
-                assert isinstance(names, list)
-                for type, name in zip(decl_types, names):
-                    self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
+            names = fourth_child.root.get_attr('names')
+            assert isinstance(names, list)
+            for type, name in zip(decl_types, names):
+                self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
 
         nested_error = sixth_child.validate_slozena_naredba()
         if nested_error:
@@ -1602,7 +1602,6 @@ class ParseTree:
                 self.root.add_attr('types', [Type('char')] * elem_count)
             else:
                 self.root.add_attr('type', first_child.root.get_attr('type'))
-
 
         elif isinstance(first_child, Token) and first_child.name == 'L_VIT_ZAGRADA':
             second_child = self.children[1]
