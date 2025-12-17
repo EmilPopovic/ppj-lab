@@ -1119,8 +1119,6 @@ class ParseTree:
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
 
-            log(definition_idn)
-
             func = self.scope.get_symbol(definition_idn.source)
             assert func is not None
             assert func.type is not None
@@ -1428,9 +1426,6 @@ class ParseTree:
                 third_child_elem_count = third_child.root.get_attr('elem_count')
                 assert isinstance(third_child_elem_count, int)
 
-                log(first_child_elem_count)
-                log(third_child_elem_count)
-
                 if third_child_elem_count > first_child_elem_count:
                     return self.error_str
                 
@@ -1588,7 +1583,21 @@ class ParseTree:
                 return nested_error
 
             if nested_child.name == 'NIZ_ZNAKOVA':
-                elem_count = len(nested_child.source) - 1
+                escape_map = {
+                    r'\t': '\t',
+                    r'\n': '\n',
+                    r'\0': '\0',
+                    r"\'": "'",
+                    r'\"': '"',
+                    r'\\': '\\',
+                }
+
+                escaped_str = nested_child.source
+                for esc, real in escape_map.items():
+                    escaped_str = escaped_str.replace(esc, real)
+
+                elem_count = len(escaped_str) - 1
+
                 self.root.add_attr('elem_count', elem_count)
                 self.root.add_attr('types', [Type('char')] * elem_count)
             else:
