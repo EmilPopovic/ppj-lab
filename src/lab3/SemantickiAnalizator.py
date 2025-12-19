@@ -1731,6 +1731,7 @@ class TreeFactory:
 
 def main() -> None:
     log(f'[Info]   Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
+    log(f'[Info]   Starting semantic analysis...')
     
     start_parse_input = time.time()
     parse_tree, _ = TreeFactory.from_stdin()
