@@ -1,3 +1,4 @@
+import time
 import sys
 from typing import Iterator, Optional, Tuple, List, Dict
 
@@ -1729,10 +1730,23 @@ class TreeFactory:
                 tree.add_child(Token.from_str(line))
 
 def main() -> None:
-    parse_tree, scope_tree = TreeFactory.from_stdin()
+    log(f'[Info]   Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
+    
+    start_parse_input = time.time()
+    parse_tree, _ = TreeFactory.from_stdin()
+    end_parse_input = time.time()
+    log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
+
+    start_validation = time.time()
     error = parse_tree.validate()
+    end_validation = time.time()
+    log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
+
     if error:
+        log(f'[Error]  Finished with error: {error}')
         out(error)
+    else:
+        log(f'[Info]   Finished without errors')
 
 if __name__ == '__main__':
     main()
