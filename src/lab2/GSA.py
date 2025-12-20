@@ -477,13 +477,13 @@ class Token:
     def __repr__(self) -> str:
         return f'{self.type} {self.line_number} {self.source}'
 
-class AST:
+class ParseTree:
     __slots__ = ('root', 'children', 'parent')
 
-    def __init__(self, root: Nonterminal, parent: 'Optional[AST]' = None) -> None:
+    def __init__(self, root: Nonterminal, parent: 'Optional[ParseTree]' = None) -> None:
         self.root: Nonterminal = root
-        self.children: deque[AST | Optional[Token]] = deque()
-        self.parent: Optional[AST] = parent
+        self.children: deque[ParseTree | Optional[Token]] = deque()
+        self.parent: Optional[ParseTree] = parent
 
     def __repr__(self) -> str:
         return self.__repr_inner(0)[:-1]
@@ -517,16 +517,16 @@ class SA:
         self._terminal_id_map: Optional[List[Optional[Terminal]]] = None
         self._nonterminal_id_map: Optional[List[Nonterminal]] = None
 
-    def parse_from_stdin(self) -> AST:
+    def parse_from_stdin(self) -> ParseTree:
         return self.parse_from_string(sys.stdin.read())
 
-    def parse_from_file(self, filename: str) -> AST:
+    def parse_from_file(self, filename: str) -> ParseTree:
         with open(filename, 'r') as f:
             content = f.read()
 
         return self.parse_from_string(content)
 
-    def parse_from_string(self, string: str) -> AST:
+    def parse_from_string(self, string: str) -> ParseTree:
         start_tokenize = time.time()
         lines = string.split('\n')
         tokens: List[Optional[Token]] = []
@@ -569,18 +569,18 @@ class SA:
         else:
             return state_moves.get(nonterminal)
 
-    def parse(self, tokens: List[Optional[Token]]) -> AST:
+    def parse(self, tokens: List[Optional[Token]]) -> ParseTree:
         start_parse = time.time()
         
         class StackItem:
             __slots__ = ('state_id', 'symbol')
 
-            def __init__(self, state_id: int, symbol: 'Optional[Token] | AST') -> None:
+            def __init__(self, state_id: int, symbol: 'Optional[Token] | ParseTree') -> None:
                 self.state_id = state_id
                 self.symbol = symbol
 
             def __repr__(self) -> str:
-                return f'({self.state_id}, {self.symbol if not isinstance(self.symbol, AST) else self.symbol.root})'
+                return f'({self.state_id}, {self.symbol if not isinstance(self.symbol, ParseTree) else self.symbol.root})'
 
         assert self.starting_nonterminal is not None
         assert self.starting_state_id is not None
@@ -596,7 +596,7 @@ class SA:
 
             if action.type == SAActionType.ACCEPT:
                 top_of_stack_symbol = stack[-1].symbol
-                assert isinstance(top_of_stack_symbol, AST)
+                assert isinstance(top_of_stack_symbol, ParseTree)
                 end_parse = time.time()
                 log(f'[Timing] Parse tokens to AST: {(end_parse - start_parse) * 1000:.2f} ms')
                 return top_of_stack_symbol
@@ -610,7 +610,7 @@ class SA:
                 assert isinstance(action, SAActionReduce)
 
                 reduction = action.reduction
-                node = AST(reduction.left_side)
+                node = ParseTree(reduction.left_side)
 
                 if not reduction.is_epsilon:
                     num_to_pop = len(reduction.symbols)
@@ -832,11 +832,13 @@ class SAUtils:
         nfa = SAUtils.construct_epislon_nfa(sa.nonterminals, sa.terminals, sa.starting_nonterminal)
         end_nfa = time.time()
         log(f'[Timing] Construct epsilon-NFA: {(end_nfa - start_nfa) * 1000:.2f} ms')
+        log(f'[Debug]  NFA states: {len(nfa.states)}')
 
         start_dfa = time.time()
         dfa = SAUtils.epsilon_nfa_to_dfa(nfa)
         end_dfa = time.time()
         log(f'[Timing] Convert NFA to DFA: {(end_dfa - start_dfa) * 1000:.2f} ms')
+        log(f'[Debug]  DFA states: {len(dfa.states)}')
 
         start_compile = time.time()
         SAUtils.compile(sa, dfa)
@@ -1111,7 +1113,7 @@ def make_sa_file(filename: str, sa: SA) -> None:
     compressed = zlib.compress(pickled, level=9)
     b64_sa: str = base64.b64encode(compressed).decode('utf-8')
 
-    log(f'[Info] Generated SA size: {len(b64_sa)}')
+    log(f'[Info]   Generated SA size: {len(b64_sa)}')
 
     all_src = inspect.getsource(sys.modules[__name__])
     before_preamble_end = all_src.split('# end preamble', 1)[0]
@@ -1134,7 +1136,7 @@ def make_sa_file(filename: str, sa: SA) -> None:
         ('sa_action_accept_src', inspect.getsource(SAActionAccept)),
         ('sa_action_reject_src', inspect.getsource(SAActionReject)),
         ('token_src', inspect.getsource(Token)),
-        ('ast_src', inspect.getsource(AST)),
+        ('ast_src', inspect.getsource(ParseTree)),
         ('sa_src', inspect.getsource(SA)),
         ('sa_main_src', inspect.getsource(sa_main)),
         ('entrypoint_src', 'if __name__ == \'__main__\':\n    sa_main()')
@@ -1153,7 +1155,7 @@ def sa_main() -> None:
     out(ast)
 
 def main() -> None:
-    log(f'[Info] Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
+    log(f'[Info]   Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
 
     sa: SA = SAUtils.from_stdin()
     
