@@ -56,30 +56,297 @@ class TestOpcode(Enum):
 class MoveOpcode(Enum):
     MOV = 'mov'
     MVN = 'mvn'
+
+class NopOpcode(Enum):
     NOP = 'nop'
 
 class MultiplyOpcode(Enum):
     MUL = 'mul'
+
+class MultiplyAccumulateOpcode(Enum):
     MLA = 'mla'
 
 class StatusOpcode(Enum):
     MRS = 'mrs'
     MSR = 'msr'
 
-class JumpOpcode(Enum):
+class BranchOpcode(Enum):
     B = 'b'
     BL = 'bl'
 
 class ControlOpcode(Enum):
     SWI = 'swi'
 
-class LoadStoreSingleOpcode(Enum):
+class LoadSingleOpcode(Enum):
     LDR = 'ldr'
+
+class StoreSingleOpcode(Enum):
     STR = 'str'
 
 class LoadStoreBlockOpcode(Enum):
     LDM = 'ldm'
     STM = 'stm'
+
+class Cond(Enum):
+    EQUAL = 'eq'
+    NOT_EQUAL = 'ne'
+    NEGATIVE = 'mi'
+    POSITIVE = 'pl'
+    OVERFLOW_SET = 'vs'
+    OVERFLOW_CLEAR = 'vc'
+    CARRY_SET = 'cs'
+    UNSIGNED_HIGHER_OR_SAME = 'hs'
+    CARRY_CLEAR = 'cc'
+    UNSIGNED_LOWER = 'lo'
+    UNSIGNED_HIGHER = 'hi'
+    UNSIGNED_LOWER_OR_SAME = 'ls'
+    SIGNED_GREATER_OR_EQUAL = 'ge'
+    SIGNED_LESS_THAN = 'lt'
+    SIGNED_GREATER_THAN = 'gt'
+    SIGNED_LESS_OR_EQUAL = 'le'
+    ALWAYS = ''
+
+class WordOrByte(Enum):
+    WORD = ''
+    BYTE = 'b'
+
+class HalfOrByte(Enum):
+    HALF = 'h'
+    BYTE = 'b'
+
+class Oprnd2:
+    pass
+
+class Mode2:
+    pass
+
+class Mode3:
+    pass
+
+class Mode4(Enum):
+    INCREMENT_AFTER = 'ia'
+    INCREMENT_BEFORE = 'ib'
+    DECREMENT_AFTER = 'da'
+    DECREMENT_BEFORE = 'db'
+
+class ArithmeticLogicOp:
+    def __init__(
+            self,
+            opcode: 'ArithmeticOpcode | LogicOpcode',
+            rd: int,
+            rn: int,
+            oprnd2: Oprnd2,
+            cond: Cond = Cond.ALWAYS,
+            save_flags: bool = False
+    ) -> None:
+        self.opcode: 'ArithmeticOpcode | LogicOpcode' = opcode
+        self.rd: int = rd
+        self.rn: int = rn
+        self.oprnd2: Oprnd2 = oprnd2
+        self.cond: Cond = cond
+        self.save_flags: bool = save_flags
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}{"s" if self.save_flags else ""}'
+        rd_str = f'r{self.rd}'
+        rn_str = f'r{self.rn}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {rn_str:>3}, {self.oprnd2}'
+    
+class TestOp:
+    def __init__(
+            self,
+            opcode: TestOpcode,
+            rn: int,
+            oprnd2: Oprnd2,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: TestOpcode = opcode
+        self.rn: int = rn
+        self.oprnd2: Oprnd2 = oprnd2
+        self.cond: Cond = cond
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}'
+        rn_str = f'r{self.rn}'
+        return f'    {opcode_str:<8} {rn_str:>3}, {self.oprnd2}'
+    
+class MoveOp:
+    def __init__(
+            self,
+            opcode: MoveOpcode,
+            rd: int,
+            oprnd2: Oprnd2,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: MoveOpcode = opcode
+        self.rd: int = rd
+        self.oprnd2: Oprnd2 = oprnd2
+        self.cond: Cond = cond
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}'
+        rd_str = f'r{self.rd}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {self.oprnd2}'
+    
+class NopOp:
+    def __init__(self) -> None:
+        self.opcode: NopOpcode = NopOpcode.NOP
+    
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}'
+        return f'    {opcode_str:<8}'
+    
+class MultiplyOp:
+    def __init__(
+            self,
+            rd: int,
+            rm: int,
+            rs: int,
+            cond: Cond = Cond.ALWAYS,
+            save_flags: bool = False
+    ) -> None:
+        self.opcode: MultiplyOpcode = MultiplyOpcode.MUL
+        self.rd: int = rd
+        self.rm: int = rm
+        self.rs: int = rs
+        self.cond: Cond = cond
+        self.save_flags: bool = save_flags
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}{"s" if self.save_flags else ""}'
+        rd_str = f'r{self.rd}'
+        rm_str = f'r{self.rm}'
+        rs_str = f'r{self.rs}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}'
+
+class MultiplyAccumulateOp:
+    def __init__(
+            self,
+            rd: int,
+            rm: int,
+            rs: int,
+            rn: int,
+            cond: Cond = Cond.ALWAYS,
+            save_flags: bool = False
+    ) -> None:
+        self.opcode: MultiplyAccumulateOpcode = MultiplyAccumulateOpcode.MLA
+        self.rd: int = rd
+        self.rm: int = rm
+        self.rs: int = rs
+        self.rn: int = rn
+        self.cond: Cond = cond
+        self.save_flags: bool = save_flags
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}{"s" if self.save_flags else ""}'
+        rd_str = f'r{self.rd}'
+        rm_str = f'r{self.rm}'
+        rs_str = f'r{self.rs}'
+        rn_str = f'r{self.rn}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}, {rn_str:>3}'
+
+class BranchOp:
+    def __init__(
+            self,
+            opcode: BranchOpcode,
+            label: str,
+            cond: Cond
+    ) -> None:
+        self.opcode: BranchOpcode = opcode
+        self.label: str = label
+        self.cond: Cond = cond
+    
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}'
+        return f'    {opcode_str:<8} {self.label}'
+    
+class SoftwareInterruptOp:
+    def __init__(self, irq_num: int) -> None:
+        self.opcode: ControlOpcode = ControlOpcode.SWI
+        self.irq_num: int = irq_num
+
+    def __repr__(self) -> str:
+        return f'    {self.opcode:<8} {self.irq_num}'
+    
+class LoadStoreSingleMode2Op:
+    def __init__(
+            self,
+            opcode: 'LoadSingleOpcode | StoreSingleOpcode',
+            size: WordOrByte,
+            rd: int,
+            mode2: Mode2,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: 'LoadSingleOpcode | StoreSingleOpcode' = opcode
+        self.size: WordOrByte = size
+        self.rd: int = rd
+        self.mode2: Mode2 = mode2
+        self.cond: Cond = cond
+    
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}{self.size}'
+        rd_str = f'r{self.rd}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode2}'
+
+class LoadStoreHalfMode3UnsignedOp:
+    def __init__(
+            self,
+            opcode: 'LoadSingleOpcode | StoreSingleOpcode',
+            rd: int,
+            mode3: Mode3,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: 'LoadSingleOpcode | StoreSingleOpcode' = opcode
+        self.rd: int = rd
+        self.mode3: Mode3 = mode3
+        self.cond: Cond = cond
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}h'
+        rd_str = f'r{self.rd}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
+    
+class LoadSingleMode3SignedOp:
+    def __init__(
+            self,
+            size: HalfOrByte,
+            rd: int,
+            mode3: Mode3,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: LoadSingleOpcode = LoadSingleOpcode.LDR
+        self.size: HalfOrByte = size
+        self.rd: int = rd
+        self.mode3: Mode3 = mode3
+        self.cond: Cond = cond
+
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}s{self.size}'
+        rd_str = f'r{self.rd}'
+        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
+
+class LoadStoreMultipleOp:
+    def __init__(
+            self,
+            opcode: LoadStoreBlockOpcode,
+            rd: int,
+            mode4: Mode4,
+            reglist: List[int],
+            save_rd: bool,
+            cond: Cond = Cond.ALWAYS
+    ) -> None:
+        self.opcode: LoadStoreBlockOpcode = opcode
+        self.rd: int = rd
+        self.mode4: Mode4 = mode4
+        self.reglist: List[int] = reglist
+        self.save_rd: bool = save_rd
+        self.cond: Cond = cond
+    
+    def __repr__(self) -> str:
+        opcode_str = f'{self.opcode}{self.cond}{self.mode4}'
+        rd_str = f'r{self.rd}'
+        reglist_str = f'{{ {", ".join(str(reg) for reg in self.reglist)} }}'
+        return f'    {opcode_str} {rd_str:>3}{"!" if self.save_rd else ""}, {reglist_str}'
 
 class Type:
     def __init__(self, name: str, is_const: bool = False, nested_type: Optional['Type | FuncSignature'] = None) -> None:
