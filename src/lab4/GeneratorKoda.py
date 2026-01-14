@@ -1,6 +1,18 @@
+import os
 import time
 import sys
 from typing import Iterator, Optional, Tuple, List, Dict
+
+OUTPUT_FILENAME = 'a.s'
+ASM_PREAMBLE = \
+"""    .text
+    .global _start
+_start:
+    ldr sp, =0x20000
+    bl f_main
+    bx lr
+    swi 0
+"""
 
 def out(*args, **kwargs) -> None:
     """Use this function for program output"""
@@ -1551,6 +1563,12 @@ class TreeFactory:
             else:
                 tree.add_child(Token.from_str(line))
 
+class CodeGenerator:
+    @staticmethod
+    def to_file(filepath: str) -> None:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(ASM_PREAMBLE)
+
 def main() -> None:
     log(f'[Info]   Python version: {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')
     log(f'[Info]   Starting semantic analysis...')
@@ -1567,9 +1585,12 @@ def main() -> None:
 
     if error:
         log(f'[Error]  Finished with error: {error}')
-        out(error)
     else:
         log(f'[Info]   Finished without errors')
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, OUTPUT_FILENAME)
+
+        CodeGenerator.to_file(output_path)
 
 if __name__ == '__main__':
     main()

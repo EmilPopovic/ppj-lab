@@ -54,7 +54,7 @@ def evaluate_r6(arm_code_path, expected_r6_value):
                 capture_output=True, check=True, text=True
             )
         except subprocess.CalledProcessError as e:
-            print("COMPILE_ERROR", file=sys.stderr)
+            print(f"COMPILE_ERROR: {e.stderr}", file=sys.stderr)
             return False
 
         with open(bin_file, "rb") as f:
@@ -69,7 +69,7 @@ def evaluate_r6(arm_code_path, expected_r6_value):
 
     # Run emulation
     try:
-        mu.emu_start(ARM_CODE_ADDRESS, ARM_CODE_ADDRESS + len(code))
+        mu.emu_start(ARM_CODE_ADDRESS, 0)
     except Exception as e:
         pass
 

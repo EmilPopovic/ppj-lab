@@ -11,3 +11,4 @@ analizator/
 !src/lab1/analizator
 *.log
 !requirements.txt
+*.s
