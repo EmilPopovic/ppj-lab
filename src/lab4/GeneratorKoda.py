@@ -7,6 +7,7 @@ from instructions import *
 from opcodes import *
 from size import WordOrByte, HalfOrByte
 from type import Type, FuncSignature
+import ast_nodes
 
 OUTPUT_FILENAME = 'a.s'
 
@@ -178,7 +179,9 @@ class ParseTree:
         self.children.append(child)
 
     def validate(self) -> Optional[str]:
-        if e := self.validate_prijevodna_jedinica(): return e
+        program = ast_nodes.Program([], [])
+        if e := self.validate_prijevodna_jedinica(program): return e
+        ast_nodes.print_ast(program)
         
         main = self.scope.get_symbol('main')
 
@@ -986,33 +989,33 @@ class ParseTree:
             if not second_child_type.implicitly_reduces_to(func_signature.return_type):
                 return self.error_str
 
-    def validate_prijevodna_jedinica(self) -> Optional[str]:
+    def validate_prijevodna_jedinica(self, program: ast_nodes.Program) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         if first_child.name == '<vanjska_deklaracija>':
-            if e := first_child.validate_vanjska_deklaracija(): return e
+            if e := first_child.validate_vanjska_deklaracija(program): return e
 
         elif first_child.name == '<prijevodna_jedinica>':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
-            if e := (first_child.validate_prijevodna_jedinica() or second_child.validate_vanjska_deklaracija()): return e
+            if e := (first_child.validate_prijevodna_jedinica(program) or second_child.validate_vanjska_deklaracija(program)): return e
 
-    def validate_vanjska_deklaracija(self) -> Optional[str]:
+    def validate_vanjska_deklaracija(self, program: ast_nodes.Program) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         e = None
 
         if first_child.name == '<definicija_funkcije>':
-            e = first_child.validate_definicija_funkcije()
+            e = first_child.validate_definicija_funkcije(program)
 
         elif first_child.name == '<deklaracija>':
             e = first_child.validate_deklaracija()
 
         return e
 
-    def validate_definicija_funkcije(self) -> Optional[str]:
+    def validate_definicija_funkcije(self, program: ast_nodes.Program) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
@@ -1057,6 +1060,9 @@ class ParseTree:
                 )
 
                 Scope.root_scope.add_child(root_func)
+                
+                func_def = ast_nodes.FuncDef(root_func.name, first_child_type, [], ast_nodes.Block([]))
+                program.functions.append(func_def)
             
         elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
             if e := fourth_child.validate_lista_parametara(): return e
@@ -1088,9 +1094,15 @@ class ParseTree:
             Scope.root_scope.add_child(root_func)
 
             names = fourth_child.get_attr('names')
+            var_decls = []
+
             assert isinstance(names, list)
             for type, name in zip(decl_types, names):
                 self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
+                var_decls.append(ast_nodes.VarDecl(name, type, None))
+
+            func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([]))
+            program.functions.append(func_def)
 
         if e := sixth_child.validate_slozena_naredba(): return e
 
