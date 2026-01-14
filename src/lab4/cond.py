@@ -1,0 +1,20 @@
+from enum import Enum
+
+class Cond(Enum):
+    EQUAL = 'eq'
+    NOT_EQUAL = 'ne'
+    NEGATIVE = 'mi'
+    POSITIVE = 'pl'
+    OVERFLOW_SET = 'vs'
+    OVERFLOW_CLEAR = 'vc'
+    CARRY_SET = 'cs'
+    UNSIGNED_HIGHER_OR_SAME = 'hs'
+    CARRY_CLEAR = 'cc'
+    UNSIGNED_LOWER = 'lo'
+    UNSIGNED_HIGHER = 'hi'
+    UNSIGNED_LOWER_OR_SAME = 'ls'
+    SIGNED_GREATER_OR_EQUAL = 'ge'
+    SIGNED_LESS_THAN = 'lt'
+    SIGNED_GREATER_THAN = 'gt'
+    SIGNED_LESS_OR_EQUAL = 'le'
+    ALWAYS = ''
