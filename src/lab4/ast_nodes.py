@@ -6,28 +6,28 @@ from type import Type
 class Expr: pass
 
 @dataclass
-class Program:
-    functions: List['FuncDef']
-    globals: List['VarDecl']
-
-@dataclass
 class VarDecl:
     name: str
     vtype: Type
     init: Optional[Expr] = None
-
-@dataclass
-class FuncDef:
-    name: str
-    ret_type: str
-    params: List[VarDecl]
-    body: 'Block'
 
 class Stmt: pass
 
 @dataclass
 class Block(Stmt):
     stmts: List[Stmt]
+
+@dataclass
+class FuncDef:
+    name: str
+    ret_type: str
+    params: List[VarDecl]
+    body: Block
+
+@dataclass
+class Program:
+    functions: List[FuncDef]
+    globals: List[VarDecl]
 
 @dataclass
 class Return(Stmt):
