@@ -58,6 +58,10 @@ class Const(Expr):
     value: int
 
 @dataclass
+class ConstStr(Expr):
+    value: str
+
+@dataclass
 class CharConst(Expr):
     value: str
 
@@ -68,7 +72,7 @@ class Var(Expr):
 @dataclass
 class BinOp(Expr):
     op: str
-    left: Expr
+    left: Expr  # Var or ArrayAccess for assignment
     right: Expr
 
 @dataclass
@@ -154,6 +158,9 @@ def print_ast(node: Any, indent: int = 0) -> None:
     
     elif isinstance(node, CharConst):
         print(f"{prefix}CharConst: '{node.value}'")
+    
+    elif isinstance(node, ConstStr):
+        print(f"{prefix}StrConst: '{node.value}'")
     
     elif isinstance(node, Var):
         print(f"{prefix}Var: {node.name}")
