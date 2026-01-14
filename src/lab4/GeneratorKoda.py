@@ -2,6 +2,7 @@ import os
 import time
 import sys
 from typing import Iterator, Optional, Tuple, List, Dict
+from enum import Enum
 
 OUTPUT_FILENAME = 'a.s'
 ASM_PREAMBLE = \
@@ -32,11 +33,59 @@ def get_line(iter: Iterator[str]) -> Tuple[Optional[str], int]:
     except StopIteration:
         return None, -1
 
+class ArithmeticOpcode(Enum):
+    ADD = 'add'
+    ADC = 'adc'
+    SUB = 'sub'
+    SBC = 'sbc'
+    RSB = 'rsb'
+    RSC = 'rsc'
+
+class LogicOpcode(Enum):
+    AND = 'and'
+    ORR = 'orr'
+    EOR = 'eor'
+    BIC = 'bic'
+
+class TestOpcode(Enum):
+    CMP = 'cmp'
+    CMN = 'cmn'
+    TST = 'tst'
+    TEQ = 'teq'
+
+class MoveOpcode(Enum):
+    MOV = 'mov'
+    MVN = 'mvn'
+    NOP = 'nop'
+
+class MultiplyOpcode(Enum):
+    MUL = 'mul'
+    MLA = 'mla'
+
+class StatusOpcode(Enum):
+    MRS = 'mrs'
+    MSR = 'msr'
+
+class JumpOpcode(Enum):
+    B = 'b'
+    BL = 'bl'
+
+class ControlOpcode(Enum):
+    SWI = 'swi'
+
+class LoadStoreSingleOpcode(Enum):
+    LDR = 'ldr'
+    STR = 'str'
+
+class LoadStoreBlockOpcode(Enum):
+    LDM = 'ldm'
+    STM = 'stm'
+
 class Type:
     def __init__(self, name: str, is_const: bool = False, nested_type: Optional['Type | FuncSignature'] = None) -> None:
         self.name: str = name
         self.is_const: bool = is_const
-        self.nested_type: Optional[Type | FuncSignature] = nested_type
+        self.nested_type: Optional['Type | FuncSignature'] = nested_type
 
     def implicitly_reduces_to(self, other: 'Type') -> bool:
         if self.name == other.name:

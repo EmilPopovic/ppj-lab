@@ -24,7 +24,7 @@ class Type:
     def __init__(self, name: str, is_const: bool = False, nested_type: Optional['Type | FuncSignature'] = None) -> None:
         self.name: str = name
         self.is_const: bool = is_const
-        self.nested_type: Optional[Type | FuncSignature] = nested_type
+        self.nested_type: Optional['Type | FuncSignature'] = nested_type
 
     def implicitly_reduces_to(self, other: 'Type') -> bool:
         if self.name == other.name:
