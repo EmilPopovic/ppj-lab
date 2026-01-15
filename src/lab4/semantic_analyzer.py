@@ -1643,7 +1643,7 @@ class ParseTree:
         
         return None, None
 
-    def validate_inicijalizator(self) -> Tuple[Optional[str], Optional[ast_nodes.Expr]]:
+    def validate_inicijalizator(self) -> Tuple[Optional[str], 'Optional[ast_nodes.Expr] | List[ast_nodes.Expr]']:
         first_child = self.children[0]
     
         if isinstance(first_child, ParseTree) and first_child.name == '<izraz_pridruzivanja>':
@@ -1682,35 +1682,40 @@ class ParseTree:
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
-            if e := second_child.validate_lista_izraza_pridruzivanja():
+            expr_list: List[ast_nodes.Expr] = []
+            if e := second_child.validate_lista_izraza_pridruzivanja(expr_list):
                 return e, None
             
             self.copy_attr_from(second_child, ['elem_count', 'types'])
-            return None, None
+            return None, expr_list
         
         return None, None
 
-    def validate_lista_izraza_pridruzivanja(self) -> Optional[str]:
+    def validate_lista_izraza_pridruzivanja(self, expr_list: List[ast_nodes.Expr]) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         if first_child.name == '<izraz_pridruzivanja>':
-            e, _ = first_child.validate_izraz_pridruzivanja()
+            e, expr = first_child.validate_izraz_pridruzivanja()
             if e:
                 return e
             self.add_attr('types', [first_child.get_attr('type')])
             self.add_attr('elem_count', 1)
+            if expr is not None:
+                expr_list.append(expr)
 
         elif first_child.name == '<lista_izraza_pridruzivanja>':
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
-            if e := first_child.validate_lista_izraza_pridruzivanja():
+            if e := first_child.validate_lista_izraza_pridruzivanja(expr_list):
                 return e
             
-            e, _ = third_child.validate_izraz_pridruzivanja()
+            e, expr = third_child.validate_izraz_pridruzivanja()
             if e:
                 return e
+            if expr is not None:
+                expr_list.append(expr)
             
             first_child_types = first_child.get_attr('types')
             assert isinstance(first_child_types, list)

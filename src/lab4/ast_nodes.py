@@ -10,7 +10,7 @@ class Expr: pass
 class VarDecl:
     name: str
     vtype: Type
-    init: Optional[Expr] = None
+    init: 'Optional[Expr] | List[Expr]' = None
 
 class Stmt: pass
 
@@ -128,7 +128,12 @@ def print_ast(node: Any, indent: int = 0) -> None:
         init_str = " = ..." if node.init else ""
         log(f"{prefix}VarDecl: {node.name}: {node.vtype}{init_str}")
         if node.init:
-            print_ast(node.init, indent + 1)
+            if isinstance(node.init, Expr):
+                print_ast(node.init, indent + 1)
+            else:
+                for i, expr in enumerate(node.init):
+                    log(f"{prefix} [{i}]:")
+                    print_ast(expr, indent + 2)
     
     elif isinstance(node, Block):
         log(f"{prefix}Block")
