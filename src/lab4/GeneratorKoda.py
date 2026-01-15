@@ -15,15 +15,16 @@ from size import WordOrByte, HalfOrByte
 from semantic_analyzer import TreeFactory
 import instructions as instr
 import ast_nodes as ast
+from regs import Regs
 
 OUTPUT_FILENAME = 'a.s'
 RUNTIME = [
     instr.AssemblerDirective('.text'),
     instr.AssemblerDirective('.global _start'),
     instr.Label('_start'),
-    instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, 7, mode2.Mode2Immediate(0x20000)),
+    instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, mode2.Mode2Immediate(0x20000)),
     instr.BranchOp(BranchOpcode.BL, 'f_main', Cond.ALWAYS),
-    instr.MoveOp(MoveOpcode.MOV, 6, oprnd2.Oprnd2Rm(0)),
+    instr.MoveOp(MoveOpcode.MOV, Regs.R6, oprnd2.Oprnd2Rm(Regs.R0)),
     instr.SoftwareInterruptOp(0),
 ]
 
@@ -243,8 +244,8 @@ class CodeGenerator:
         for func in program.functions:
             f_sym = func.sym
             code.append(instr.Label(f'f_{f_sym.name}'))
-            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, 13, mode4.Mode4.DECREMENT_BEFORE, [11, 14], True))
-            code.append(instr.MoveOp(MoveOpcode.MOV, 11, oprnd2.Oprnd2Rm(13)))
+            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True))
+            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP)))
             code.append(instr.Comment(f'Entered {f_sym.name}'))
             
             body_instrs = func.body.to_asm()
@@ -252,9 +253,9 @@ class CodeGenerator:
                 code.append(line)
 
             code.append(instr.Comment(f'Leaving {f_sym.name}'))
-            code.append(instr.MoveOp(MoveOpcode.MOV, 13, oprnd2.Oprnd2Rm(11)))
-            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, 13, mode4.Mode4.INCREMENT_AFTER, [11, 14], True))
-            code.append(instr.MoveOp(MoveOpcode.MOV, 15, oprnd2.Oprnd2Rm(14)))
+            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
+            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))
+            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
 
         for glob in program.globals:
             code.append(instr.Label(f'g_{glob.sym.name}'))
