@@ -22,6 +22,13 @@ class Type:
             return other.name == 'char'
         return False
 
+    @staticmethod
+    def sizeof(type: 'Type') -> int:
+        if type.name == 'int':
+            return 4
+        else:
+            return 1
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Type):
             return self.name == other.name and self.nested_type == other.nested_type

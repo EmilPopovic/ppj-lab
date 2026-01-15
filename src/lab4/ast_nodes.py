@@ -10,6 +10,7 @@ class Expr: pass
 class VarDecl:
     name: str
     vtype: Type
+    bytes: int
     init: 'Optional[Expr] | List[Expr]' = None
 
 class Stmt: pass
@@ -129,7 +130,12 @@ def print_ast(node: Any, indent: int = 0) -> None:
     
     elif isinstance(node, VarDecl):
         init_str = " = ..." if node.init else ""
-        log(f"{prefix}VarDecl: {node.name}: {node.vtype}{init_str}")
+        if node.vtype.name == "arr":
+            assert isinstance(node.vtype.nested_type, Type)
+            log(f"{prefix}VarDecl: {node.name}: {node.vtype}[{node.bytes // Type.sizeof(node.vtype.nested_type)}]{init_str}")
+        else:
+            log(f"{prefix}VarDecl: {node.name}: {node.vtype}{init_str}")
+
         if node.init:
             if isinstance(node.init, Expr):
                 print_ast(node.init, indent + 1)

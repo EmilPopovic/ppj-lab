@@ -1340,7 +1340,7 @@ class ParseTree:
             assert isinstance(names, list)
             for type, name in zip(decl_types, names):
                 self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
-                var_decls.append(ast_nodes.VarDecl(name, type, None))
+                var_decls.append(ast_nodes.VarDecl(name, type, Type.sizeof(type), None))
 
             func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([], []))
             program.functions.append(func_def)
@@ -1540,7 +1540,7 @@ class ParseTree:
             self.add_attr('type', root_ntype)
 
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol.name, symbol.type, None)
+            decl = ast_nodes.VarDecl(symbol.name, symbol.type, Type.sizeof(root_ntype), None)
             return None, decl
 
         elif self.children[2].name == 'BROJ':
@@ -1568,8 +1568,10 @@ class ParseTree:
             self.add_attr('type', Type('arr', nested_type=root_ntype))
             self.add_attr('elem_count', third_child_int)
 
+            size = third_child_int * Type.sizeof(root_ntype)
+
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol.name, symbol.type, None)
+            decl = ast_nodes.VarDecl(symbol.name, symbol.type, size, None)
             return None, decl
 
         elif self.children[2].name == 'KR_VOID':
