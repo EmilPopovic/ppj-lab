@@ -31,6 +31,9 @@ class Program:
     functions: List[FuncDef]
     globals: List[VarDecl]
 
+    def log(self) -> None:
+        print_ast(self)
+
 @dataclass
 class If(Stmt):
     cond: Expr

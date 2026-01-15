@@ -51,6 +51,8 @@ def main() -> None:
     log(f'[Info]   Found no semantic errors')
     log(f'[Info]   Starting code generation...')
 
+    ast.log()
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(script_dir, OUTPUT_FILENAME)
 

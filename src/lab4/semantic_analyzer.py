@@ -1050,9 +1050,11 @@ class ParseTree:
         fifth_child = self.children[4]
         assert isinstance(fifth_child, ParseTree)
 
-        if_block = ast_nodes.Block([], [])
-
-        if e := fifth_child.validate_naredba(if_block)[0]: return e, None
+        e, if_block = fifth_child.validate_naredba(None)
+        if e:
+            return e, None
+        
+        assert if_block is not None
 
         if_stmt = ast_nodes.If(cond_expr, if_block, None)
 
@@ -1062,7 +1064,11 @@ class ParseTree:
 
             else_block = ast_nodes.Block([], [])
 
-            if e := seventh_child.validate_naredba(else_block)[0]: return e, None
+            e, else_block = seventh_child.validate_naredba(None)
+            if e:
+                return e, None
+            
+            assert else_block is not None
 
             if_stmt.else_branch = else_block
 
