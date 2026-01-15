@@ -1257,6 +1257,19 @@ class ParseTree:
 
             if e := third_child.validate_inicijalizator(): return e
             
+            if self.scope == Scope.root_scope:
+                def contains_nonconst_variable_reference(node):
+                    if isinstance(node, Token) and node.name == 'IDN':
+                        sym = self.scope.get_symbol(node.source)
+                        if sym and sym.type and not sym.type.is_const:
+                            return True
+                    if isinstance(node, ParseTree):
+                        return any(contains_nonconst_variable_reference(child) for child in node.children)
+                    return False
+                
+                if contains_nonconst_variable_reference(third_child):
+                    return self.error_str
+            
             if first_child_type.name == 'arr':
                 first_child_elem_count = first_child.get_attr('elem_count')
                 assert isinstance(first_child_elem_count, int)
