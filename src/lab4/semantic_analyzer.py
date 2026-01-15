@@ -208,7 +208,8 @@ class ParseTree:
             if e:
                 return e, None
             
-            if e := third_child.validate_lista_argumenata():
+            param_exprs: List[ast_nodes.Expr] = []
+            if e := third_child.validate_lista_argumenata(param_exprs):
                 return e, None
 
             first_child_type = first_child.get_attr('type')
@@ -227,21 +228,21 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             assert isinstance(func_expr, ast_nodes.Var)
-            # We need to get the actual argument expressions from lista_argumenata
-            # For now, return empty args list - this will need more work
-            return None, ast_nodes.Call(func_expr.name, [])
+            return None, ast_nodes.Call(func_expr.name, param_exprs)
         
         return None, None
 
 
-    def validate_lista_argumenata(self) -> Optional[str]:
+    def validate_lista_argumenata(self, exprs: List[ast_nodes.Expr]) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         if first_child.name == '<izraz_pridruzivanja>':
-            e, _ = first_child.validate_izraz_pridruzivanja()
+            e, expr = first_child.validate_izraz_pridruzivanja()
             if e:
                 return e
+            if expr:
+                exprs.append(expr)
             
             first_child_type = first_child.get_attr('type')
             assert isinstance(first_child_type, Type)
@@ -252,12 +253,14 @@ class ParseTree:
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
-            if e := first_child.validate_lista_argumenata():
+            if e := first_child.validate_lista_argumenata(exprs):
                 return e
             
-            e, _ = third_child.validate_izraz_pridruzivanja()
+            e, expr = third_child.validate_izraz_pridruzivanja()
             if e:
                 return e
+            if expr:
+                exprs.append(expr)
             
             first_child_types = first_child.get_attr('types')
             assert isinstance(first_child_types, list)
@@ -456,9 +459,9 @@ class ParseTree:
 
             second_child = self.children[1]
             assert isinstance(second_child, Token)
-            if second_child.source == 'OP_PUTA':
+            if second_child.name == 'OP_PUTA':
                 op = 'MUL'
-            elif second_child.source == 'OP_DIJELI':
+            elif second_child.name == 'OP_DIJELI':
                 op = 'DIV'
             else:  # OP_MOD
                 op = 'MOD'
@@ -511,7 +514,7 @@ class ParseTree:
 
             second_child = self.children[1]
             assert isinstance(second_child, Token)
-            if second_child.source == 'PLUS':
+            if second_child.name == 'PLUS':
                 op = 'ADD'
             else:  # MINUS
                 op = 'SUB'
@@ -564,11 +567,11 @@ class ParseTree:
 
             second_child = self.children[1]
             assert isinstance(second_child, Token)
-            if second_child.source == 'OP_LT':
+            if second_child.name == 'OP_LT':
                 op = 'LT'
-            elif second_child.source == 'OP_GT':
+            elif second_child.name == 'OP_GT':
                 op = 'GT'
-            elif second_child.source == 'OP_LTE':
+            elif second_child.name == 'OP_LTE':
                 op = 'LTE'
             else:  # OP_GTE
                 op = 'GTE'
@@ -621,7 +624,7 @@ class ParseTree:
 
             second_child = self.children[1]
             assert isinstance(second_child, Token)
-            if second_child.source == 'OP_EQ':
+            if second_child.name == 'OP_EQ':
                 op = 'EQ'
             else:  # OP_NEQ
                 op = 'NEQ'
@@ -942,95 +945,129 @@ class ParseTree:
         
         return None, None
 
-    def validate_slozena_naredba(self) -> Optional[str]:
+    def validate_slozena_naredba(self) -> Tuple[Optional[str], Optional[ast_nodes.Block]]:
         second_child = self.children[1]
         assert isinstance(second_child, ParseTree)
 
+        block = ast_nodes.Block([], [])
+
         if second_child.name == '<lista_naredbi>':
-            if e := second_child.validate_lista_naredbi(): return e
+            if e := second_child.validate_lista_naredbi(block): return e, None
             
         elif second_child.name == '<lista_deklaracija>':
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
-            if e := (second_child.validate_lista_deklaracija() or third_child.validate_lista_naredbi()): return e
+            if e := (second_child.validate_lista_deklaracija(block) or third_child.validate_lista_naredbi(block)): return e, None
+        
+        return None, block
 
-    def validate_lista_naredbi(self) -> Optional[str]:
+    def validate_lista_naredbi(self, block: ast_nodes.Block) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         if first_child.name == '<naredba>':
-            if e := first_child.validate_naredba(): return e
+            if e := first_child.validate_naredba(block)[0]: return e
             
         elif first_child.name == '<lista_naredbi>':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
-            if e := (first_child.validate_lista_naredbi() or second_child.validate_naredba()): return e
+            if e := (first_child.validate_lista_naredbi(block) or second_child.validate_naredba(block)[0]): return e
             
-    def validate_naredba(self) -> Optional[str]:
+    def validate_naredba(self, block: Optional[ast_nodes.Block]) -> Tuple[Optional[str], Optional[ast_nodes.Stmt]]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         e = None
 
         if first_child.name == '<slozena_naredba>':
-            e = first_child.validate_slozena_naredba()
+            e, stmt = first_child.validate_slozena_naredba()
+            if e:
+                return e, None
+            if block is None:
+                return None, stmt
 
         elif first_child.name == '<izraz_naredba>':
-            e = first_child.validate_izraz_naredba()
+            e, stmt = first_child.validate_izraz_naredba()
 
         elif first_child.name == '<naredba_grananja>':
-            e = first_child.validate_naredba_grananja()
+            e, stmt = first_child.validate_naredba_grananja()
             
         elif first_child.name == '<naredba_petlje>':
-            e = first_child.validate_naredba_petlje()
+            e, stmt = first_child.validate_naredba_petlje()
         
-        elif first_child.name == '<naredba_skoka>':
-            e = first_child.validate_naredba_skoka()
+        else:  # <naredba_skoka>
+            e, stmt = first_child.validate_naredba_skoka()
+        
+        if e:
+            return e, None
 
-        return e
+        if block is None:
+            block = ast_nodes.Block([], [])
+        if stmt is not None:
+            block.stmts.append(stmt)
+
+        return None, stmt
     
-    def validate_izraz_naredba(self) -> Optional[str]:
+    def validate_izraz_naredba(self) -> Tuple[Optional[str], Optional[ast_nodes.ExprStmt]]:
         first_child = self.children[0]
 
         if isinstance(first_child, Token) and first_child.name == 'TOCKAZAREZ':
             self.add_attr('type', Type('int'))
+            return None, None
 
         elif isinstance(first_child, ParseTree) and first_child.name == '<izraz>':
-            e, _ = first_child.validate_izraz()
+            e, expr = first_child.validate_izraz()
             if e:
-                return e
+                return e, None
             
             first_child_type = first_child.get_attr('type')
             assert isinstance(first_child_type, Type)
             
             self.add_attr('type', first_child_type)
 
-    def validate_naredba_grananja(self) -> Optional[str]:
+            assert expr is not None
+            return None, ast_nodes.ExprStmt(expr)
+        
+        return None, None
+
+    def validate_naredba_grananja(self) -> Tuple[Optional[str], Optional[ast_nodes.If]]:
         third_child = self.children[2]
         assert isinstance(third_child, ParseTree)
 
-        e, _ = third_child.validate_izraz()
+        e, cond_expr = third_child.validate_izraz()
         if e:
-            return e
+            return e, None
+        assert cond_expr is not None
         
         third_child_type = third_child.get_attr('type')
         assert isinstance(third_child_type, Type)
 
         if not third_child_type.implicitly_reduces_to(Type('int')):
-            return self.error_str
+            return self.error_str, None
         
         fifth_child = self.children[4]
         assert isinstance(fifth_child, ParseTree)
 
-        if e := fifth_child.validate_naredba(): return e
+        if_block = ast_nodes.Block([], [])
+
+        if e := fifth_child.validate_naredba(if_block)[0]: return e, None
+
+        if_stmt = ast_nodes.If(cond_expr, if_block, None)
 
         if len(self.children) > 5:
             seventh_child = self.children[6]
             assert isinstance(seventh_child, ParseTree)
-            if e := seventh_child.validate_naredba(): return e
 
-    def validate_naredba_petlje(self) -> Optional[str]:
+            else_block = ast_nodes.Block([], [])
+
+            if e := seventh_child.validate_naredba(else_block)[0]: return e, None
+
+            if_stmt.else_branch = else_block
+
+        return None, if_stmt
+
+    def validate_naredba_petlje(self) -> Tuple[Optional[str], Optional[ast_nodes.While]]:
         first_child = self.children[0]
         assert isinstance(first_child, Token)
 
@@ -1038,20 +1075,26 @@ class ParseTree:
             third_child = self.children[2]
             assert isinstance(third_child, ParseTree)
 
-            e, _ = third_child.validate_izraz()
+            e, cond_expr = third_child.validate_izraz()
             if e:
-                return e
+                return e, None
+            assert cond_expr is not None
             
             third_child_type = third_child.get_attr('type')
             assert isinstance(third_child_type, Type)
 
             if not third_child_type.implicitly_reduces_to(Type('int')):
-                return self.error_str
+                return self.error_str, None
             
             fifth_child = self.children[4]
             assert isinstance(fifth_child, ParseTree)
 
-            if e := fifth_child.validate_naredba(): return e
+            e, while_block = fifth_child.validate_naredba(None)
+            if e:
+                return e, None
+            assert while_block
+            
+            return None, ast_nodes.While(None, cond_expr, while_block)
             
         elif first_child.name == 'KR_FOR':
             third_child = self.children[2]
@@ -1059,33 +1102,52 @@ class ParseTree:
             fourth_child = self.children[3]
             assert isinstance(fourth_child, ParseTree)
 
-            if e := (third_child.validate_izraz_naredba() or fourth_child.validate_izraz_naredba()): return e
+            e, decl_stmt = third_child.validate_izraz_naredba()
+            if e:
+                return e, None
             
+            e, cond_stmt = fourth_child.validate_izraz_naredba()
+            if e:
+                return e, None
+
             fourth_child_type = fourth_child.get_attr('type')
             assert isinstance(fourth_child_type, Type)
 
             if not fourth_child_type.implicitly_reduces_to(Type('int')):
-                return self.error_str
+                return self.error_str, None
+            
+            after_iter_expr = None
 
             if self.children[4].name == 'D_ZAGRADA':
                 sixth_child = self.children[5]
                 assert isinstance(sixth_child, ParseTree)
-                if e := sixth_child.validate_naredba(): return e
+                e, for_block =  sixth_child.validate_naredba(None)
+                if e:
+                    return e, None
 
-            elif self.children[4].name == '<izraz>':
+            else: # fifth_child.name == '<izraz>':
                 fifth_child = self.children[4]
                 assert isinstance(fifth_child, ParseTree)
 
-                e, _ = fifth_child.validate_izraz()
+                e, after_iter_expr = fifth_child.validate_izraz()
                 if e:
-                    return e
+                    return e, None
                 
                 seventh_child = self.children[6]
                 assert isinstance(seventh_child, ParseTree)
 
-                if e := seventh_child.validate_naredba(): return e
+                e, for_block = seventh_child.validate_naredba(None)
+                if e:
+                    return e, None
+            
+            assert isinstance(for_block, ast_nodes.Block)
+            if after_iter_expr:
+                for_block.stmts.append(ast_nodes.ExprStmt(after_iter_expr))
+            return None, ast_nodes.While(decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block)
 
-    def validate_naredba_skoka(self) -> Optional[str]:
+        return None, None
+
+    def validate_naredba_skoka(self) -> Tuple[Optional[str], Optional[ast_nodes.CtrlFlowStmt]]:
         first_child = self.children[0]
         assert isinstance(first_child, Token)
 
@@ -1095,7 +1157,12 @@ class ParseTree:
                 loop = loop.parent
 
             if loop is None:
-                return self.error_str
+                return self.error_str, None
+            
+            if first_child.name == 'KR_CONTINUE':
+                return None, ast_nodes.Continue()
+            else:  # KR_BREAK
+                return None, ast_nodes.Break()
 
         elif self.children[1].name == 'TOCKAZAREZ':
             definition: Optional[ParseTree] = self
@@ -1103,7 +1170,7 @@ class ParseTree:
                 definition = definition.parent
 
             if definition is None:
-                return self.error_str
+                return self.error_str, None
             
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
@@ -1115,22 +1182,24 @@ class ParseTree:
             func_signature = func.type.nested_type
 
             if func_signature.return_type != Type('void'):
-                return self.error_str
+                return self.error_str, None
+            
+            return None, ast_nodes.Return(None)
 
         elif self.children[1].name == '<izraz>':
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
 
-            e, _ = second_child.validate_izraz()
+            e, return_expr = second_child.validate_izraz()
             if e:
-                return e
+                return e, None
 
             definition: Optional[ParseTree] = self
             while definition and definition.name != '<definicija_funkcije>':
                 definition = definition.parent
 
             if definition is None:
-                return self.error_str
+                return self.error_str, None
             
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
@@ -1145,7 +1214,11 @@ class ParseTree:
             assert isinstance(second_child_type, Type)
 
             if not second_child_type.implicitly_reduces_to(func_signature.return_type):
-                return self.error_str
+                return self.error_str, None
+            
+            return None, ast_nodes.Return(return_expr)
+        
+        return None, None
 
     def validate_prijevodna_jedinica(self, program: ast_nodes.Program) -> Optional[str]:
         first_child = self.children[0]
@@ -1195,6 +1268,8 @@ class ParseTree:
 
         sixth_child = self.children[5]
         assert isinstance(sixth_child, ParseTree)
+
+        func_def = None
         
         if isinstance(fourth_child, Token) and fourth_child.name == 'KR_VOID':
             if root_func:
@@ -1220,7 +1295,7 @@ class ParseTree:
 
                 Scope.root_scope.add_child(root_func)
                 
-                func_def = ast_nodes.FuncDef(root_func.name, first_child_type, [], ast_nodes.Block([]))
+                func_def = ast_nodes.FuncDef(root_func.name, first_child_type, [], ast_nodes.Block([], []))
                 program.functions.append(func_def)
             
         elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
@@ -1260,10 +1335,15 @@ class ParseTree:
                 self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
                 var_decls.append(ast_nodes.VarDecl(name, type, None))
 
-            func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([]))
+            func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([], []))
             program.functions.append(func_def)
 
-        if e := sixth_child.validate_slozena_naredba(): return e
+        e, func_body = sixth_child.validate_slozena_naredba()
+        if e:
+            return e
+        assert func_body is not None
+        assert func_def is not None
+        func_def.body = func_body
 
     def validate_lista_parametara(self) -> Optional[str]:
         first_child = self.children[0]
@@ -1314,23 +1394,25 @@ class ParseTree:
         else:
             self.add_attr('type', Type('arr', nested_type=type))
 
-    def validate_lista_deklaracija(self) -> Optional[str]:
+    def validate_lista_deklaracija(self, block: ast_nodes.Block) -> Optional[str]:
         first_child = self.children[0]
         assert isinstance(first_child, ParseTree)
 
         if len(self.children) == 1:
-            e, _ = first_child.validate_deklaracija()
+            e, var_decls = first_child.validate_deklaracija()
             if e:
                 return e
+            block.var_decls.extend(var_decls)
             
         else:
             second_child = self.children[1]
             assert isinstance(second_child, ParseTree)
-            if e := first_child.validate_lista_deklaracija(): return e
+            if e := first_child.validate_lista_deklaracija(block): return e
 
-            e, _ = second_child.validate_deklaracija()
+            e, var_decls = second_child.validate_deklaracija()
             if e:
                 return e
+            block.var_decls.extend(var_decls)
 
     def validate_deklaracija(self) -> Tuple[Optional[str], List[ast_nodes.VarDecl]]:
         first_child = self.children[0]

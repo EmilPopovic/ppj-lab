@@ -16,6 +16,7 @@ class Stmt: pass
 
 @dataclass
 class Block(Stmt):
+    var_decls: List[VarDecl]
     stmts: List[Stmt]
 
 @dataclass
@@ -31,10 +32,6 @@ class Program:
     globals: List[VarDecl]
 
 @dataclass
-class Return(Stmt):
-    expr: Optional[Expr]
-
-@dataclass
 class If(Stmt):
     cond: Expr
     then_branch: Stmt
@@ -42,7 +39,8 @@ class If(Stmt):
 
 @dataclass
 class While(Stmt):
-    cond: Expr
+    before: Optional[Stmt]
+    cond: Optional[Expr]
     body: Stmt
 
 @dataclass
@@ -53,6 +51,22 @@ class ExprStmt(Stmt):
 class Assign(Stmt):
     target: Expr
     value: Expr
+
+@dataclass
+class CtrlFlowStmt(Stmt):
+    pass
+
+@dataclass
+class Break(CtrlFlowStmt):
+    pass
+
+@dataclass
+class Continue(CtrlFlowStmt):
+    pass
+
+@dataclass
+class Return(CtrlFlowStmt):
+    expr: Optional[Expr]
 
 @dataclass
 class Const(Expr):
@@ -118,6 +132,8 @@ def print_ast(node: Any, indent: int = 0) -> None:
     
     elif isinstance(node, Block):
         log(f"{prefix}Block")
+        for decl in node.var_decls:
+            print_ast(decl, indent + 1)
         for stmt in node.stmts:
             print_ast(stmt, indent + 1)
     
@@ -125,6 +141,12 @@ def print_ast(node: Any, indent: int = 0) -> None:
         log(f"{prefix}Return")
         if node.expr:
             print_ast(node.expr, indent + 1)
+
+    elif isinstance(node, Continue):
+        log(f"{prefix}Continue")
+
+    elif isinstance(node, Break):
+        log(f"{prefix}Break")
     
     elif isinstance(node, If):
         log(f"{prefix}If")
@@ -138,6 +160,9 @@ def print_ast(node: Any, indent: int = 0) -> None:
     
     elif isinstance(node, While):
         log(f"{prefix}While")
+        if node.before:
+            log(f"{prefix}  Before")
+            print_ast(node.before, indent + 2)
         log(f"{prefix}  Condition:")
         print_ast(node.cond, indent + 2)
         log(f"{prefix}  Body:")
