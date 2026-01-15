@@ -38,13 +38,15 @@ def main() -> None:
     log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
 
     start_validation = time.time()
-    error = parse_tree.validate()
+    error, ast = parse_tree.generate_ast()
     end_validation = time.time()
     log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
 
     if error:
         log(f'[Error]  Finished with error: {error}')
         return
+    
+    assert ast is not None
 
     log(f'[Info]   Found no semantic errors')
     log(f'[Info]   Starting code generation...')

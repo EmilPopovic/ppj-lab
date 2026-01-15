@@ -41,15 +41,14 @@ class ParseTree:
     def add_child(self, child: 'ParseTree | Token') -> None:
         self.children.append(child)
 
-    def validate(self) -> Optional[str]:
+    def generate_ast(self) -> Tuple[Optional[str], Optional[ast_nodes.Program]]:
         program = ast_nodes.Program([], [])
-        if e := self.validate_prijevodna_jedinica(program): return e
-        ast_nodes.print_ast(program)
+        if e := self.validate_prijevodna_jedinica(program): return e, None
         
         main = self.scope.get_symbol('main')
 
         if main is None or main.type != Type('function', nested_type=FuncSignature(return_type=Type('int'), arg_types=[])):
-            return 'main'
+            return 'main', None
         
         stack = [c for c in self.scope.children if isinstance(c, Scope)]
 
@@ -59,7 +58,7 @@ class ParseTree:
             for sym in [s for s in c.children if isinstance(s, Symbol) and s.type and s.type.name == 'function']:
                 f = self.scope.get_symbol(sym.name)
                 if f is None:
-                    return 'funkcija'
+                    return 'funkcija', None
                 
                 assert isinstance(sym, Symbol)
                 assert isinstance(sym.type, Type)
@@ -70,9 +69,11 @@ class ParseTree:
                 f_signature = f.type.nested_type
 
                 if sym_signature != f_signature:
-                    return 'funkcija'
+                    return 'funkcija', None
 
             stack.extend([d for d in c.children if isinstance(d, Scope)])
+
+        return None, program
 
     def validate_primarni_izraz(self) -> Tuple[Optional[str], Optional[ast_nodes.Expr]]:
         first_child = self.children[0]
@@ -1830,7 +1831,7 @@ def main() -> None:
     log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
 
     start_validation = time.time()
-    error = parse_tree.validate()
+    error, _ = parse_tree.generate_ast()
     end_validation = time.time()
     log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
 
