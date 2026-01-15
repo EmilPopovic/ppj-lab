@@ -1302,7 +1302,7 @@ class ParseTree:
 
                 Scope.root_scope.add_child(root_func)
                 
-                func_def = ast_nodes.FuncDef(root_func.name, first_child_type, [], ast_nodes.Block([], []))
+                func_def = ast_nodes.FuncDef(root_func, first_child_type, [], ast_nodes.Block([], []))
                 program.functions.append(func_def)
             
         elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
@@ -1343,7 +1343,7 @@ class ParseTree:
                 self.scope.add_child(symbol)
                 var_decls.append(ast_nodes.VarDecl(symbol, type, Type.sizeof(type), None))
 
-            func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([], []))
+            func_def = ast_nodes.FuncDef(root_func, first_child_type, var_decls, ast_nodes.Block([], []))
             program.functions.append(func_def)
 
         e, func_body = sixth_child.validate_slozena_naredba()

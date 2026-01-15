@@ -4,6 +4,7 @@ from typing import List, Optional, Any
 from util import log
 from type import Type
 from scope import Symbol
+import instructions as instr
 
 class Expr: pass
 
@@ -14,16 +15,24 @@ class VarDecl:
     bytes: int
     init: 'Optional[Expr] | List[Expr]' = None
 
-class Stmt: pass
+class Stmt:
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class Block(Stmt):
     var_decls: List[VarDecl]
     stmts: List[Stmt]
 
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        asm = []
+        for stmt in self.stmts:
+            asm.extend(stmt.to_asm())
+        return asm
+
 @dataclass
 class FuncDef:
-    name: str
+    sym: Symbol
     ret_type: Type
     params: List[VarDecl]
     body: Block
@@ -42,20 +51,24 @@ class If(Stmt):
     then_branch: Stmt
     else_branch: Optional[Stmt] = None
 
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
+
 @dataclass
 class While(Stmt):
     before: Optional[Stmt]
     cond: Optional[Expr]
     body: Stmt
 
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
+
 @dataclass
 class ExprStmt(Stmt):
     expr: Expr
 
-@dataclass
-class Assign(Stmt):
-    target: Expr
-    value: Expr
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class CtrlFlowStmt(Stmt):
@@ -63,15 +76,20 @@ class CtrlFlowStmt(Stmt):
 
 @dataclass
 class Break(CtrlFlowStmt):
-    pass
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class Continue(CtrlFlowStmt):
-    pass
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class Return(CtrlFlowStmt):
     expr: Optional[Expr]
+
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class ConstExpr(Expr):
@@ -130,7 +148,7 @@ def print_ast(node: Any, indent: int = 0) -> None:
     
     elif isinstance(node, FuncDef):
         params_str = ", ".join(f"{p.sym.name}: {p.vtype}" for p in node.params)
-        log(f"{prefix}FuncDef: {node.name}({params_str}) -> {node.ret_type}")
+        log(f"{prefix}FuncDef: {node.sym.name}({params_str}) -> {node.ret_type}")
         print_ast(node.body, indent + 1)
     
     elif isinstance(node, VarDecl):
@@ -190,13 +208,6 @@ def print_ast(node: Any, indent: int = 0) -> None:
     elif isinstance(node, ExprStmt):
         log(f"{prefix}ExprStmt")
         print_ast(node.expr, indent + 1)
-    
-    elif isinstance(node, Assign):
-        log(f"{prefix}Assign")
-        log(f"{prefix}  Target:")
-        print_ast(node.target, indent + 2)
-        log(f"{prefix}  Value:")
-        print_ast(node.value, indent + 2)
     
     elif isinstance(node, Const):
         log(f"{prefix}Const: {node.value}")

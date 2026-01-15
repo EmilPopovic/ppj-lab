@@ -2,6 +2,7 @@ from abc import ABC
 from typing import Optional
 
 from indexing import IndexingType
+from addressing.util import reg_to_str
 
 class Mode3(ABC):
     pass
@@ -31,13 +32,13 @@ class Mode3RegiserOffset(Mode3):
 
     def __repr__(self) -> str:
         if self.rm is None:
-            return f'[r{self.rn}]'
+            return f'[{reg_to_str(self.rn)}]'
         
         rm_sign_str = "-" if self.negate_rm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[r{self.rn}, {rm_sign_str}r{self.rm}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, {rm_sign_str}{reg_to_str(self.rm)}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[r{self.rn}], {rm_sign_str}r{self.rm}'
+            return f'[{reg_to_str(self.rn)}], {rm_sign_str}{reg_to_str(self.rm)}'
 
 class Mode3ImmediateOffset(Mode3):
     def __init__(
@@ -54,13 +55,13 @@ class Mode3ImmediateOffset(Mode3):
 
     def __repr__(self) -> str:
         if self.imm_8 is None:
-            return f'[r{self.rn}]'
+            return f'[{reg_to_str(self.rn)}]'
         
         imm_sign_str = "-" if self.negate_imm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[r{self.rn}, #{imm_sign_str}{self.imm_8}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, #{imm_sign_str}{self.imm_8}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[r{self.rn}], #{imm_sign_str}{self.imm_8}'
+            return f'[{reg_to_str(self.rn)}], #{imm_sign_str}{self.imm_8}'
     
 class Mode3Label(Mode3):
     def __init__(self, label: str) -> None:

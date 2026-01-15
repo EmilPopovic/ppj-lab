@@ -4,10 +4,12 @@ import sys
 from typing import List, Optional
 
 from util import log, out
-from type import Type
+from type import Type, FuncSignature
 from opcodes import *
 from cond import Cond
 from addressing import mode2
+from addressing import mode3
+from addressing import mode4
 from addressing import oprnd2
 from size import WordOrByte, HalfOrByte
 from semantic_analyzer import TreeFactory
@@ -232,16 +234,27 @@ class CodeGenerator:
                     return ast.CharConst(expr.operand.value ^ 0xff)
             elif expr.op == 'LOGNOT':
                 if isinstance(expr.operand, ast.Const) or isinstance(expr.operand, ast.CharConst):
-                    return ast.Const(expr.operand.value != 0)            
+                    return ast.Const(expr.operand.value != 0)
 
     @staticmethod
     def from_ast(program: ast.Program) -> 'CodeGenerator':
         code = RUNTIME
 
-        next_vreg = 0
-
         for func in program.functions:
-            code.append(instr.Label(f'f_{func.name}'))
+            f_sym = func.sym
+            code.append(instr.Label(f'f_{f_sym.name}'))
+            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, 13, mode4.Mode4.DECREMENT_BEFORE, [11, 14], True))
+            code.append(instr.MoveOp(MoveOpcode.MOV, 11, oprnd2.Oprnd2Rm(13)))
+            code.append(instr.Comment(f'Entered {f_sym.name}'))
+            
+            body_instrs = func.body.to_asm()
+            for line in body_instrs:
+                code.append(line)
+
+            code.append(instr.Comment(f'Leaving {f_sym.name}'))
+            code.append(instr.MoveOp(MoveOpcode.MOV, 13, oprnd2.Oprnd2Rm(11)))
+            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, 13, mode4.Mode4.INCREMENT_AFTER, [11, 14], True))
+            code.append(instr.MoveOp(MoveOpcode.MOV, 15, oprnd2.Oprnd2Rm(14)))
 
         for glob in program.globals:
             code.append(instr.Label(f'g_{glob.sym.name}'))
@@ -265,11 +278,6 @@ class CodeGenerator:
                         code.append(instr.AssemblerDirective(f'.space {glob.bytes - len(val.value) - 1}'))
 
                 else:
-                    assert isinstance(glob.vtype.nested_type, Type)
-                    size_str = 'word'
-                    if glob.vtype.nested_type.name == 'char':
-                        size_str = 'byte'
-
                     for elem_init in glob.init:
                         val = CodeGenerator.fold_const(elem_init)
                         
@@ -280,6 +288,7 @@ class CodeGenerator:
                         elif isinstance(val, ast.ConstStr):  # ConstStr
                             code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
 
+                    assert isinstance(glob.vtype.nested_type, Type)
                     code.append(instr.AssemblerDirective(f'.space {glob.bytes - len(glob.init) * Type.sizeof(glob.vtype.nested_type)}'))
 
             else:

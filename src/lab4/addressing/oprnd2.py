@@ -1,6 +1,7 @@
 from abc import ABC
 
 from shift import ShiftType
+from addressing.util import reg_to_str
 
 class Oprnd2(ABC):
     pass
@@ -10,7 +11,7 @@ class Oprnd2Rm(Oprnd2):
         self.rm: int = rm
 
     def __repr__(self) -> str:
-        return f'r{self.rm}'
+        return f'{reg_to_str(self.rm)}'
 
 class Oprnd2Imm8(Oprnd2):
     def __init__(self, imm_8r: int) -> None:
@@ -26,7 +27,7 @@ class Oprnd2ShiftImm5(Oprnd2):
         self.imm_5: int = imm_5
 
     def __repr__(self) -> str:
-        return f'r{self.rm}, {self.shift} #{self.imm_5}'
+        return f'{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}'
 
 class Oprnd2ShiftRs(Oprnd2):
     def __init__(self, rm: int, shift: ShiftType, rs: int) -> None:
@@ -35,11 +36,11 @@ class Oprnd2ShiftRs(Oprnd2):
         self.rs: int = rs
 
     def __repr__(self) -> str:
-        return f'r{self.rm}, {self.shift} r{self.rs}'
+        return f'{reg_to_str(self.rm)}, {self.shift} {reg_to_str(self.rs)}'
 
 class Oprnd2ShiftRRX(Oprnd2):
     def __init__(self, rm: int) -> None:
         self.rm = rm
     
     def __repr__(self) -> str:
-        return f'r{self.rm}, rrx'
+        return f'{reg_to_str(self.rm)}, rrx'

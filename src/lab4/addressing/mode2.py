@@ -3,6 +3,7 @@ from typing import Optional
 
 from indexing import IndexingType
 from shift import ShiftType
+from addressing.util import reg_to_str
 
 class Mode2(ABC):
     pass
@@ -32,13 +33,13 @@ class Mode2RegiserOffset(Mode2):
 
     def __repr__(self) -> str:
         if self.rm is None:
-            return f'[r{self.rn}]'
+            return f'[{reg_to_str(self.rn)}]'
         
         rm_sign_str = "-" if self.negate_rm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[r{self.rn}, {rm_sign_str}r{self.rm}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, {rm_sign_str}{reg_to_str(self.rm)}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[r{self.rn}], {rm_sign_str}r{self.rm}'
+            return f'[{reg_to_str(self.rn)}], {rm_sign_str}{reg_to_str(self.rm)}'
 
 class Mode2ImmediateOffset(Mode2):
     def __init__(
@@ -55,13 +56,13 @@ class Mode2ImmediateOffset(Mode2):
 
     def __repr__(self) -> str:
         if self.imm_12 is None:
-            return f'[r{self.rn}]'
+            return f'[{reg_to_str(self.rn)}]'
         
         imm_sign_str = "-" if self.negate_imm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[r{self.rn}, #{imm_sign_str}{self.imm_12}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, #{imm_sign_str}{self.imm_12}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[r{self.rn}], #{imm_sign_str}{self.imm_12}'
+            return f'[{reg_to_str(self.rn)}], #{imm_sign_str}{self.imm_12}'
 
 class Mode2ScaledOffset(Mode2):
     def __init__(
@@ -82,13 +83,13 @@ class Mode2ScaledOffset(Mode2):
     
     def __repr__(self) -> str:
         if self.imm_5 is None:
-            return f'[r{self.rn}]'
+            return f'[{reg_to_str(self.rn)}]'
         
         rm_sign_str = "-" if self.negate_rm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[r{self.rn}, {rm_sign_str}r{self.rm}, {self.shift} #{self.imm_5}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, {rm_sign_str}{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[r{self.rn}], {rm_sign_str}r{self.rm}, {self.shift} #{self.imm_5}'
+            return f'[{reg_to_str(self.rn)}], {rm_sign_str}{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}'
     
 class Mode2Label(Mode2):
     def __init__(self, label: str) -> None:

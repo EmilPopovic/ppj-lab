@@ -8,8 +8,27 @@ from addressing.mode2 import *
 from addressing.mode3 import *
 from addressing.mode4 import *
 
+def reg_to_str(reg: int) -> str:
+    if reg == 11:
+        return 'fp'
+    elif reg == 13:
+        return 'sp'
+    elif reg == 14:
+        return 'lr'
+    elif reg == 15:
+        return 'pc'
+    else:
+        return f'r{reg}'
+
 class AssemblyLine:
     pass
+
+class Comment(AssemblyLine):
+    def __init__(self, s: str) -> None:
+        self.s = s
+    
+    def __repr__(self) -> str:
+        return f'    // {self.s}'
 
 class AssemblerDirective(AssemblyLine):
     def __init__(self, name: str) -> None:
@@ -59,9 +78,7 @@ class ArithmeticLogicOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}{"s" if self.save_flags else ""}'
-        rd_str = f'r{self.rd}'
-        rn_str = f'r{self.rn}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {rn_str:>3}, {self.oprnd2}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {reg_to_str(self.rn):>3}, {self.oprnd2}'
     
 class TestOp(Instruction):
     def __init__(
@@ -78,8 +95,7 @@ class TestOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}'
-        rn_str = f'r{self.rn}'
-        return f'    {opcode_str:<8} {rn_str:>3}, {self.oprnd2}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rn):>3}, {self.oprnd2}'
     
 class MoveOp(Instruction):
     def __init__(
@@ -96,8 +112,7 @@ class MoveOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}'
-        rd_str = f'r{self.rd}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {self.oprnd2}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {self.oprnd2}'
     
 class NopOp(Instruction):
     def __init__(self) -> None:
@@ -125,10 +140,7 @@ class MultiplyOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}{"s" if self.save_flags else ""}'
-        rd_str = f'r{self.rd}'
-        rm_str = f'r{self.rm}'
-        rs_str = f'r{self.rs}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {reg_to_str(self.rm):>3}, {reg_to_str(self.rs):>3}'
 
 class MultiplyAccumulateOp(Instruction):
     def __init__(
@@ -150,11 +162,7 @@ class MultiplyAccumulateOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}{"s" if self.save_flags else ""}'
-        rd_str = f'r{self.rd}'
-        rm_str = f'r{self.rm}'
-        rs_str = f'r{self.rs}'
-        rn_str = f'r{self.rn}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}, {rn_str:>3}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {reg_to_str(self.rm):>3}, {reg_to_str(self.rs):>3}, {reg_to_str(self.rn):>3}'
 
 class BranchOp(Instruction):
     def __init__(
@@ -196,8 +204,7 @@ class LoadStoreSingleMode2Op(Instruction):
     
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}{self.size.value}'
-        rd_str = f'r{self.rd}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode2}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {self.mode2}'
 
 class LoadStoreHalfMode3UnsignedOp(Instruction):
     def __init__(
@@ -214,8 +221,7 @@ class LoadStoreHalfMode3UnsignedOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}h'
-        rd_str = f'r{self.rd}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {self.mode3}'
 
 class LoadSingleMode3SignedOp(Instruction):
     def __init__(
@@ -233,8 +239,7 @@ class LoadSingleMode3SignedOp(Instruction):
 
     def __repr__(self) -> str:
         opcode_str = f'{self.opcode.value}{self.cond.value}s{self.size.value}'
-        rd_str = f'r{self.rd}'
-        return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}, {self.mode3}'
 
 class LoadStoreMultipleOp(Instruction):
     def __init__(
@@ -254,7 +259,6 @@ class LoadStoreMultipleOp(Instruction):
         self.cond: Cond = cond
     
     def __repr__(self) -> str:
-        opcode_str = f'{self.opcode.value}{self.cond.value}{self.mode4}'
-        rd_str = f'r{self.rd}'
-        reglist_str = f'{{ {", ".join(str(reg) for reg in self.reglist)} }}'
-        return f'    {opcode_str} {rd_str:>3}{"!" if self.save_rd else ""}, {reglist_str}'
+        opcode_str = f'{self.opcode.value}{self.cond.value}{self.mode4.value}'
+        reglist_str = f'{{ {", ".join(reg_to_str(reg) for reg in self.reglist)} }}'
+        return f'    {opcode_str:<8} {reg_to_str(self.rd):>3}{"!" if self.save_rd else ""}, {reglist_str}'
