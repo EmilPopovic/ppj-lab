@@ -7,6 +7,7 @@ class Symbol:
         self.name: str = name
         self.type: Optional[Type] = type
         self.is_l_expr: bool = is_l_expr
+        self.const_val: 'Optional[int | str]' = None
 
     def __repr__(self) -> str:
         if self.type and isinstance(self.type.nested_type, FuncSignature):

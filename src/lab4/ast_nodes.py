@@ -3,12 +3,13 @@ from typing import List, Optional, Any
 
 from util import log
 from type import Type
+from scope import Symbol
 
 class Expr: pass
 
 @dataclass
 class VarDecl:
-    name: str
+    sym: Symbol
     vtype: Type
     bytes: int
     init: 'Optional[Expr] | List[Expr]' = None
@@ -73,20 +74,24 @@ class Return(CtrlFlowStmt):
     expr: Optional[Expr]
 
 @dataclass
-class Const(Expr):
+class ConstExpr(Expr):
+    pass
+
+@dataclass
+class Const(ConstExpr):
     value: int
 
 @dataclass
-class ConstStr(Expr):
+class ConstStr(ConstExpr):
     value: str
 
 @dataclass
-class CharConst(Expr):
-    value: str
+class CharConst(ConstExpr):
+    value: int
 
 @dataclass
 class Var(Expr):
-    name: str
+    sym: Symbol
 
 @dataclass
 class BinOp(Expr):
@@ -124,7 +129,7 @@ def print_ast(node: Any, indent: int = 0) -> None:
                 print_ast(f, indent + 2)
     
     elif isinstance(node, FuncDef):
-        params_str = ", ".join(f"{p.name}: {p.vtype}" for p in node.params)
+        params_str = ", ".join(f"{p.sym.name}: {p.vtype}" for p in node.params)
         log(f"{prefix}FuncDef: {node.name}({params_str}) -> {node.ret_type}")
         print_ast(node.body, indent + 1)
     
@@ -132,9 +137,9 @@ def print_ast(node: Any, indent: int = 0) -> None:
         init_str = " = ..." if node.init else ""
         if node.vtype.name == "arr":
             assert isinstance(node.vtype.nested_type, Type)
-            log(f"{prefix}VarDecl: {node.name}: {node.vtype}[{node.bytes // Type.sizeof(node.vtype.nested_type)}]{init_str}")
+            log(f"{prefix}VarDecl: {node.sym.name}: {node.vtype}[{node.bytes // Type.sizeof(node.vtype.nested_type)}]{init_str}")
         else:
-            log(f"{prefix}VarDecl: {node.name}: {node.vtype}{init_str}")
+            log(f"{prefix}VarDecl: {node.sym.name}: {node.vtype}{init_str}")
 
         if node.init:
             if isinstance(node.init, Expr):
@@ -203,7 +208,7 @@ def print_ast(node: Any, indent: int = 0) -> None:
         log(f"{prefix}StrConst: '{node.value}'")
     
     elif isinstance(node, Var):
-        log(f"{prefix}Var: {node.name}")
+        log(f"{prefix}Var: {node.sym.name}")
     
     elif isinstance(node, BinOp):
         log(f"{prefix}BinOp: {node.op}")

@@ -8,7 +8,39 @@ from addressing.mode2 import *
 from addressing.mode3 import *
 from addressing.mode4 import *
 
-class ArithmeticLogicOp:
+class AssemblyLine:
+    pass
+
+class AssemblerDirective(AssemblyLine):
+    def __init__(self, name: str) -> None:
+        if not name.startswith('.'):
+            self.name = f'.{name}'
+        else:
+            self.name = name
+
+    def __repr__(self) -> str:
+        return f'    {self.name}'
+
+class Label(AssemblyLine):
+    __last = -1
+
+    def __init__(self, name: Optional[str] = None) -> None:
+        if name is None:
+            name = self.__new_name()
+        self.name = name
+
+    @staticmethod
+    def __new_name() -> str:
+        Label.__last += 1
+        return f'l{Label.__last}'
+
+    def __repr__(self) -> str:
+        return f'{self.name}:'
+
+class Instruction(AssemblyLine):
+    pass
+
+class ArithmeticLogicOp(Instruction):
     def __init__(
             self,
             opcode: 'ArithmeticOpcode | LogicOpcode',
@@ -31,7 +63,7 @@ class ArithmeticLogicOp:
         rn_str = f'r{self.rn}'
         return f'    {opcode_str:<8} {rd_str:>3}, {rn_str:>3}, {self.oprnd2}'
     
-class TestOp:
+class TestOp(Instruction):
     def __init__(
             self,
             opcode: TestOpcode,
@@ -49,7 +81,7 @@ class TestOp:
         rn_str = f'r{self.rn}'
         return f'    {opcode_str:<8} {rn_str:>3}, {self.oprnd2}'
     
-class MoveOp:
+class MoveOp(Instruction):
     def __init__(
             self,
             opcode: MoveOpcode,
@@ -67,7 +99,7 @@ class MoveOp:
         rd_str = f'r{self.rd}'
         return f'    {opcode_str:<8} {rd_str:>3}, {self.oprnd2}'
     
-class NopOp:
+class NopOp(Instruction):
     def __init__(self) -> None:
         self.opcode: NopOpcode = NopOpcode.NOP
     
@@ -75,7 +107,7 @@ class NopOp:
         opcode_str = f'{self.opcode.value}'
         return f'    {opcode_str:<8}'
     
-class MultiplyOp:
+class MultiplyOp(Instruction):
     def __init__(
             self,
             rd: int,
@@ -98,7 +130,7 @@ class MultiplyOp:
         rs_str = f'r{self.rs}'
         return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}'
 
-class MultiplyAccumulateOp:
+class MultiplyAccumulateOp(Instruction):
     def __init__(
             self,
             rd: int,
@@ -124,7 +156,7 @@ class MultiplyAccumulateOp:
         rn_str = f'r{self.rn}'
         return f'    {opcode_str:<8} {rd_str:>3}, {rm_str:>3}, {rs_str:>3}, {rn_str:>3}'
 
-class BranchOp:
+class BranchOp(Instruction):
     def __init__(
             self,
             opcode: BranchOpcode,
@@ -139,7 +171,7 @@ class BranchOp:
         opcode_str = f'{self.opcode.value}{self.cond.value}'
         return f'    {opcode_str:<8} {self.label}'
     
-class SoftwareInterruptOp:
+class SoftwareInterruptOp(Instruction):
     def __init__(self, irq_num: int) -> None:
         self.opcode: ControlOpcode = ControlOpcode.SWI
         self.irq_num: int = irq_num
@@ -147,7 +179,7 @@ class SoftwareInterruptOp:
     def __repr__(self) -> str:
         return f'    {self.opcode.value:<8} {self.irq_num}'
 
-class LoadStoreSingleMode2Op:
+class LoadStoreSingleMode2Op(Instruction):
     def __init__(
             self,
             opcode: 'LoadSingleOpcode | StoreSingleOpcode',
@@ -167,7 +199,7 @@ class LoadStoreSingleMode2Op:
         rd_str = f'r{self.rd}'
         return f'    {opcode_str:<8} {rd_str:>3}, {self.mode2}'
 
-class LoadStoreHalfMode3UnsignedOp:
+class LoadStoreHalfMode3UnsignedOp(Instruction):
     def __init__(
             self,
             opcode: 'LoadSingleOpcode | StoreSingleOpcode',
@@ -185,7 +217,7 @@ class LoadStoreHalfMode3UnsignedOp:
         rd_str = f'r{self.rd}'
         return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
 
-class LoadSingleMode3SignedOp:
+class LoadSingleMode3SignedOp(Instruction):
     def __init__(
             self,
             size: HalfOrByte,
@@ -204,7 +236,7 @@ class LoadSingleMode3SignedOp:
         rd_str = f'r{self.rd}'
         return f'    {opcode_str:<8} {rd_str:>3}, {self.mode3}'
 
-class LoadStoreMultipleOp:
+class LoadStoreMultipleOp(Instruction):
     def __init__(
             self,
             opcode: LoadStoreBlockOpcode,

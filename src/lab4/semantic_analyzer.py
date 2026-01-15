@@ -85,7 +85,7 @@ class ParseTree:
                 return self.error_str, None
             self.add_attr('type', symbol.type)
             self.add_attr('is_l_expr', symbol.is_l_expr)
-            return None, ast_nodes.Var(first_child.source)
+            return None, ast_nodes.Var(symbol)
             
         elif first_child.name == 'BROJ':
             if not first_child.is_int:
@@ -99,7 +99,7 @@ class ParseTree:
                 return self.error_str, None
             self.add_attr('type', Type('char'))
             self.add_attr('is_l_expr', False)
-            return None, ast_nodes.Const(first_child.to_int)
+            return None, ast_nodes.CharConst(first_child.to_int)
 
         elif first_child.name == 'NIZ_ZNAKOVA':
             if not first_child.is_valid_str:
@@ -199,7 +199,7 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             assert isinstance(func_expr, ast_nodes.Var)
-            return None, ast_nodes.Call(func_expr.name, [])
+            return None, ast_nodes.Call(func_expr.sym.name, [])
 
         elif first_child.name == '<postfiks_izraz>' and self.children[2].name == '<lista_argumenata>':
             third_child = self.children[2]
@@ -229,7 +229,7 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             assert isinstance(func_expr, ast_nodes.Var)
-            return None, ast_nodes.Call(func_expr.name, param_exprs)
+            return None, ast_nodes.Call(func_expr.sym.name, param_exprs)
         
         return None, None
 
@@ -1339,8 +1339,9 @@ class ParseTree:
 
             assert isinstance(names, list)
             for type, name in zip(decl_types, names):
-                self.scope.add_child(Symbol(name, type, is_l_expr=not type.is_const))
-                var_decls.append(ast_nodes.VarDecl(name, type, Type.sizeof(type), None))
+                symbol = Symbol(name, type, is_l_expr=not type.is_const)
+                self.scope.add_child(symbol)
+                var_decls.append(ast_nodes.VarDecl(symbol, type, Type.sizeof(type), None))
 
             func_def = ast_nodes.FuncDef(root_func.name, first_child_type, var_decls, ast_nodes.Block([], []))
             program.functions.append(func_def)
@@ -1540,7 +1541,7 @@ class ParseTree:
             self.add_attr('type', root_ntype)
 
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol.name, symbol.type, Type.sizeof(root_ntype), None)
+            decl = ast_nodes.VarDecl(symbol, symbol.type, Type.sizeof(root_ntype), None)
             return None, decl
 
         elif self.children[2].name == 'BROJ':
@@ -1571,7 +1572,7 @@ class ParseTree:
             size = third_child_int * Type.sizeof(root_ntype)
 
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol.name, symbol.type, size, None)
+            decl = ast_nodes.VarDecl(symbol, symbol.type, size, None)
             return None, decl
 
         elif self.children[2].name == 'KR_VOID':
