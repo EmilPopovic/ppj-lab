@@ -1,12 +1,22 @@
 from dataclasses import dataclass
 from typing import List, Optional, Any
 
+from addressing import oprnd2
 from util import log
 from type import Type
 from scope import Symbol
+import opcodes as op
 import instructions as instr
+from addressing.oprnd2 import Oprnd2, Oprnd2Imm8, Oprnd2Rm
+from cond import Cond
 
-class Expr: pass
+next_vreg = 0
+
+class Expr:
+    vreg: int
+
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        return []
 
 @dataclass
 class VarDecl:
@@ -52,6 +62,7 @@ class If(Stmt):
     else_branch: Optional[Stmt] = None
 
     def to_asm(self) -> List[instr.AssemblyLine]:
+
         return []
 
 @dataclass
@@ -117,10 +128,94 @@ class BinOp(Expr):
     left: Expr  # Var or ArrayAccess for assignment
     right: Expr
 
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        asm = self.left.to_asm()
+        asm.extend(self.right.to_asm())
+
+        global next_vreg
+        self.vreg = next_vreg
+        next_vreg += 2
+
+        if self.op == 'ADD':
+            asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+        elif self.op == 'SUB':
+            asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+        elif self.op == 'MUL':
+            asm.append(instr.MultiplyOp(self.vreg, self.left.vreg, self.right.vreg))
+        elif self.op == 'DIV':
+        # TODO:
+            ...
+        elif self.op == 'MOD':
+        # TODO:
+            ...
+
+        elif self.op == 'AND':
+            asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+        elif self.op == 'OR':
+            asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.ORR, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+        elif self.op == 'XOR':
+            asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.EOR, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+
+        elif self.op == 'EQ':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.EQUAL))
+        elif self.op == 'NEQ':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.NOT_EQUAL))
+        elif self.op == 'LT':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.SIGNED_LESS_THAN))
+        elif self.op == 'GT':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.SIGNED_GREATER_THAN))
+        elif self.op == 'LE':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.SIGNED_LESS_OR_EQUAL))
+        elif self.op == 'GE':
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.SIGNED_GREATER_OR_EQUAL))
+
+        elif self.op == 'LOG_AND':
+            asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, self.vreg + 1, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.vreg, Oprnd2Rm(self.vreg + 1)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.NOT_EQUAL))
+        elif self.op == 'LOG_OR':
+            asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.ORR, self.vreg + 1, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(0)))
+            asm.append(instr.TestOp(op.TestOpcode.CMP, self.vreg, Oprnd2Rm(self.vreg + 1)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.EQUAL))
+
+        return asm
+
+
 @dataclass
 class UnaryOp(Expr):
     op: str
     operand: Expr
+
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        asm = self.operand.to_asm()
+
+        global next_vreg
+        self.vreg = next_vreg
+        next_vreg += 1
+
+        if self.op == 'NEG':
+            asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, self.vreg, self.operand.vreg, oprnd2.Oprnd2Imm8(0)))
+        elif self.op in ['POSTFIX_INC', 'PREFIX_INC']:
+            ...
+        elif self.op in ['POSTFIX_DEC', 'PREFIX_DEC']:
+            ...
+        
+        return asm
+
 
 @dataclass
 class Call(Expr):
