@@ -110,6 +110,182 @@ class Program:
     functions: List[FuncDef]
     globals: List[VarDecl]
 
+    @staticmethod
+    def to_int32(value: int) -> int:
+        value = value & 0xffff_ffff
+        if value >= 0x8000_0000:
+            return value - 0x1_0000_0000
+        return value
+
+    @staticmethod
+    def to_int8(value: int) -> int:
+        value = value & 0xff
+        if value >= 0x80:
+            return value - 0x100
+        return value
+
+    @staticmethod
+    def _compare_values(op: str, left: Any, right: Any) -> Const:
+        if op == 'EQ':
+            return Const(1 if left == right else 0)
+        elif op == 'NEQ':
+            return Const(1 if left != right else 0)
+        elif op == 'LT':
+            return Const(1 if left < right else 0)
+        elif op == 'GT':
+            return Const(1 if left > right else 0)
+        elif op == 'LE':
+            return Const(1 if left <= right else 0)
+        else:  # op == 'GE'
+            return Const(1 if left >= right else 0)
+
+    @staticmethod
+    def fold_const(expr: Expr) -> Expr:
+        if isinstance(expr, Const) or isinstance(expr, ConstStr) or isinstance(expr, CharConst):
+            return expr
+        
+        elif isinstance(expr, Var):
+            if expr.sym.type is None or not expr.sym.type.is_const:
+                return expr
+            elif expr.sym.const_val is not None:
+                if expr.sym.type.name == 'int':
+                    assert isinstance(expr.sym.const_val, int)
+                    return Const(expr.sym.const_val)
+                elif expr.sym.type.name == 'char':
+                    assert isinstance(expr.sym.const_val, int)
+                    return CharConst(expr.sym.const_val)
+                elif expr.sym.type.name == 'arr':
+                    assert isinstance(expr.sym.const_val, str)
+                    return ConstStr(expr.sym.const_val)
+            
+        elif isinstance(expr, BinOp):
+            left_expr = Program.fold_const(expr.left)
+            left_is_const = isinstance(left_expr, Const) or isinstance(left_expr, CharConst) or isinstance(left_expr, ConstStr)
+
+            right_expr = Program.fold_const(expr.right)
+            right_is_const = isinstance(right_expr, Const) or isinstance(right_expr, CharConst) or isinstance(right_expr, ConstStr)
+
+            if left_is_const:
+                expr.left = left_expr
+                return expr
+
+            if right_is_const:
+                expr.right = right_expr
+                return expr
+
+            if not left_is_const or not right_is_const:
+                return expr
+
+            left_val = None
+            right_val = None
+            is_char_op = False
+
+            if isinstance(left_expr, Const):
+                left_val = left_expr.value
+            elif isinstance(left_expr, CharConst):
+                left_val = left_expr.value if left_expr.value else 0
+                is_char_op = True
+
+            if isinstance(right_expr, Const):
+                right_val = right_expr.value
+            elif isinstance(right_expr, CharConst):
+                right_val = right_expr.value if right_expr.value else 0
+                is_char_op = is_char_op and isinstance(right_expr, CharConst)
+
+            if isinstance(left_expr, ConstStr) and isinstance(right_expr, ConstStr):
+                return Program._compare_values(expr.op, left_expr.value, right_expr.value)
+            
+            if left_val is None or right_val is None:
+                return expr
+            
+            wrap = Program.to_int32 if is_char_op else Program.to_int32
+
+            if expr.op == 'ADD':
+                result = wrap(left_val + right_val)
+            elif expr.op == 'SUB':
+                result = wrap(left_val - right_val)
+            elif expr.op == 'MUL':
+                result = wrap(left_val * right_val)
+            elif expr.op == 'DIV':
+                if right_val == 0:
+                    return expr
+                result = left_val // right_val
+            elif expr.op == 'MOD':
+                if right_val == 0:
+                    return expr
+                result = left_val % right_val
+
+            elif expr.op == 'AND':
+                result = wrap(left_val & right_val)
+            elif expr.op == 'OR':
+                result = wrap(left_val | right_val)
+            elif expr.op == 'XOR':
+                result = wrap(left_val ^ right_val)
+
+            elif expr.op in ('EQ', 'NEQ', 'LT', 'GT', 'LE', 'GE'):
+                return Program._compare_values(expr.op, left_val, right_val)
+            
+            elif expr.op == 'LOG_AND':
+                return Const(1 if left_val and right_val else 0)
+            elif expr.op == 'LOG_OR':
+                return Const(1 if left_val or right_val else 0)
+            
+            else:
+                return expr
+            
+            if is_char_op:
+                return CharConst(result)
+            else:
+                return Const(result)
+            
+        elif isinstance(expr, UnaryOp):
+            operand_expr = Program.fold_const(expr.operand)
+            if operand_expr is None:
+                return expr
+            
+            if isinstance(operand_expr, Const):
+                val = operand_expr.value
+                is_char = False
+                wrap = Program.to_int32
+            elif isinstance(operand_expr, CharConst):
+                val = operand_expr.value if operand_expr.value else 0
+                is_char = True
+                wrap = Program.to_int8
+            else:
+                return expr
+            
+            if expr.op == 'NEG':
+                result = wrap(-val)
+            elif expr.op == 'BITNOT':
+                result = wrap(~val)
+            elif expr.op == 'LOGNOT':
+                return Const(1 if not val else 0)
+            else:
+                return expr
+            
+            if is_char:
+                return CharConst(result)
+            else:
+                return Const(result)
+        
+        return expr
+    
+    def optimize(self) -> 'Program':
+        for glob in self.globals:
+            if glob.init is None:
+                continue
+
+            if isinstance(glob.init, Expr):
+                glob.init = Program.fold_const(glob.init)
+            else:
+                for val in glob.init:
+                    val = Program.fold_const(val)
+
+        for func in self.functions:
+            func.body
+
+        return self
+
     def log(self) -> None:
         print_ast(self)
 
@@ -323,10 +499,18 @@ class Call(Expr):
     name: str
     args: List[Expr]
 
+    def optimize(self) -> None:
+        for arg in self.args:
+            arg = Program.fold_const(arg)
+
 @dataclass
 class ArrayAccess(Expr):
     array: Expr
     index: Expr
+
+    def optimize(self) -> None:
+        # self.array = Program.fold_const(self.array)
+        self.index = Program.fold_const(self.index)
 
 def print_ast(node: Any, indent: int = 0) -> None:
     prefix = "  " * indent
