@@ -2,10 +2,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Any
 
 from addressing import oprnd2
-from addressing import mode4
+from addressing import mode4, mode2
 from util import log
 from type import Type
-from scope import Symbol
+from scope import Symbol, Scope
+from size import WordOrByte
 import opcodes as op
 import instructions as instr
 from addressing.oprnd2 import Oprnd2, Oprnd2Imm8, Oprnd2Rm
@@ -178,9 +179,28 @@ class Return(CtrlFlowStmt):
             asm.extend(self.expr.to_asm())
 
             if isinstance(self.expr, Const) or isinstance(self.expr, CharConst):
-                asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Imm8(self.expr.value)))
+                if oprnd2.is_valid_arm_immediate(self.expr.value):
+                    asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Imm8(self.expr.value)))
+                else:
+                    size = WordOrByte.WORD
+                    if isinstance(self.expr, CharConst):
+                        size = WordOrByte.BYTE
+
+                    asm.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, mode2.Mode2Immediate(self.expr.value)))
             else:
-                asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Rm(self.expr.vreg)))
+                if isinstance(self.expr, Var) and Scope.root_scope.get_symbol(self.expr.sym.name) is not None:
+                    sym = Scope.root_scope.get_symbol(self.expr.sym.name)
+
+                    assert sym is not None
+                    assert sym.type is not None
+
+                    size = WordOrByte.WORD
+                    if sym.type.name == 'char':
+                        size = WordOrByte.BYTE
+
+                    asm.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, mode2.Mode2Label(f'g_{sym.name}')))
+                else:
+                    asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Rm(self.expr.vreg)))
 
         asm.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
         asm.append(instr.LoadStoreMultipleOp(instr.LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))

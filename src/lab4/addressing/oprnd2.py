@@ -3,6 +3,18 @@ from abc import ABC
 from shift import ShiftType
 from addressing.util import reg_to_str
 
+def is_valid_arm_immediate(val: int) -> bool:
+    if val < 0 or val > 0xFFFFFFFF:
+        return False
+
+    for k in range(0, 32, 2):
+        rotated_val = ((val << k) | (val >> (32 - k))) & 0xFFFFFFFF
+
+        if rotated_val <= 0xFF:
+            return True
+
+    return False
+
 class Oprnd2(ABC):
     pass
 
