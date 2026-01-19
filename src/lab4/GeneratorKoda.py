@@ -1,10 +1,10 @@
 import os
 import time
 import sys
-from typing import List, Optional
+from typing import List, Any
 
-from util import log, out
-from type import Type, FuncSignature
+from util import log
+from type import Type
 from opcodes import *
 from cond import Cond
 from addressing import mode2
@@ -38,19 +38,42 @@ class CodeGenerator:
                 f.write(f'{instr}\n')
     
     @staticmethod
-    def fold_const(expr: ast.Expr) -> Optional[ast.ConstExpr]:
-        def clamp_char(v: int):
-            return v & 0xff
-        
-        def clamp_int(v: int):
-            return v & 0xffffffff
-
+    def to_int32(value: int) -> int:
+        value = value & 0xffff_ffff
+        if value >= 0x8000_0000:
+            return value - 0x1_0000_0000
+        return value
+    
+    @staticmethod
+    def to_int8(value: int) -> int:
+        value = value & 0xff
+        if value >= 0x80:
+            return value - 0x100
+        return value
+    
+    @staticmethod
+    def _compare_values(op: str, left: Any, right: Any) -> ast.Const:
+        if op == 'EQ':
+            return ast.Const(1 if left == right else 0)
+        elif op == 'NEQ':
+            return ast.Const(1 if left != right else 0)
+        elif op == 'LT':
+            return ast.Const(1 if left < right else 0)
+        elif op == 'GT':
+            return ast.Const(1 if left > right else 0)
+        elif op == 'LE':
+            return ast.Const(1 if left <= right else 0)
+        else:  # op == 'GE'
+            return ast.Const(1 if left >= right else 0)
+    
+    @staticmethod
+    def fold_const(expr: ast.Expr) -> ast.Expr:
         if isinstance(expr, ast.Const) or isinstance(expr, ast.ConstStr) or isinstance(expr, ast.CharConst):
             return expr
         
         elif isinstance(expr, ast.Var):
             if expr.sym.type is None or not expr.sym.type.is_const:
-                return None
+                return expr
             elif expr.sym.const_val is not None:
                 if expr.sym.type.name == 'int':
                     assert isinstance(expr.sym.const_val, int)
@@ -65,235 +88,186 @@ class CodeGenerator:
         elif isinstance(expr, ast.BinOp):
             left_expr = CodeGenerator.fold_const(expr.left)
             if left_expr is None:
-                return None
+                return expr
             right_expr = CodeGenerator.fold_const(expr.right)
             if right_expr is None:
-                return None
+                return expr
             
-            # Both operands are Const (int)
-            if isinstance(left_expr, ast.Const) and isinstance(right_expr, ast.Const):
-                left_val = left_expr.value
-                right_val = right_expr.value
-                
-                # Arithmetic operations
-                if expr.op == 'ADD':
-                    return ast.Const(clamp_int(left_val + right_val))
-                elif expr.op == 'SUB':
-                    return ast.Const(clamp_int(left_val - right_val))
-                elif expr.op == 'MUL':
-                    return ast.Const(clamp_int(left_val * right_val))
-                elif expr.op == 'DIV':
-                    if right_val == 0:
-                        return None
-                    return ast.Const(left_val // right_val)
-                elif expr.op == 'MOD':
-                    if right_val == 0:
-                        return None
-                    return ast.Const(left_val % right_val)
-                
-                # Bitwise operations
-                elif expr.op == 'AND':
-                    return ast.Const(left_val & right_val)
-                elif expr.op == 'OR':
-                    return ast.Const(left_val | right_val)
-                elif expr.op == 'XOR':
-                    return ast.Const(left_val ^ right_val)
-                
-                # Comparison operations
-                elif expr.op == 'EQ':
-                    return ast.Const(1 if left_val == right_val else 0)
-                elif expr.op == 'NEQ':
-                    return ast.Const(1 if left_val != right_val else 0)
-                elif expr.op == 'LT':
-                    return ast.Const(1 if left_val < right_val else 0)
-                elif expr.op == 'GT':
-                    return ast.Const(1 if left_val > right_val else 0)
-                elif expr.op == 'LE':
-                    return ast.Const(1 if left_val <= right_val else 0)
-                elif expr.op == 'GE':
-                    return ast.Const(1 if left_val >= right_val else 0)
-                
-                # Logical operations
-                elif expr.op == 'LOG_AND':
-                    return ast.Const(1 if left_val and right_val else 0)
-                elif expr.op == 'LOG_OR':
-                    return ast.Const(1 if left_val or right_val else 0)
-                
-            # Both operands are CharConst
-            elif isinstance(left_expr, ast.CharConst) and isinstance(right_expr, ast.CharConst):
-                left_val = left_expr.value if left_expr.value else 0
-                right_val = right_expr.value if right_expr.value else 0
+            left_val = None
+            right_val = None
+            is_char_op = False
 
-                # Arithmetic operations
-                if expr.op == 'ADD':
-                    return ast.CharConst(clamp_char(left_val + right_val))
-                elif expr.op == 'SUB':
-                    return ast.CharConst(clamp_char(left_val - right_val))
-                elif expr.op == 'MUL':
-                    return ast.CharConst(clamp_char(left_val * right_val))
-                elif expr.op == 'DIV':
-                    if right_val == 0:
-                        return None
-                    return ast.CharConst(left_val // right_val)
-                elif expr.op == 'MOD':
-                    if right_val == 0:
-                        return None
-                    return ast.CharConst(left_val % right_val)
-                
-                # Bitwise operations
-                elif expr.op == 'AND':
-                    return ast.CharConst(clamp_char(left_val & right_val))
-                elif expr.op == 'OR':
-                    return ast.CharConst(clamp_char(left_val | right_val))
-                elif expr.op == 'XOR':
-                    return ast.CharConst(clamp_char(left_val ^ right_val))
-                
-                # Comparison operations
-                if expr.op == 'EQ':
-                    return ast.Const(1 if left_val == right_val else 0)
-                elif expr.op == 'NEQ':
-                    return ast.Const(1 if left_val != right_val else 0)
-                elif expr.op == 'LT':
-                    return ast.Const(1 if left_val < right_val else 0)
-                elif expr.op == 'GT':
-                    return ast.Const(1 if left_val > right_val else 0)
-                elif expr.op == 'LE':
-                    return ast.Const(1 if left_val <= right_val else 0)
-                elif expr.op == 'GE':
-                    return ast.Const(1 if left_val >= right_val else 0)
-            
-            # Both operands are ConstStr
-            elif isinstance(left_expr, ast.ConstStr) and isinstance(right_expr, ast.ConstStr):
+            if isinstance(left_expr, ast.Const):
                 left_val = left_expr.value
-                right_val = right_expr.value
-                
-                # Comparison operations
-                if expr.op == 'EQ':
-                    return ast.Const(1 if left_val == right_val else 0)
-                elif expr.op == 'NEQ':
-                    return ast.Const(1 if left_val != right_val else 0)
-                elif expr.op == 'LT':
-                    return ast.Const(1 if left_val < right_val else 0)
-                elif expr.op == 'GT':
-                    return ast.Const(1 if left_val > right_val else 0)
-                elif expr.op == 'LE':
-                    return ast.Const(1 if left_val <= right_val else 0)
-                elif expr.op == 'GE':
-                    return ast.Const(1 if left_val >= right_val else 0)
-            
-            # Mixed Const and CharConst
-            elif isinstance(left_expr, ast.Const) and isinstance(right_expr, ast.CharConst):
-                left_val = left_expr.value
-                right_val = right_expr.value if right_expr.value else 0
-                
-                # Comparison operations
-                if expr.op == 'EQ':
-                    return ast.Const(1 if left_val == right_val else 0)
-                elif expr.op == 'NEQ':
-                    return ast.Const(1 if left_val != right_val else 0)
-                elif expr.op == 'LT':
-                    return ast.Const(1 if left_val < right_val else 0)
-                elif expr.op == 'GT':
-                    return ast.Const(1 if left_val > right_val else 0)
-                elif expr.op == 'LE':
-                    return ast.Const(1 if left_val <= right_val else 0)
-                elif expr.op == 'GE':
-                    return ast.Const(1 if left_val >= right_val else 0)
-            
-            elif isinstance(left_expr, ast.CharConst) and isinstance(right_expr, ast.Const):
+            elif isinstance(left_expr, ast.CharConst):
                 left_val = left_expr.value if left_expr.value else 0
+                is_char_op = True
+
+            if isinstance(right_expr, ast.Const):
                 right_val = right_expr.value
-                
-                # Comparison operations
-                if expr.op == 'EQ':
-                    return ast.Const(1 if left_val == right_val else 0)
-                elif expr.op == 'NEQ':
-                    return ast.Const(1 if left_val != right_val else 0)
-                elif expr.op == 'LT':
-                    return ast.Const(1 if left_val < right_val else 0)
-                elif expr.op == 'GT':
-                    return ast.Const(1 if left_val > right_val else 0)
-                elif expr.op == 'LE':
-                    return ast.Const(1 if left_val <= right_val else 0)
-                elif expr.op == 'GE':
-                    return ast.Const(1 if left_val >= right_val else 0)
+            elif isinstance(right_expr, ast.CharConst):
+                right_val = right_expr.value if right_expr.value else 0
+                is_char_op = is_char_op and isinstance(right_expr, ast.CharConst)
+
+            if isinstance(left_expr, ast.ConstStr) and isinstance(right_expr, ast.ConstStr):
+                return CodeGenerator._compare_values(expr.op, left_expr.value, right_expr.value)
+            
+            if left_val is None or right_val is None:
+                return expr
+            
+            wrap = CodeGenerator.to_int32 if is_char_op else CodeGenerator.to_int32
+
+            if expr.op == 'ADD':
+                result = wrap(left_val + right_val)
+            elif expr.op == 'SUB':
+                result = wrap(left_val - right_val)
+            elif expr.op == 'MUL':
+                result = wrap(left_val * right_val)
+            elif expr.op == 'DIV':
+                if right_val == 0:
+                    return expr
+                result = left_val // right_val
+            elif expr.op == 'MOD':
+                if right_val == 0:
+                    return expr
+                result = left_val % right_val
+
+            elif expr.op == 'AND':
+                result = wrap(left_val & right_val)
+            elif expr.op == 'OR':
+                result = wrap(left_val | right_val)
+            elif expr.op == 'XOR':
+                result = wrap(left_val ^ right_val)
+
+            elif expr.op in ('EQ', 'NEQ', 'LT', 'GT', 'LE', 'GE'):
+                return CodeGenerator._compare_values(expr.op, left_val, right_val)
+            
+            elif expr.op == 'LOG_AND':
+                return ast.Const(1 if left_val and right_val else 0)
+            elif expr.op == 'LOG_OR':
+                return ast.Const(1 if left_val or right_val else 0)
+            
+            else:
+                return expr
+            
+            if is_char_op:
+                return ast.CharConst(result)
+            else:
+                return ast.Const(result)
             
         elif isinstance(expr, ast.UnaryOp):
-            operand = CodeGenerator.fold_const(expr.operand)
-            if operand is None:
-                return None
+            operand_expr = CodeGenerator.fold_const(expr.operand)
+            if operand_expr is None:
+                return expr
+            
+            if isinstance(operand_expr, ast.Const):
+                val = operand_expr.value
+                is_char = False
+                wrap = CodeGenerator.to_int32
+            elif isinstance(operand_expr, ast.CharConst):
+                val = operand_expr.value if operand_expr.value else 0
+                is_char = True
+                wrap = CodeGenerator.to_int8
+            else:
+                return expr
             
             if expr.op == 'NEG':
-                if isinstance(expr.operand, ast.Const):
-                    return ast.Const(clamp_int(-expr.operand.value))
-                elif isinstance(expr.operand, ast.CharConst):
-                    return ast.CharConst(clamp_char(-expr.operand.value))
+                result = wrap(-val)
             elif expr.op == 'BITNOT':
-                if isinstance(expr.operand, ast.Const):
-                    return ast.Const(expr.operand.value ^ 0xffffffff)
-                elif isinstance(expr.operand, ast.CharConst):
-                    return ast.CharConst(expr.operand.value ^ 0xff)
+                result = wrap(~val)
             elif expr.op == 'LOGNOT':
-                if isinstance(expr.operand, ast.Const) or isinstance(expr.operand, ast.CharConst):
-                    return ast.Const(expr.operand.value != 0)
+                return ast.Const(1 if not val else 0)
+            else:
+                return expr
+            
+            if is_char:
+                return ast.CharConst(result)
+            else:
+                return ast.Const(result)
+        
+        return expr
+    
+    @staticmethod
+    def fold_global_var(var: ast.VarDecl) -> List[instr.AssemblyLine]:
+        code: List[instr.AssemblyLine] = [instr.Label(f'g_{var.sym.name}')]
+        if var.init:
+            if isinstance(var.init, ast.Expr):
+                val = CodeGenerator.fold_const(var.init)
+                
+                if isinstance(val, ast.Const):
+                    code.append(instr.AssemblerDirective(f'.word {val.value}'))
+                    var.sym.const_val = val.value
+                elif isinstance(val, ast.CharConst):
+                    code.append(instr.AssemblerDirective(f'.byte {val.value}'))
+                    var.sym.const_val = val.value
+                elif isinstance(val, ast.ConstStr):
+                    code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
+                    var.sym.const_val = val.value
+                else:
+                    assert False
+
+                if var.vtype.name == 'arr':
+                    assert isinstance(val, ast.ConstStr)
+                    code.append(instr.AssemblerDirective(f'.space {var.bytes - len(val.value) - 1}'))
+
+            else:
+                for elem_init in var.init:
+                    val = CodeGenerator.fold_const(elem_init)
+                    
+                    if isinstance(val, ast.Const):
+                        code.append(instr.AssemblerDirective(f'.word {val.value}'))
+                    elif isinstance(val, ast.CharConst):
+                        code.append(instr.AssemblerDirective(f'.byte {val.value}'))
+                    elif isinstance(val, ast.ConstStr):
+                        code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
+                    else:
+                        assert False
+
+                assert isinstance(var.vtype.nested_type, Type)
+                code.append(instr.AssemblerDirective(f'.space {var.bytes - len(var.init) * Type.sizeof(var.vtype.nested_type)}'))
+
+        else:
+            code.append(instr.AssemblerDirective(f'.size {var.bytes}'))
+
+        return code
+    
+    @staticmethod
+    def globals_asm(program: ast.Program) -> List[instr.AssemblyLine]:
+        code = []
+        for glob in program.globals:
+            code.extend(CodeGenerator.fold_global_var(glob))
+        return code
+    
+    @staticmethod
+    def enter(f: ast.FuncDef) -> List[instr.AssemblyLine]:
+        f_sym = f.sym
+        code: List[instr.AssemblyLine] = [instr.Label(f'f_{f_sym.name}')]
+        code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True))
+        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP)))
+        code.append(instr.Comment(f'Entered {f_sym.name}'))
+        return code
+    
+    @staticmethod
+    def leave(f: ast.FuncDef) -> List[instr.AssemblyLine]:
+        f_sym = f.sym
+        code: List[instr.AssemblyLine] = [instr.Comment(f'Leaving {f_sym.name}')]
+        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
+        code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))
+        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
+        return code
 
     @staticmethod
     def from_ast(program: ast.Program) -> 'CodeGenerator':
         code = RUNTIME
 
         for func in program.functions:
-            f_sym = func.sym
-            code.append(instr.Label(f'f_{f_sym.name}'))
-            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True))
-            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP)))
-            code.append(instr.Comment(f'Entered {f_sym.name}'))
-            
+            code.extend(CodeGenerator.enter(func))
             body_instrs = func.body.to_asm()
             for line in body_instrs:
                 code.append(line)
+            code.extend(CodeGenerator.leave(func))
 
-            code.append(instr.Comment(f'Leaving {f_sym.name}'))
-            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
-            code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))
-            code.append(instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
-
-        for glob in program.globals:
-            code.append(instr.Label(f'g_{glob.sym.name}'))
-            if glob.init:
-                if isinstance(glob.init, ast.Expr):
-                    val = CodeGenerator.fold_const(glob.init)
-                    assert val is not None
-                    
-                    if isinstance(val, ast.Const):
-                        code.append(instr.AssemblerDirective(f'.word {val.value}'))
-                        glob.sym.const_val = val.value
-                    elif isinstance(val, ast.CharConst):
-                        code.append(instr.AssemblerDirective(f'.byte {val.value}'))
-                        glob.sym.const_val = val.value
-                    elif isinstance(val, ast.ConstStr):  # ConstStr
-                        code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
-                        glob.sym.const_val = val.value
-
-                    if glob.vtype.name == 'arr':
-                        assert isinstance(val, ast.ConstStr)
-                        code.append(instr.AssemblerDirective(f'.space {glob.bytes - len(val.value) - 1}'))
-
-                else:
-                    for elem_init in glob.init:
-                        val = CodeGenerator.fold_const(elem_init)
-                        
-                        if isinstance(val, ast.Const):
-                            code.append(instr.AssemblerDirective(f'.word {val.value}'))
-                        elif isinstance(val, ast.CharConst):
-                            code.append(instr.AssemblerDirective(f'.byte {val.value}'))
-                        elif isinstance(val, ast.ConstStr):  # ConstStr
-                            code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
-
-                    assert isinstance(glob.vtype.nested_type, Type)
-                    code.append(instr.AssemblerDirective(f'.space {glob.bytes - len(glob.init) * Type.sizeof(glob.vtype.nested_type)}'))
-
-            else:
-                code.append(instr.AssemblerDirective(f'.size {glob.bytes}'))
+        code.extend(CodeGenerator.globals_asm(program))
 
         return CodeGenerator(code)
 
