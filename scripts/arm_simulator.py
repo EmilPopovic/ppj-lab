@@ -17,7 +17,7 @@ ARM_CODE_ADDRESS = 0x10000
 
 
 def hook_intr(mu, intno, user_data):
-    if intno == 0:
+    if intno == 2:
         mu.emu_stop()
 
 
