@@ -18,17 +18,18 @@ import ast_nodes as ast
 from regs import Regs
 
 OUTPUT_FILENAME = 'a.s'
-RUNTIME = [
-    instr.AssemblerDirective('.text'),
-    instr.AssemblerDirective('.global _start'),
-    instr.Label('_start'),
-    instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, mode2.Mode2Immediate(0x20000)),
-    instr.BranchOp(BranchOpcode.BL, 'f_main', Cond.ALWAYS),
-    instr.MoveOp(MoveOpcode.MOV, Regs.R6, oprnd2.Oprnd2Rm(Regs.R0)),
-    instr.SoftwareInterruptOp(0),
-]
 
 class CodeGenerator:
+    runtime = [
+        instr.AssemblerDirective('.text'),
+        instr.AssemblerDirective('.global _start'),
+        instr.Label('_start'),
+        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, mode2.Mode2Immediate(0x20000)),
+        instr.BranchOp(BranchOpcode.BL, 'f_main', Cond.ALWAYS),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R6, oprnd2.Oprnd2Rm(Regs.R0)),
+        instr.SoftwareInterruptOp(0),
+    ]
+
     def __init__(self, code: List[instr.AssemblyLine]) -> None:
         self.code = code
 
@@ -258,7 +259,7 @@ class CodeGenerator:
 
     @staticmethod
     def from_ast(program: ast.Program) -> 'CodeGenerator':
-        code = RUNTIME
+        code = CodeGenerator.runtime
 
         for func in program.functions:
             code.extend(CodeGenerator.enter(func))
