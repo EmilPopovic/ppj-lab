@@ -66,7 +66,7 @@ for dict in $pattern; do
     # Step 2: Run the simulator to check R6 register value
     expected_val=$(cat "$dict/test.out" | tr -d ' \n')
     
-    result=$(python3.8 "$(dirname "$0")/arm_simulator.py" "a.s" "$expected_val" 2>/dev/null)
+    result=$(python "$(dirname "$0")/arm_simulator.py" "./src/lab4/a.s" "$expected_val" 2>/dev/null)
 
     # End simulation timer
     sim_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
