@@ -11,6 +11,7 @@ from addressing import mode2
 from addressing import mode3
 from addressing import mode4
 from addressing import oprnd2
+from shift import ShiftType
 from size import WordOrByte, HalfOrByte
 from semantic_analyzer import TreeFactory
 import instructions as instr
@@ -28,6 +29,69 @@ class CodeGenerator:
         instr.BranchOp(BranchOpcode.BL, 'f_main', Cond.ALWAYS),
         instr.MoveOp(MoveOpcode.MOV, Regs.R6, oprnd2.Oprnd2Rm(Regs.R0)),
         instr.SoftwareInterruptOp(0),
+    ]
+
+    # R0=dividend, R1=divisor -> R0=quotient, R1=remainder
+    div_func = [
+        instr.Label('_f_divide'),
+
+        instr.ArithmeticLogicOp(ArithmeticOpcode.SUB, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
+        instr.LoadStoreSingleMode2Op(StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
+
+        instr.MoveOp(MoveOpcode.MOV, Regs.R2, oprnd2.Oprnd2Rm(Regs.R1)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R3, oprnd2.Oprnd2Rm(Regs.R0)),
+
+        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Imm8(0)),
+        instr.BranchOp(BranchOpcode.B, '_div_by_zero', Cond.EQUAL),
+
+        instr.MoveOp(MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Rm(Regs.R2)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2Imm8(1)),
+
+        instr.Label('_align_loop'),
+        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Rm(Regs.R3)),
+        instr.BranchOp(BranchOpcode.B, '_align_done', Cond.UNSIGNED_HIGHER),
+        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Imm8(0)),
+        instr.BranchOp(BranchOpcode.B, '_align_done', Cond.NEGATIVE),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSL, 1)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSL, 1)),
+        instr.BranchOp(BranchOpcode.B, '_align_loop', Cond.ALWAYS),
+
+        instr.Label('_align_done'),
+        instr.TestOp(TestOpcode.CMP, Regs.R4, oprnd2.Oprnd2Imm8(1)),
+        instr.BranchOp(BranchOpcode.B, '_divide_loop', Cond.EQUAL),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
+
+        instr.Label('_divide_loop'),
+        instr.TestOp(TestOpcode.CMP, Regs.R4, oprnd2.Oprnd2Imm8(0)),
+        instr.BranchOp(BranchOpcode.B, '_divide_done', Cond.EQUAL),
+
+        instr.TestOp(TestOpcode.CMP, Regs.R3, oprnd2.Oprnd2Rm(Regs.R1)),
+        instr.BranchOp(BranchOpcode.B, '_skip_subtract', Cond.UNSIGNED_LOWER),
+
+        instr.ArithmeticLogicOp(ArithmeticOpcode.SUB, Regs.R3, Regs.R3, oprnd2.Oprnd2Rm(Regs.R1)),
+        instr.ArithmeticLogicOp(LogicOpcode.ORR, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R4)),
+
+        instr.Label('_skip_subtract'),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
+        instr.BranchOp(BranchOpcode.B, '_divide_loop', Cond.ALWAYS),
+
+        instr.Label('_div_by_zero'),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Imm8(0)),
+        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
+        instr.ArithmeticLogicOp(ArithmeticOpcode.ADD, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)),
+
+        instr.Label('_divide_done'),
+        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Rm(Regs.R3)),
+
+        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
+        instr.ArithmeticLogicOp(ArithmeticOpcode.ADD, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
+        instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)),
     ]
 
     def __init__(self, code: List[instr.AssemblyLine]) -> None:
@@ -238,35 +302,16 @@ class CodeGenerator:
         for glob in program.globals:
             code.extend(CodeGenerator.fold_global_var(glob))
         return code
-    
-    @staticmethod
-    def enter(f: ast.FuncDef) -> List[instr.AssemblyLine]:
-        f_sym = f.sym
-        code: List[instr.AssemblyLine] = [instr.Label(f'f_{f_sym.name}')]
-        code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True))
-        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP)))
-        code.append(instr.Comment(f'Entered {f_sym.name}'))
-        return code
-    
-    @staticmethod
-    def leave(f: ast.FuncDef) -> List[instr.AssemblyLine]:
-        f_sym = f.sym
-        code: List[instr.AssemblyLine] = [instr.Comment(f'Leaving {f_sym.name}')]
-        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
-        code.append(instr.LoadStoreMultipleOp(LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))
-        code.append(instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
-        return code
 
     @staticmethod
     def from_ast(program: ast.Program) -> 'CodeGenerator':
         code = CodeGenerator.runtime
 
         for func in program.functions:
-            code.extend(CodeGenerator.enter(func))
-            body_instrs = func.body.to_asm()
-            for line in body_instrs:
-                code.append(line)
-            code.extend(CodeGenerator.leave(func))
+            code.extend(func.to_asm())
+
+        if ast.needs_div:
+            code.extend(CodeGenerator.div_func)
 
         code.extend(CodeGenerator.globals_asm(program))
 

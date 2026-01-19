@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Any
 
 from addressing import oprnd2
+from addressing import mode4
 from util import log
 from type import Type
 from scope import Symbol
@@ -9,8 +10,10 @@ import opcodes as op
 import instructions as instr
 from addressing.oprnd2 import Oprnd2, Oprnd2Imm8, Oprnd2Rm
 from cond import Cond
+from regs import Regs
 
 next_vreg = 0
+needs_div = False
 
 class Expr:
     vreg: int
@@ -47,6 +50,60 @@ class FuncDef:
     params: List[VarDecl]
     body: Block
 
+    def enter(self) -> List[instr.AssemblyLine]:
+        f_sym = self.sym
+        code: List[instr.AssemblyLine] = [instr.Label(f'f_{f_sym.name}')]
+        code.append(instr.LoadStoreMultipleOp(instr.LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True))
+        code.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP)))
+        code.append(instr.Comment(f'Entered {f_sym.name}'))
+        return code
+    
+    def leave(self) -> List[instr.AssemblyLine]:
+        f_sym = self.sym
+        code: List[instr.AssemblyLine] = [instr.Comment(f'Leaving {f_sym.name}')]
+        code.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
+        return code
+
+    def to_asm(self) -> List[instr.AssemblyLine]:
+        asm = []
+
+        global next_vreg
+        next_vreg = 0
+
+        asm.extend(self.enter())
+        asm.extend(self.body.to_asm())
+
+        last_instr = asm[-1]
+        if (
+                not (isinstance(last_instr, instr.MoveOp) and asm[-1].rd == Regs.PC)
+                or isinstance(last_instr, instr.Comment)
+                or isinstance(last_instr, instr.AssemblerDirective)
+                or isinstance(last_instr, instr.Label)
+        ):
+            asm.extend(self.leave())
+
+        return asm
+
+@dataclass
+class ConstExpr(Expr):
+    pass
+
+@dataclass
+class Const(ConstExpr):
+    value: int
+
+@dataclass
+class ConstStr(ConstExpr):
+    value: str
+
+@dataclass
+class CharConst(ConstExpr):
+    value: int
+
+@dataclass
+class Var(Expr):
+    sym: Symbol
+
 @dataclass
 class Program:
     functions: List[FuncDef]
@@ -62,7 +119,6 @@ class If(Stmt):
     else_branch: Optional[Stmt] = None
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-
         return []
 
 @dataclass
@@ -72,7 +128,23 @@ class While(Stmt):
     body: Stmt
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        return []
+        label_loop = instr.Label()
+        label_exit = instr.Label()
+
+        asm: List[instr.AssemblyLine] = [label_loop]
+
+        if self.before is not None:
+            asm.extend(self.before.to_asm())
+
+        if self.cond is not None:
+            asm.extend(self.cond.to_asm())
+
+        asm.extend(self.body.to_asm())
+
+        asm.append(instr.BranchOp(op.BranchOpcode.B, label_loop.name, Cond.ALWAYS))
+        asm.append(label_exit)
+
+        return asm
 
 @dataclass
 class ExprStmt(Stmt):
@@ -100,27 +172,21 @@ class Return(CtrlFlowStmt):
     expr: Optional[Expr]
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        return []
+        asm: List[instr.AssemblyLine]  = []
 
-@dataclass
-class ConstExpr(Expr):
-    pass
+        if self.expr is not None:
+            asm.extend(self.expr.to_asm())
 
-@dataclass
-class Const(ConstExpr):
-    value: int
+            if isinstance(self.expr, Const) or isinstance(self.expr, CharConst):
+                asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Imm8(self.expr.value)))
+            else:
+                asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Rm(self.expr.vreg)))
 
-@dataclass
-class ConstStr(ConstExpr):
-    value: str
+        asm.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)))
+        asm.append(instr.LoadStoreMultipleOp(instr.LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True))
+        asm.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
 
-@dataclass
-class CharConst(ConstExpr):
-    value: int
-
-@dataclass
-class Var(Expr):
-    sym: Symbol
+        return asm
 
 @dataclass
 class BinOp(Expr):
@@ -132,7 +198,9 @@ class BinOp(Expr):
         asm = self.left.to_asm()
         asm.extend(self.right.to_asm())
 
+        global needs_div
         global next_vreg
+
         self.vreg = next_vreg
         next_vreg += 2
 
@@ -143,12 +211,17 @@ class BinOp(Expr):
         elif self.op == 'MUL':
             asm.append(instr.MultiplyOp(self.vreg, self.left.vreg, self.right.vreg))
         elif self.op == 'DIV':
-        # TODO:
-            ...
+            needs_div = True
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Rm(self.left.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.BranchOp(op.BranchOpcode.BL, '_f_divide', Cond.ALWAYS))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Rm(Regs.R0)))
         elif self.op == 'MOD':
-        # TODO:
-            ...
-
+            needs_div = True
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, Oprnd2Rm(self.left.vreg)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, Oprnd2Rm(self.right.vreg)))
+            asm.append(instr.BranchOp(op.BranchOpcode.BL, '_f_divide', Cond.ALWAYS))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Rm(Regs.R1)))
         elif self.op == 'AND':
             asm.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, self.vreg, self.left.vreg, Oprnd2Rm(self.right.vreg)))
         elif self.op == 'OR':
@@ -192,6 +265,14 @@ class BinOp(Expr):
             asm.append(instr.TestOp(op.TestOpcode.CMP, self.vreg, Oprnd2Rm(self.vreg + 1)))
             asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, Oprnd2Imm8(1), Cond.EQUAL))
 
+        elif self.op == 'ASSIGN':
+            assert isinstance(self.left, Var) or  isinstance(self.left, ArrayAccess)
+
+            # TODO: assign na globalnu varijablu
+            ...
+
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.left.vreg, Oprnd2Rm(self.right.vreg)))
+
         return asm
 
 
@@ -210,10 +291,10 @@ class UnaryOp(Expr):
         if self.op == 'NEG':
             asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, self.vreg, self.operand.vreg, oprnd2.Oprnd2Imm8(0)))
         elif self.op in ['POSTFIX_INC', 'PREFIX_INC']:
-            ...
+            asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, self.vreg, self.vreg, Oprnd2Imm8(1)))
         elif self.op in ['POSTFIX_DEC', 'PREFIX_DEC']:
-            ...
-        
+            asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, self.vreg, self.vreg, Oprnd2Imm8(1)))
+
         return asm
 
 
