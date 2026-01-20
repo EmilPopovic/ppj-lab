@@ -18,7 +18,7 @@ class Mode2Immediate(Mode2):
     def __repr__(self) -> str:
         return f'={hex(self.imm)}'
 
-class Mode2RegiserOffset(Mode2):
+class Mode2RegisterOffset(Mode2):
     def __init__(
             self,
             rn: int,
@@ -87,9 +87,9 @@ class Mode2ScaledOffset(Mode2):
         
         rm_sign_str = "-" if self.negate_rm else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
-            return f'[{reg_to_str(self.rn)}, {rm_sign_str}{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
+            return f'[{reg_to_str(self.rn)}, {rm_sign_str}{reg_to_str(self.rm)}, {self.shift.value} #{self.imm_5}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
-            return f'[{reg_to_str(self.rn)}], {rm_sign_str}{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}'
+            return f'[{reg_to_str(self.rn)}], {rm_sign_str}{reg_to_str(self.rm)}, {self.shift.value} #{self.imm_5}'
     
 class Mode2Label(Mode2):
     def __init__(self, label: str) -> None:

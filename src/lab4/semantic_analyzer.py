@@ -42,7 +42,7 @@ class ParseTree:
         self.children.append(child)
 
     def generate_ast(self) -> Tuple[Optional[str], Optional[ast_nodes.Program]]:
-        program = ast_nodes.Program([], [])
+        program = ast_nodes.Program([], [], self.scope)
         if e := self.validate_prijevodna_jedinica(program): return e, None
         
         main = self.scope.get_symbol('main')
@@ -329,6 +329,8 @@ class ParseTree:
             assert isinstance(unarni_op_token, Token)
             if unarni_op_token.name == 'MINUS':
                 op = 'NEG'
+            elif unarni_op_token.name == 'PLUS':
+                op = 'PLUS'
             elif unarni_op_token.name == 'OP_TILDA':
                 op = 'BITNOT'
             else:  # OP_NEG
@@ -1148,9 +1150,9 @@ class ParseTree:
                     return e, None
             
             assert isinstance(for_block, ast_nodes.Block)
-            if after_iter_expr:
-                for_block.stmts.append(ast_nodes.ExprStmt(after_iter_expr))
-            return None, ast_nodes.While(decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block)
+            
+            step_stmt = ast_nodes.ExprStmt(after_iter_expr) if after_iter_expr else None
+            return None, ast_nodes.While(decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block, step_stmt)
 
         return None, None
 

@@ -71,6 +71,7 @@ def evaluate_r6(arm_code_path, expected_r6_value):
     try:
         mu.emu_start(ARM_CODE_ADDRESS, 0)
     except Exception as e:
+        print(f"EMULATION EXCEPTION: {e}")
         pass
 
     # Read R6 register value
@@ -82,6 +83,8 @@ def evaluate_r6(arm_code_path, expected_r6_value):
     else:
         r6_signed = r6_value
 
+    if r6_signed != expected_r6_value:
+        print(f"FAIL: Expected {expected_r6_value}, got {r6_signed}")
     return r6_signed == expected_r6_value
 
 
@@ -97,5 +100,5 @@ if __name__ == "__main__":
         print("PASS")
         sys.exit(0)
     else:
-        print("FAIL")
         sys.exit(1)
+

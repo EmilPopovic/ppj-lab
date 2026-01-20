@@ -39,7 +39,7 @@ class Oprnd2ShiftImm5(Oprnd2):
         self.imm_5: int = imm_5
 
     def __repr__(self) -> str:
-        return f'{reg_to_str(self.rm)}, {self.shift} #{self.imm_5}'
+        return f'{reg_to_str(self.rm)}, {self.shift.value} #{self.imm_5}'
 
 class Oprnd2ShiftRs(Oprnd2):
     def __init__(self, rm: int, shift: ShiftType, rs: int) -> None:
@@ -48,7 +48,7 @@ class Oprnd2ShiftRs(Oprnd2):
         self.rs: int = rs
 
     def __repr__(self) -> str:
-        return f'{reg_to_str(self.rm)}, {self.shift} {reg_to_str(self.rs)}'
+        return f'{reg_to_str(self.rm)}, {self.shift.value} {reg_to_str(self.rs)}'
 
 class Oprnd2ShiftRRX(Oprnd2):
     def __init__(self, rm: int) -> None:

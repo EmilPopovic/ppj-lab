@@ -17,6 +17,7 @@ from semantic_analyzer import TreeFactory
 import instructions as instr
 import ast_nodes as ast
 from regs import Regs
+from register_allocator import RegisterAllocator
 
 OUTPUT_FILENAME = 'a.s'
 
@@ -140,7 +141,7 @@ class CodeGenerator:
                 code.append(instr.AssemblerDirective(f'.space {var.bytes - len(var.init) * Type.sizeof(var.vtype.nested_type)}'))
 
         else:
-            code.append(instr.AssemblerDirective(f'.size {var.bytes}'))
+            code.append(instr.AssemblerDirective(f'.space {var.bytes}'))
 
         return code
     
@@ -153,6 +154,10 @@ class CodeGenerator:
 
     @staticmethod
     def from_ast(program: ast.Program) -> 'CodeGenerator':
+        # Set the global root_scope for lookups during code generation
+        if program.scope:
+            ast.root_scope = program.scope
+        
         code = CodeGenerator.runtime
 
         for func in program.functions:
@@ -162,6 +167,17 @@ class CodeGenerator:
             code.extend(CodeGenerator.div_func)
 
         code.extend(CodeGenerator.globals_asm(program))
+        
+        # Perform register allocation
+        log('[Info]   Starting register allocation...')
+        start_reg_alloc = time.time()
+        allocator = RegisterAllocator(code)
+        code = allocator.allocate_registers()
+        end_reg_alloc = time.time()
+        log(f'[Timing] Register allocation: {(end_reg_alloc - start_reg_alloc) * 1000:.2f} ms')
+        
+        if allocator.spilled_vregs:
+            log(f'[Warning] Spilled {len(allocator.spilled_vregs)} virtual registers (not yet handled)')
 
         return CodeGenerator(code)
 
