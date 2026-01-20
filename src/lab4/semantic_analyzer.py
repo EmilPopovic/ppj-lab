@@ -1101,7 +1101,11 @@ class ParseTree:
             e, while_block = fifth_child.validate_naredba(None)
             if e:
                 return e, None
-            assert while_block
+            # assert while_block
+            if while_block is None:
+                while_block = ast_nodes.Block([], [])
+            elif not isinstance(while_block, ast_nodes.Block):
+                while_block = ast_nodes.Block([], [while_block])
             
             return None, ast_nodes.While(None, cond_expr, while_block)
             
@@ -1149,8 +1153,13 @@ class ParseTree:
                 if e:
                     return e, None
             
-            assert isinstance(for_block, ast_nodes.Block)
             
+            # Helper to wrap non-block statements
+            if for_block is None:
+                for_block = ast_nodes.Block([], [])
+            elif not isinstance(for_block, ast_nodes.Block):
+                for_block = ast_nodes.Block([], [for_block])
+
             step_stmt = ast_nodes.ExprStmt(after_iter_expr) if after_iter_expr else None
             return None, ast_nodes.While(decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block, step_stmt)
 

@@ -1258,6 +1258,29 @@ class UnaryOp(Expr):
             next_vreg += 1
             asm.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, self.vreg, operand_vreg, oprnd2.Oprnd2Imm8(0)))
             
+        elif self.op == 'BITNOT':
+            # Bitwise NOT: ~operand == MVN rd, operand
+            asm.extend(self.operand.to_asm())
+            operand_vreg = self._load_var_if_needed(self.operand, asm)
+            
+            self.vreg = next_vreg
+            next_vreg += 1
+            asm.append(instr.MoveOp(op.MoveOpcode.MVN, self.vreg, oprnd2.Oprnd2Rm(operand_vreg)))
+        
+        elif self.op == 'LOGNOT':
+            # Logical NOT: !operand -> (operand == 0 ? 1 : 0)
+            asm.extend(self.operand.to_asm())
+            operand_vreg = self._load_var_if_needed(self.operand, asm)
+            
+            self.vreg = next_vreg
+            next_vreg += 1
+            
+            # Compare with 0
+            asm.append(instr.TestOp(op.TestOpcode.CMP, operand_vreg, oprnd2.Oprnd2Imm8(0)))
+            # If equal (was 0), result is 1. If not equal (was non-zero), result is 0.
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, oprnd2.Oprnd2Imm8(0)))
+            asm.append(instr.MoveOp(op.MoveOpcode.MOV, self.vreg, oprnd2.Oprnd2Imm8(1), Cond.EQUAL))
+            
         elif self.op in ['POSTFIX_INC', 'PREFIX_INC', 'POSTFIX_DEC', 'PREFIX_DEC']:
             # Increment/decrement operations
             # Need to modify the variable in place
