@@ -45,20 +45,17 @@ for dict in $pattern; do
     gen_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
 
     # Step 1: Run GeneratorKoda.py with .in file on stdin to generate ARM assembly
-    python3.8 src/lab4/GeneratorKoda.py <"$dict/test.in" >a.s 2>/dev/null
+    python3.8 src/lab4/GeneratorKoda.py <"$dict/test.in" >./src/lab4/a.s 2>/dev/null
 
     # End generation timer
     gen_end=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
     gen_time_ms=$((gen_end - gen_start))
 
-    if [[ ! -f "a.s" ]]; then
+    if [[ ! -f "./src/lab4/a.s" ]]; then
         echo -e "${RED}  ⚠ Failed to generate ARM assembly${RESET}\n"
         ((fail_count++))
         continue
     fi
-
-    # Get size of generated file
-    asm_size=$(wc -c < "a.s")
 
     # Start simulation timer (in milliseconds)
     sim_start=$(( $(date +%s) * 1000 + 10#$(date +%N) / 1000000 ))
@@ -74,10 +71,10 @@ for dict in $pattern; do
 
     # Step 3: Check result
     if [[ "$result" == "PASS" ]]; then
-        echo -e "${GREEN}  ✔ PASS${RESET} (gen: ${gen_time_ms}ms, sim: ${sim_time_ms}ms, ASM: ${asm_size} bytes)\n"
+        echo -e "${GREEN}  ✔ PASS${RESET} (gen: ${gen_time_ms}ms, sim: ${sim_time_ms}ms)\n"
         ((pass_count++))
     else
-        echo -e "${RED}  ✘ FAIL${RESET} (gen: ${gen_time_ms}ms, sim: ${sim_time_ms}ms, ASM: ${asm_size} bytes)"
+        echo -e "${RED}  ✘ FAIL${RESET} (gen: ${gen_time_ms}ms, sim: ${sim_time_ms}ms)"
         echo -e "    Expected: ${expected_val}"
         echo
         ((fail_count++))

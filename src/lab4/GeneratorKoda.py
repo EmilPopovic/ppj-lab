@@ -186,6 +186,13 @@ def main() -> None:
     assert ast is not None
 
     log(f'[Info]   Found no semantic errors')
+    
+    start_optimize = time.time()
+    ast.optimize()
+    end_optimize = time.time()
+    log(f'[Info]   AST optimization completed')
+    log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000:.2f} ms')
+    
     log(f'[Info]   Starting code generation...')
 
     ast.log()

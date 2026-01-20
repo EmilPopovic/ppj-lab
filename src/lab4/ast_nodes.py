@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Any
 
@@ -16,11 +17,79 @@ from regs import Regs
 next_vreg = 0
 needs_div = False
 
+
+class ConstantFoldingVisitor:
+    
+    @staticmethod
+    def visit_expr(expr: 'Expr') -> 'Expr':
+        if expr is None:
+            return expr
+        
+        if isinstance(expr, BinOp):
+            expr.left = ConstantFoldingVisitor.visit_expr(expr.left)
+            expr.right = ConstantFoldingVisitor.visit_expr(expr.right)
+        elif isinstance(expr, UnaryOp):
+            expr.operand = ConstantFoldingVisitor.visit_expr(expr.operand)
+        elif isinstance(expr, Call):
+            expr.args = [ConstantFoldingVisitor.visit_expr(arg) for arg in expr.args]
+        elif isinstance(expr, ArrayAccess):
+            expr.array = ConstantFoldingVisitor.visit_expr(expr.array)
+            expr.index = ConstantFoldingVisitor.visit_expr(expr.index)
+        
+        return Program.fold_const(expr)
+    
+    @staticmethod
+    def visit_stmt(stmt: 'Stmt') -> 'Stmt':
+        if stmt is None:
+            return stmt
+        
+        if isinstance(stmt, Block):
+            stmt.var_decls = [ConstantFoldingVisitor.visit_var_decl(decl) for decl in stmt.var_decls]
+            stmt.stmts = [ConstantFoldingVisitor.visit_stmt(s) for s in stmt.stmts]
+        
+        elif isinstance(stmt, If):
+            stmt.cond = ConstantFoldingVisitor.visit_expr(stmt.cond)
+            stmt.then_branch = ConstantFoldingVisitor.visit_stmt(stmt.then_branch)
+            if stmt.else_branch:
+                stmt.else_branch = ConstantFoldingVisitor.visit_stmt(stmt.else_branch)
+        
+        elif isinstance(stmt, While):
+            if stmt.before:
+                stmt.before = ConstantFoldingVisitor.visit_stmt(stmt.before)
+            if stmt.cond:
+                stmt.cond = ConstantFoldingVisitor.visit_expr(stmt.cond)
+            stmt.body = ConstantFoldingVisitor.visit_stmt(stmt.body)
+        
+        elif isinstance(stmt, ExprStmt):
+            stmt.expr = ConstantFoldingVisitor.visit_expr(stmt.expr)
+        
+        elif isinstance(stmt, Return):
+            if stmt.expr:
+                stmt.expr = ConstantFoldingVisitor.visit_expr(stmt.expr)
+        
+        return stmt
+    
+    @staticmethod
+    def visit_var_decl(decl: VarDecl) -> VarDecl:
+        if decl.init is None:
+            return decl
+        
+        if isinstance(decl.init, Expr):
+            decl.init = ConstantFoldingVisitor.visit_expr(decl.init)
+        elif isinstance(decl.init, list):
+            decl.init = [ConstantFoldingVisitor.visit_expr(expr) for expr in decl.init]
+        
+        return decl
+
+
 class Expr:
     vreg: int
 
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
+
+    def optimize(self) -> None:
+        return
 
 @dataclass
 class VarDecl:
@@ -32,6 +101,9 @@ class VarDecl:
 class Stmt:
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
+    
+    def optimize(self) -> None:
+        pass
 
 @dataclass
 class Block(Stmt):
@@ -43,6 +115,12 @@ class Block(Stmt):
         for stmt in self.stmts:
             asm.extend(stmt.to_asm())
         return asm
+    
+    def optimize(self) -> None:
+        for decl in self.var_decls:
+            ConstantFoldingVisitor.visit_var_decl(decl)
+        for stmt in self.stmts:
+            stmt.optimize()
 
 @dataclass
 class FuncDef:
@@ -272,18 +350,12 @@ class Program:
     
     def optimize(self) -> 'Program':
         for glob in self.globals:
-            if glob.init is None:
-                continue
-
-            if isinstance(glob.init, Expr):
-                glob.init = Program.fold_const(glob.init)
-            else:
-                for val in glob.init:
-                    val = Program.fold_const(val)
-
+            ConstantFoldingVisitor.visit_var_decl(glob)
+        
+        # Optimize all function bodies
         for func in self.functions:
-            func.body
-
+            func.body = ConstantFoldingVisitor.visit_stmt(func.body)
+        
         return self
 
     def log(self) -> None:
@@ -295,8 +367,11 @@ class If(Stmt):
     then_branch: Stmt
     else_branch: Optional[Stmt] = None
 
-    def to_asm(self) -> List[instr.AssemblyLine]:
-        return []
+    def optimize(self) -> None:
+        self.cond = ConstantFoldingVisitor.visit_expr(self.cond)
+        self.then_branch.optimize()
+        if self.else_branch:
+            self.else_branch.optimize()
 
 @dataclass
 class While(Stmt):
@@ -322,6 +397,13 @@ class While(Stmt):
         asm.append(label_exit)
 
         return asm
+    
+    def optimize(self) -> None:
+        if self.before:
+            self.before.optimize()
+        if self.cond:
+            self.cond = ConstantFoldingVisitor.visit_expr(self.cond)
+        self.body.optimize()
 
 @dataclass
 class ExprStmt(Stmt):
@@ -329,6 +411,10 @@ class ExprStmt(Stmt):
 
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
+    
+    def optimize(self) -> None:
+        """Optimize the expression in the statement."""
+        self.expr = ConstantFoldingVisitor.visit_expr(self.expr)
 
 @dataclass
 class CtrlFlowStmt(Stmt):
@@ -338,11 +424,18 @@ class CtrlFlowStmt(Stmt):
 class Break(CtrlFlowStmt):
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
+    
+    def optimize(self) -> None:
+        pass
+
 
 @dataclass
 class Continue(CtrlFlowStmt):
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
+    
+    def optimize(self) -> None:
+        pass
 
 @dataclass
 class Return(CtrlFlowStmt):
@@ -383,6 +476,10 @@ class Return(CtrlFlowStmt):
         asm.append(instr.MoveOp(instr.MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
 
         return asm
+    
+    def optimize(self) -> None:
+        if self.expr:
+            self.expr = ConstantFoldingVisitor.visit_expr(self.expr)
 
 @dataclass
 class BinOp(Expr):
@@ -493,6 +590,9 @@ class UnaryOp(Expr):
 
         return asm
 
+    def optimize(self) -> None:
+        self.operand = ConstantFoldingVisitor.visit_expr(self.operand)
+
 
 @dataclass
 class Call(Expr):
@@ -500,8 +600,7 @@ class Call(Expr):
     args: List[Expr]
 
     def optimize(self) -> None:
-        for arg in self.args:
-            arg = Program.fold_const(arg)
+        self.args = [ConstantFoldingVisitor.visit_expr(arg) for arg in self.args]
 
 @dataclass
 class ArrayAccess(Expr):
@@ -509,8 +608,8 @@ class ArrayAccess(Expr):
     index: Expr
 
     def optimize(self) -> None:
-        # self.array = Program.fold_const(self.array)
-        self.index = Program.fold_const(self.index)
+        self.array = ConstantFoldingVisitor.visit_expr(self.array)
+        self.index = ConstantFoldingVisitor.visit_expr(self.index)
 
 def print_ast(node: Any, indent: int = 0) -> None:
     prefix = "  " * indent
