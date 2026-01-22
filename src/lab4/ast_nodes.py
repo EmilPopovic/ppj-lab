@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Tuple
 
 from addressing import oprnd2
 from addressing import mode4, mode2
@@ -77,7 +77,6 @@ class ConstantFoldingVisitor:
             decl.init = [ConstantFoldingVisitor.visit_expr(expr) for expr in decl.init]
         
         return decl
-
 
 class Expr:
     vreg: int
@@ -355,10 +354,6 @@ class FuncDef:
                 param.sym.stack_offset = offset
         
         return code
-        
-        return code
-        
-        return code
     
     def leave(self) -> List[instr.AssemblyLine]:
         f_sym = self.sym
@@ -411,7 +406,6 @@ class Const(ConstExpr):
             asm.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, self.vreg, mode2.Mode2Immediate(self.value)))
         return asm
 
-
 @dataclass
 class ConstStr(ConstExpr):
     value: str
@@ -441,7 +435,6 @@ class Var(Expr):
             self.vreg = self.sym.vreg
         return []
 
-@dataclass
 @dataclass
 class Program:
     functions: List[FuncDef]
@@ -773,7 +766,6 @@ class Break(CtrlFlowStmt):
     
     def optimize(self) -> None:
         pass
-
 
 @dataclass
 class Continue(CtrlFlowStmt):
@@ -1236,7 +1228,6 @@ class BinOp(Expr):
 
         return asm
 
-
 @dataclass
 class UnaryOp(Expr):
     op: str
@@ -1375,7 +1366,6 @@ class UnaryOp(Expr):
 
     def optimize(self) -> None:
         self.operand = ConstantFoldingVisitor.visit_expr(self.operand)
-
 
 @dataclass
 class Call(Expr):

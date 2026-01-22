@@ -1846,7 +1846,7 @@ def main() -> None:
     log(f'[Info]   Starting semantic analysis...')
     
     start_parse_input = time.time()
-    parse_tree, _ = TreeFactory.from_stdin()
+    parse_tree, scope_tree = TreeFactory.from_stdin()
     end_parse_input = time.time()
     log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
 
@@ -1854,6 +1854,9 @@ def main() -> None:
     error, _ = parse_tree.generate_ast()
     end_validation = time.time()
     log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
+
+
+    print(scope_tree)
 
     if error:
         log(f'[Error]  Finished with error: {error}')
