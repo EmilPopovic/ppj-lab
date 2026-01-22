@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from type import Type, FuncSignature
 
@@ -8,6 +8,8 @@ class Symbol:
         self.type: Optional[Type] = type
         self.is_l_expr: bool = is_l_expr
         self.const_val: 'Optional[int | str]' = None
+        self.frame_offset: int = 0
+        self.parent: Optional[Scope] = None
 
     def __repr__(self) -> str:
         if self.type and isinstance(self.type.nested_type, FuncSignature):
@@ -26,14 +28,15 @@ class Scope:
 
     def add_child(self, child: 'Symbol | Scope') -> None:
         self.children.append(child)
+        child.parent = self
 
-    def get_symbol(self, name: str) -> Optional[Symbol]:
+    def get_symbol(self, name: str, levels_removed: int = 0) -> Tuple[Optional[Symbol], int, bool]:
         with_name = [c for c in self.children if isinstance(c, Symbol) and c.name == name]
         if len(with_name) > 0:
-            return with_name[0]
+            return with_name[0], levels_removed, self == Scope.root_scope
         elif self.parent:
-            return self.parent.get_symbol(name)
-        return None
+            return self.parent.get_symbol(name, levels_removed + 1)
+        return None, 0, False
 
     def __repr__(self) -> str:
         return self.__repr_inner(0)[:-1]

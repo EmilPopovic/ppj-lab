@@ -42,10 +42,10 @@ class ParseTree:
         self.children.append(child)
 
     def generate_ast(self) -> Tuple[Optional[str], Optional[ast_nodes.Program]]:
-        program = ast_nodes.Program([], [], self.scope)
+        program = ast_nodes.Program(self.scope, [], [])
         if e := self.validate_prijevodna_jedinica(program): return e, None
         
-        main = self.scope.get_symbol('main')
+        main, _, _ = self.scope.get_symbol('main')
 
         if main is None or main.type != Type('function', nested_type=FuncSignature(return_type=Type('int'), arg_types=[])):
             return 'main', None
@@ -56,7 +56,7 @@ class ParseTree:
             c: Scope = stack.pop()
             
             for sym in [s for s in c.children if isinstance(s, Symbol) and s.type and s.type.name == 'function']:
-                f = self.scope.get_symbol(sym.name)
+                f, _, _ = self.scope.get_symbol(sym.name)
                 if f is None:
                     return 'funkcija', None
                 
@@ -78,35 +78,35 @@ class ParseTree:
     def validate_primarni_izraz(self) -> Tuple[Optional[str], Optional[ast_nodes.Expr]]:
         first_child = self.children[0]
         assert isinstance(first_child, Token)
-        symbol = self.scope.get_symbol(first_child.source)
+        symbol, decl_dist, is_global = self.scope.get_symbol(first_child.source)
 
         if first_child.name == 'IDN':
             if symbol is None:
                 return self.error_str, None
             self.add_attr('type', symbol.type)
             self.add_attr('is_l_expr', symbol.is_l_expr)
-            return None, ast_nodes.Var(symbol)
+            return None, ast_nodes.Var(self.scope, symbol, decl_dist, is_global)
             
         elif first_child.name == 'BROJ':
             if not first_child.is_int:
                 return self.error_str, None
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
-            return None, ast_nodes.Const(int(first_child.source))
+            return None, ast_nodes.Const(self.scope, int(first_child.source))
 
         elif first_child.name == 'ZNAK':
             if not first_child.is_char:
                 return self.error_str, None
             self.add_attr('type', Type('char'))
             self.add_attr('is_l_expr', False)
-            return None, ast_nodes.CharConst(first_child.to_int)
+            return None, ast_nodes.CharConst(self.scope, first_child.to_int)
 
         elif first_child.name == 'NIZ_ZNAKOVA':
             if not first_child.is_valid_str:
                 return self.error_str, None
             self.add_attr('type', Type('arr', nested_type=Type('char', is_const=True)))
             self.add_attr('is_l_expr', False)
-            return None, ast_nodes.ConstStr(first_child.source[1:-1])
+            return None, ast_nodes.ConstStr(self.scope, first_child.source[1:-1])
 
         elif first_child.name == 'L_ZAGRADA':
             second_child = self.children[1]
@@ -148,7 +148,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            return None, ast_nodes.UnaryOp('POSTFIX_INC' if self.children[1].name == 'OP_INC' else 'POSTFIX_DEC', expr)
+            return None, ast_nodes.UnaryOp(self.scope, 'POSTFIX_INC' if self.children[1].name == 'OP_INC' else 'POSTFIX_DEC', expr)
 
         elif first_child.name == '<postfiks_izraz>' and self.children[2].name == '<izraz>':
             e, array_expr = first_child.validate_postfiks_izraz()
@@ -178,7 +178,7 @@ class ParseTree:
             self.add_attr('type', first_child_type.nested_type)
             self.add_attr('is_l_expr', not first_child_type.nested_type.is_const)
             
-            return None, ast_nodes.ArrayAccess(array_expr, index_expr)
+            return None, ast_nodes.ArrayAccess(self.scope, array_expr, index_expr)
 
         elif first_child.name == '<postfiks_izraz>' and self.children[2].name == 'D_ZAGRADA':
             e, func_expr = first_child.validate_postfiks_izraz()
@@ -199,7 +199,7 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             assert isinstance(func_expr, ast_nodes.Var)
-            return None, ast_nodes.Call(func_expr.sym.name, [])
+            return None, ast_nodes.Call(self.scope, func_expr.sym.name, [])
 
         elif first_child.name == '<postfiks_izraz>' and self.children[2].name == '<lista_argumenata>':
             third_child = self.children[2]
@@ -229,7 +229,7 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             assert isinstance(func_expr, ast_nodes.Var)
-            return None, ast_nodes.Call(func_expr.sym.name, param_exprs)
+            return None, ast_nodes.Call(self.scope, func_expr.sym.name, param_exprs)
         
         return None, None
 
@@ -304,7 +304,7 @@ class ParseTree:
             self.add_attr('is_l_expr', False)
             
             op = 'PREFIX_INC' if first_child.name == 'OP_INC' else 'PREFIX_DEC'
-            return None, ast_nodes.UnaryOp(op, operand_expr)
+            return None, ast_nodes.UnaryOp(self.scope, op, operand_expr)
 
         elif isinstance(first_child, ParseTree) and first_child.name == '<unarni_operator>':
             second_child = self.children[1]
@@ -336,7 +336,7 @@ class ParseTree:
             else:  # OP_NEG
                 op = 'LOGNOT'
             
-            return None, ast_nodes.UnaryOp(op, operand_expr)
+            return None, ast_nodes.UnaryOp(self.scope, op, operand_expr)
         
         return None, None
 
@@ -469,7 +469,7 @@ class ParseTree:
             else:  # OP_MOD
                 op = 'MOD'
             
-            mul_op = ast_nodes.BinOp(op, left_expr, right_expr)
+            mul_op = ast_nodes.BinOp(self.scope, op, left_expr, right_expr)
             return None, mul_op
 
         return None, None
@@ -522,7 +522,7 @@ class ParseTree:
             else:  # MINUS
                 op = 'SUB'
             
-            add_op = ast_nodes.BinOp(op, left_expr, right_expr)
+            add_op = ast_nodes.BinOp(self.scope, op, left_expr, right_expr)
             return None, add_op
 
         return None, None
@@ -579,7 +579,7 @@ class ParseTree:
             else:  # OP_GTE
                 op = 'GTE'
             
-            rel_op = ast_nodes.BinOp(op, left_expr, right_expr)
+            rel_op = ast_nodes.BinOp(self.scope, op, left_expr, right_expr)
             return None, rel_op
 
         return None, None
@@ -632,7 +632,7 @@ class ParseTree:
             else:  # OP_NEQ
                 op = 'NEQ'
             
-            eq_op = ast_nodes.BinOp(op, left_expr, right_expr)
+            eq_op = ast_nodes.BinOp(self.scope, op, left_expr, right_expr)
             return None, eq_op
 
         return None, None
@@ -678,7 +678,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            bit_and_op = ast_nodes.BinOp('AND', left_expr, right_expr)
+            bit_and_op = ast_nodes.BinOp(self.scope, 'AND', left_expr, right_expr)
             return None, bit_and_op
 
         return None, None
@@ -724,7 +724,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            bit_xor_op = ast_nodes.BinOp('XOR', left_expr, right_expr)
+            bit_xor_op = ast_nodes.BinOp(self.scope, 'XOR', left_expr, right_expr)
             return None, bit_xor_op
 
         return None, None
@@ -770,7 +770,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            bit_or_op = ast_nodes.BinOp('OR', left_expr, right_expr)
+            bit_or_op = ast_nodes.BinOp(self.scope, 'OR', left_expr, right_expr)
             return None, bit_or_op
 
         return None, None
@@ -816,7 +816,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            log_and_op = ast_nodes.BinOp('LOG_AND', left_expr, right_expr)
+            log_and_op = ast_nodes.BinOp(self.scope, 'LOG_AND', left_expr, right_expr)
             return None, log_and_op
 
         return None, None
@@ -862,7 +862,7 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
 
-            log_or_op = ast_nodes.BinOp('LOG_OR', left_expr, right_expr)
+            log_or_op = ast_nodes.BinOp(self.scope, 'LOG_OR', left_expr, right_expr)
             return None, log_or_op
 
         return None, None
@@ -908,7 +908,7 @@ class ParseTree:
             self.add_attr('type', first_child_type)
             self.add_attr('is_l_expr', False)
 
-            assign_expr = ast_nodes.BinOp('ASSIGN', target_expr, value_expr)
+            assign_expr = ast_nodes.BinOp(self.scope, 'ASSIGN', target_expr, value_expr)
             return None, assign_expr
 
         return None, None
@@ -952,7 +952,7 @@ class ParseTree:
         second_child = self.children[1]
         assert isinstance(second_child, ParseTree)
 
-        block = ast_nodes.Block([], [])
+        block = ast_nodes.Block(self.scope, [], [])
 
         if second_child.name == '<lista_naredbi>':
             if e := second_child.validate_lista_naredbi(block): return e, None
@@ -1006,7 +1006,7 @@ class ParseTree:
             return e, None
 
         if block is None:
-            block = ast_nodes.Block([], [])
+            block = ast_nodes.Block(self.scope, [], [])
         if stmt is not None:
             block.stmts.append(stmt)
 
@@ -1030,7 +1030,7 @@ class ParseTree:
             self.add_attr('type', first_child_type)
 
             assert expr is not None
-            return None, ast_nodes.ExprStmt(expr)
+            return None, ast_nodes.ExprStmt(self.scope, expr)
         
         return None, None
 
@@ -1058,13 +1058,13 @@ class ParseTree:
         
         assert if_block is not None
 
-        if_stmt = ast_nodes.If(cond_expr, if_block, None)
+        if_stmt = ast_nodes.If(self.scope, cond_expr, if_block, None)
 
         if len(self.children) > 5:
             seventh_child = self.children[6]
             assert isinstance(seventh_child, ParseTree)
 
-            else_block = ast_nodes.Block([], [])
+            else_block = ast_nodes.Block(self.scope, [], [])
 
             e, else_block = seventh_child.validate_naredba(None)
             if e:
@@ -1101,13 +1101,13 @@ class ParseTree:
             e, while_block = fifth_child.validate_naredba(None)
             if e:
                 return e, None
-            # assert while_block
-            if while_block is None:
-                while_block = ast_nodes.Block([], [])
-            elif not isinstance(while_block, ast_nodes.Block):
-                while_block = ast_nodes.Block([], [while_block])
             
-            return None, ast_nodes.While(None, cond_expr, while_block)
+            if while_block is None:
+                while_block = ast_nodes.Block(self.scope, [], [])
+            elif not isinstance(while_block, ast_nodes.Block):
+                while_block = ast_nodes.Block(self.scope, [], [while_block])
+            
+            return None, ast_nodes.While(self.scope, None, cond_expr, while_block)
             
         elif first_child.name == 'KR_FOR':
             third_child = self.children[2]
@@ -1156,12 +1156,12 @@ class ParseTree:
             
             # Helper to wrap non-block statements
             if for_block is None:
-                for_block = ast_nodes.Block([], [])
+                for_block = ast_nodes.Block(self.scope, [], [])
             elif not isinstance(for_block, ast_nodes.Block):
-                for_block = ast_nodes.Block([], [for_block])
+                for_block = ast_nodes.Block(self.scope, [], [for_block])
 
-            step_stmt = ast_nodes.ExprStmt(after_iter_expr) if after_iter_expr else None
-            return None, ast_nodes.While(decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block, step_stmt)
+            step_stmt = ast_nodes.ExprStmt(self.scope, after_iter_expr) if after_iter_expr else None
+            return None, ast_nodes.While(self.scope, decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block, step_stmt)
 
         return None, None
 
@@ -1176,11 +1176,11 @@ class ParseTree:
 
             if loop is None:
                 return self.error_str, None
-            
+
             if first_child.name == 'KR_CONTINUE':
-                return None, ast_nodes.Continue()
+                return None, ast_nodes.Continue(self.scope)
             else:  # KR_BREAK
-                return None, ast_nodes.Break()
+                return None, ast_nodes.Break(self.scope)
 
         elif self.children[1].name == 'TOCKAZAREZ':
             definition: Optional[ParseTree] = self
@@ -1193,7 +1193,7 @@ class ParseTree:
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
 
-            func = self.scope.get_symbol(definition_idn.source)
+            func, _, _ = self.scope.get_symbol(definition_idn.source)
             assert func is not None
             assert func.type is not None
             assert isinstance(func.type.nested_type, FuncSignature)
@@ -1202,7 +1202,7 @@ class ParseTree:
             if func_signature.return_type != Type('void'):
                 return self.error_str, None
             
-            return None, ast_nodes.Return(None)
+            return None, ast_nodes.Return(self.scope, None)
 
         elif self.children[1].name == '<izraz>':
             second_child = self.children[1]
@@ -1222,7 +1222,7 @@ class ParseTree:
             definition_idn = definition.children[1]
             assert isinstance(definition_idn, Token)
 
-            func = self.scope.get_symbol(definition_idn.source)
+            func, _, _ = self.scope.get_symbol(definition_idn.source)
             assert func is not None
             assert func.type is not None
             assert isinstance(func.type.nested_type, FuncSignature)
@@ -1234,7 +1234,7 @@ class ParseTree:
             if not second_child_type.implicitly_reduces_to(func_signature.return_type):
                 return self.error_str, None
             
-            return None, ast_nodes.Return(return_expr)
+            return None, ast_nodes.Return(self.scope, return_expr)
         
         return None, None
 
@@ -1282,7 +1282,7 @@ class ParseTree:
         second_child = self.children[1]
         assert isinstance(second_child, Token)
 
-        root_func = Scope.root_scope.get_symbol(second_child.source)
+        root_func, _, _ = Scope.root_scope.get_symbol(second_child.source)
 
         sixth_child = self.children[5]
         assert isinstance(sixth_child, ParseTree)
@@ -1313,7 +1313,7 @@ class ParseTree:
 
                 Scope.root_scope.add_child(root_func)
                 
-                func_def = ast_nodes.FuncDef(root_func, first_child_type, [], ast_nodes.Block([], []))
+                func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, [], ast_nodes.Block(self.scope, [], []))
                 program.functions.append(func_def)
             
         elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
@@ -1352,9 +1352,9 @@ class ParseTree:
             for type, name in zip(decl_types, names):
                 symbol = Symbol(name, type, is_l_expr=not type.is_const)
                 self.scope.add_child(symbol)
-                var_decls.append(ast_nodes.VarDecl(symbol, type, Type.sizeof(type), None))
+                var_decls.append(ast_nodes.VarDecl(self.scope, symbol, type, Type.sizeof(type), None))
 
-            func_def = ast_nodes.FuncDef(root_func, first_child_type, var_decls, ast_nodes.Block([], []))
+            func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, var_decls, ast_nodes.Block(self.scope, [], []))
             program.functions.append(func_def)
 
         e, func_body = sixth_child.validate_slozena_naredba()
@@ -1552,7 +1552,7 @@ class ParseTree:
             self.add_attr('type', root_ntype)
 
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol, symbol.type, Type.sizeof(root_ntype), None)
+            decl = ast_nodes.VarDecl(self.scope, symbol, symbol.type, Type.sizeof(root_ntype), None)
             return None, decl
 
         elif self.children[2].name == 'BROJ':
@@ -1583,7 +1583,7 @@ class ParseTree:
             size = third_child_int * Type.sizeof(root_ntype)
 
             assert symbol.type is not None
-            decl = ast_nodes.VarDecl(symbol, symbol.type, size, None)
+            decl = ast_nodes.VarDecl(self.scope, symbol, symbol.type, size, None)
             return None, decl
 
         elif self.children[2].name == 'KR_VOID':

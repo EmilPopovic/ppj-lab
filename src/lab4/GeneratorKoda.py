@@ -185,7 +185,7 @@ def main() -> None:
     log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
 
     start_validation = time.time()
-    error, ast = parse_tree.generate_ast()
+    error, tree = parse_tree.generate_ast()
     end_validation = time.time()
     log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
 
@@ -193,12 +193,13 @@ def main() -> None:
         log(f'[Error]  Finished with error: {error}')
         return
     
-    assert ast is not None
+    assert tree is not None
 
     log(f'[Info]   Found no semantic errors')
     
     start_optimize = time.time()
-    ast.optimize()
+    while_stack: List[ast.While] = []
+    tree.optimize(while_stack)
     end_optimize = time.time()
     log(f'[Info]   AST optimization completed')
     log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000:.2f} ms')
@@ -210,7 +211,7 @@ def main() -> None:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(script_dir, OUTPUT_FILENAME)
 
-    CodeGenerator.from_ast(ast).to_file(output_path)
+    CodeGenerator.from_ast(tree).to_file(output_path)
 
 if __name__ == '__main__':
     main()
