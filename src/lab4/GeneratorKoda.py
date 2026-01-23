@@ -193,8 +193,7 @@ def main() -> None:
     log(f'[Info]   Found no semantic errors')
     
     start_optimize = time.time()
-    while_stack: List[ast.While] = []
-    syntax_tree.optimize(while_stack)
+    syntax_tree.optimize()
     end_optimize = time.time()
     log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000000:.0f} us')
 

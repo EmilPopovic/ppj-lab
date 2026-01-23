@@ -52,60 +52,73 @@ def CALL(label: str) -> instr.BranchOp:
 
 CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0))
 
-class ConstantFoldingVisitor:
+class OptimizationVisitor:
+    """Performs constant folding and assigns loops to break/continue statements."""
 
     @staticmethod
-    def visit_expr(expr: 'Expr', while_stack: List[While]) -> 'Expr':
+    def visit_expr(expr: 'Expr') -> 'Expr':
         if isinstance(expr, BinOp):
-            expr.left = ConstantFoldingVisitor.visit_expr(expr.left, while_stack)
-            expr.right = ConstantFoldingVisitor.visit_expr(expr.right, while_stack)
+            expr.left = OptimizationVisitor.visit_expr(expr.left)
+            expr.right = OptimizationVisitor.visit_expr(expr.right)
         elif isinstance(expr, UnaryOp):
-            expr.operand = ConstantFoldingVisitor.visit_expr(expr.operand, while_stack)
+            expr.operand = OptimizationVisitor.visit_expr(expr.operand)
         elif isinstance(expr, Call):
-            expr.args = [ConstantFoldingVisitor.visit_expr(arg, while_stack) for arg in expr.args]
+            expr.args = [OptimizationVisitor.visit_expr(arg) for arg in expr.args]
         elif isinstance(expr, ArrayAccess):
-            expr.array = ConstantFoldingVisitor.visit_expr(expr.array, while_stack)
-            expr.index = ConstantFoldingVisitor.visit_expr(expr.index, while_stack)
+            expr.array = OptimizationVisitor.visit_expr(expr.array)
+            expr.index = OptimizationVisitor.visit_expr(expr.index)
 
         return Program.fold_const(expr.scope, expr)
 
     @staticmethod
-    def visit_stmt(stmt: 'Stmt', while_stack: List[While]) -> 'Stmt':
+    def visit_stmt(stmt: 'Stmt', loop_stack: List['While']) -> 'Stmt':
         if isinstance(stmt, Block):
-            stmt.var_decls = [ConstantFoldingVisitor.visit_var_decl(decl) for decl in stmt.var_decls]
-            stmt.stmts = [ConstantFoldingVisitor.visit_stmt(s, while_stack) for s in stmt.stmts]
+            stmt.var_decls = [OptimizationVisitor.visit_var_decl(decl) for decl in stmt.var_decls]
+            stmt.stmts = [OptimizationVisitor.visit_stmt(s, loop_stack) for s in stmt.stmts]
 
         elif isinstance(stmt, If):
-            stmt.cond = ConstantFoldingVisitor.visit_expr(stmt.cond, while_stack)
-            stmt.then_branch = ConstantFoldingVisitor.visit_stmt(stmt.then_branch, while_stack)
+            stmt.cond = OptimizationVisitor.visit_expr(stmt.cond)
+            stmt.then_branch = OptimizationVisitor.visit_stmt(stmt.then_branch, loop_stack)
             if stmt.else_branch:
-                stmt.else_branch = ConstantFoldingVisitor.visit_stmt(stmt.else_branch, while_stack)
+                stmt.else_branch = OptimizationVisitor.visit_stmt(stmt.else_branch, loop_stack)
 
         elif isinstance(stmt, While):
             if stmt.before:
-                stmt.before = ConstantFoldingVisitor.visit_stmt(stmt.before, while_stack)
+                stmt.before = OptimizationVisitor.visit_stmt(stmt.before, loop_stack)
             if stmt.cond:
-                stmt.cond = ConstantFoldingVisitor.visit_expr(stmt.cond, while_stack)
-            stmt.body = ConstantFoldingVisitor.visit_stmt(stmt.body, while_stack)
+                stmt.cond = OptimizationVisitor.visit_expr(stmt.cond)
+            loop_stack.append(stmt)
+            stmt.body = OptimizationVisitor.visit_stmt(stmt.body, loop_stack)
+            loop_stack.pop()
+            if stmt.step:
+                stmt.step = OptimizationVisitor.visit_stmt(stmt.step, loop_stack)
 
         elif isinstance(stmt, ExprStmt):
-            stmt.expr = ConstantFoldingVisitor.visit_expr(stmt.expr, while_stack)
+            stmt.expr = OptimizationVisitor.visit_expr(stmt.expr)
 
         elif isinstance(stmt, Return):
             if stmt.expr:
-                stmt.expr = ConstantFoldingVisitor.visit_expr(stmt.expr, while_stack)
+                stmt.expr = OptimizationVisitor.visit_expr(stmt.expr)
+
+        elif isinstance(stmt, Break):
+            if loop_stack:
+                stmt.loop = loop_stack[-1]
+
+        elif isinstance(stmt, Continue):
+            if loop_stack:
+                stmt.loop = loop_stack[-1]
 
         return stmt
 
     @staticmethod
-    def visit_var_decl(decl: VarDecl) -> VarDecl:
+    def visit_var_decl(decl: 'VarDecl') -> 'VarDecl':
         if decl.init is None:
             return decl
 
         if isinstance(decl.init, Expr):
-            decl.init = ConstantFoldingVisitor.visit_expr(decl.init)
+            decl.init = OptimizationVisitor.visit_expr(decl.init)
         elif isinstance(decl.init, list):
-            decl.init = [ConstantFoldingVisitor.visit_expr(expr) for expr in decl.init]
+            decl.init = [OptimizationVisitor.visit_expr(expr) for expr in decl.init]
 
         return decl
 
@@ -117,9 +130,6 @@ class Expr(ASTNode):
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
 
-    def optimize(self, while_stack: List[While]) -> None:
-        return
-
 @dataclass
 class VarDecl(ASTNode):
     sym: Symbol
@@ -130,9 +140,6 @@ class VarDecl(ASTNode):
 class Stmt(ASTNode):
     def to_asm(self) -> List[instr.AssemblyLine]:
         return []
-
-    def optimize(self, while_stack: List[While]) -> None:
-        pass
 
 @dataclass
 class Block(Stmt):
@@ -176,12 +183,6 @@ class Block(Stmt):
 
         code.extend(LEAVE)
         return code
-
-    def optimize(self, while_stack: List[While]) -> None:
-        for decl in self.var_decls:
-            ConstantFoldingVisitor.visit_var_decl(decl)
-        for stmt in self.stmts:
-            stmt.optimize(while_stack)
 
 @dataclass
 class FuncDef(ASTNode):
@@ -414,12 +415,13 @@ class Program(ASTNode):
 
         return expr
 
-    def optimize(self, while_stack: List[While]) -> 'Program':
+    def optimize(self) -> 'Program':
         for glob in self.globals:
-            ConstantFoldingVisitor.visit_var_decl(glob)
+            OptimizationVisitor.visit_var_decl(glob)
 
+        loop_stack: List[While] = []
         for func in self.functions:
-            func.body = ConstantFoldingVisitor.visit_stmt(func.body, while_stack)
+            func.body = OptimizationVisitor.visit_stmt(func.body, loop_stack)
 
         return self
 
@@ -453,12 +455,6 @@ class If(Stmt):
 
         code.append(end_label)
         return code
-
-    def optimize(self, while_stack: List[While]) -> None:
-        self.cond = ConstantFoldingVisitor.visit_expr(self.cond)
-        self.then_branch.optimize(while_stack)
-        if self.else_branch:
-            self.else_branch.optimize(while_stack)
 
 @dataclass
 class While(Stmt):
@@ -497,17 +493,6 @@ class While(Stmt):
         code.append(self.exit_label)
         return code
 
-    def optimize(self, while_stack: List[While]) -> None:
-        if self.before:
-            self.before.optimize(while_stack)
-        if self.cond:
-            self.cond = ConstantFoldingVisitor.visit_expr(self.cond)
-        while_stack.append(self)
-        self.body.optimize(while_stack)
-        while_stack.pop()
-        if self.step:
-            self.step.optimize(while_stack)
-
 @dataclass
 class ExprStmt(Stmt):
     expr: Expr
@@ -516,9 +501,6 @@ class ExprStmt(Stmt):
         code = self.expr.to_asm()
         code.append(POP)
         return code
-
-    def optimize(self, while_stack: List[While]) -> None:
-        self.expr = ConstantFoldingVisitor.visit_expr(self.expr)
 
 @dataclass
 class CtrlFlowStmt(Stmt):
@@ -532,9 +514,6 @@ class Break(CtrlFlowStmt):
         assert self.loop and self.loop.exit_label
         return [instr.BranchOp(op.BranchOpcode.B, self.loop.exit_label.name, Cond.ALWAYS)]
 
-    def optimize(self, while_stack: List[While]) -> None:
-        self.loop = while_stack[-1]
-
 @dataclass
 class Continue(CtrlFlowStmt):
     loop: Optional[While] = None
@@ -542,9 +521,6 @@ class Continue(CtrlFlowStmt):
     def to_asm(self) -> List[instr.AssemblyLine]:
         assert self.loop and self.loop.step_label
         return [instr.BranchOp(op.BranchOpcode.B, self.loop.step_label.name, Cond.ALWAYS)]
-
-    def optimize(self, while_stack: List[While]) -> None:
-        self.loop = while_stack[-1]
 
 @dataclass
 class Return(CtrlFlowStmt):
@@ -554,10 +530,6 @@ class Return(CtrlFlowStmt):
         code = self.expr.to_asm() if self.expr else []
         code.extend(RETURN)
         return code
-
-    def optimize(self, while_stack: List[While]) -> None:
-        if self.expr:
-            self.expr = ConstantFoldingVisitor.visit_expr(self.expr)
 
 @dataclass
 class BinOp(Expr):
@@ -729,9 +701,6 @@ class UnaryOp(Expr):
         code.append(PUSH)
         return code
 
-    def optimize(self, while_stack: List[While]) -> None:
-        self.operand = ConstantFoldingVisitor.visit_expr(self.operand)
-
 @dataclass
 class Call(Expr):
     name: str
@@ -750,14 +719,11 @@ class Call(Expr):
 
         return code
 
-    def optimize(self, while_stack: List[While]) -> None:
-        self.args = [ConstantFoldingVisitor.visit_expr(arg) for arg in self.args]
-
 @dataclass
 class ArrayAccess(Expr):
     array: Expr
     index: Expr
-    
+
     def to_asm(self) -> List[instr.AssemblyLine]:
         """
         Stack machine approach for array access:
@@ -775,10 +741,6 @@ class ArrayAccess(Expr):
         code: List[instr.AssemblyLine] = []
 
         return code
-
-    def optimize(self, while_stack: List[While]) -> None:
-        self.array = ConstantFoldingVisitor.visit_expr(self.array)
-        self.index = ConstantFoldingVisitor.visit_expr(self.index)
 
 def print_ast(node: Any, indent: int = 0) -> None:
     prefix = "  " * indent
