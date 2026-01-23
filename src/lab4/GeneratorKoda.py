@@ -1,18 +1,16 @@
 import os
 import time
 import sys
-from typing import List, Any
+from typing import List
 
 from util import log
 from type import Type
-from opcodes import *
+import opcodes as op
 from cond import Cond
-from addressing import mode2
-from addressing import mode3
-from addressing import mode4
-from addressing import oprnd2
+import addressing
+from indexing import IndexingType
 from shift import ShiftType
-from size import WordOrByte, HalfOrByte
+from size import WordOrByte
 from semantic_analyzer import TreeFactory
 import instructions as instr
 import ast_nodes as ast
@@ -25,9 +23,9 @@ class CodeGenerator:
         instr.AssemblerDirective('.text'),
         instr.AssemblerDirective('.global _start'),
         instr.Label('_start'),
-        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, mode2.Mode2Immediate(0x20000)),
-        instr.BranchOp(BranchOpcode.BL, 'f_main', Cond.ALWAYS),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R6, oprnd2.Oprnd2Rm(Regs.R0)),
+        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, addressing.Mode2Immediate(0x20000)),
+        instr.BranchOp(op.BranchOpcode.BL, 'f_main', Cond.ALWAYS),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R6, addressing.Oprnd2Rm(Regs.R0)),
         instr.SoftwareInterruptOp(0),
     ]
 
@@ -35,63 +33,63 @@ class CodeGenerator:
     div_func = [
         instr.Label('_f_divide'),
 
-        instr.ArithmeticLogicOp(ArithmeticOpcode.SUB, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
-        instr.LoadStoreSingleMode2Op(StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
+        instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
 
-        instr.MoveOp(MoveOpcode.MOV, Regs.R2, oprnd2.Oprnd2Rm(Regs.R1)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R3, oprnd2.Oprnd2Rm(Regs.R0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2Rm(Regs.R1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R3, addressing.Oprnd2Rm(Regs.R0)),
 
-        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Imm8(0)),
-        instr.BranchOp(BranchOpcode.B, '_div_by_zero', Cond.EQUAL),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+        instr.BranchOp(op.BranchOpcode.B, '_div_by_zero', Cond.EQUAL),
 
-        instr.MoveOp(MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
 
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Rm(Regs.R2)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2Imm8(1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.R2)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2Imm8(1)),
 
         instr.Label('_align_loop'),
-        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Rm(Regs.R3)),
-        instr.BranchOp(BranchOpcode.B, '_align_done', Cond.UNSIGNED_HIGHER),
-        instr.TestOp(TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Imm8(0)),
-        instr.BranchOp(BranchOpcode.B, '_align_done', Cond.NEGATIVE),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSL, 1)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSL, 1)),
-        instr.BranchOp(BranchOpcode.B, '_align_loop', Cond.ALWAYS),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Rm(Regs.R3)),
+        instr.BranchOp(op.BranchOpcode.B, '_align_done', Cond.UNSIGNED_HIGHER),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+        instr.BranchOp(op.BranchOpcode.B, '_align_done', Cond.NEGATIVE),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSL, 1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSL, 1)),
+        instr.BranchOp(op.BranchOpcode.B, '_align_loop', Cond.ALWAYS),
 
         instr.Label('_align_done'),
-        instr.TestOp(TestOpcode.CMP, Regs.R4, oprnd2.Oprnd2Imm8(1)),
-        instr.BranchOp(BranchOpcode.B, '_divide_loop', Cond.EQUAL),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R4, addressing.Oprnd2Imm8(1)),
+        instr.BranchOp(op.BranchOpcode.B, '_divide_loop', Cond.EQUAL),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
 
         instr.Label('_divide_loop'),
-        instr.TestOp(TestOpcode.CMP, Regs.R4, oprnd2.Oprnd2Imm8(0)),
-        instr.BranchOp(BranchOpcode.B, '_divide_done', Cond.EQUAL),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R4, addressing.Oprnd2Imm8(0)),
+        instr.BranchOp(op.BranchOpcode.B, '_divide_done', Cond.EQUAL),
 
-        instr.TestOp(TestOpcode.CMP, Regs.R3, oprnd2.Oprnd2Rm(Regs.R1)),
-        instr.BranchOp(BranchOpcode.B, '_skip_subtract', Cond.UNSIGNED_LOWER),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R3, addressing.Oprnd2Rm(Regs.R1)),
+        instr.BranchOp(op.BranchOpcode.B, '_skip_subtract', Cond.UNSIGNED_LOWER),
 
-        instr.ArithmeticLogicOp(ArithmeticOpcode.SUB, Regs.R3, Regs.R3, oprnd2.Oprnd2Rm(Regs.R1)),
-        instr.ArithmeticLogicOp(LogicOpcode.ORR, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R4)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R3, Regs.R3, addressing.Oprnd2Rm(Regs.R1)),
+        instr.ArithmeticLogicOp(op.LogicOpcode.ORR, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R4)),
 
         instr.Label('_skip_subtract'),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R4, oprnd2.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
-        instr.BranchOp(BranchOpcode.B, '_divide_loop', Cond.ALWAYS),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
+        instr.BranchOp(op.BranchOpcode.B, '_divide_loop', Cond.ALWAYS),
 
         instr.Label('_div_by_zero'),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Imm8(0)),
-        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
-        instr.ArithmeticLogicOp(ArithmeticOpcode.ADD, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Imm8(0)),
+        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)),
 
         instr.Label('_divide_done'),
-        instr.MoveOp(MoveOpcode.MOV, Regs.R1, oprnd2.Oprnd2Rm(Regs.R3)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.R3)),
 
-        instr.LoadStoreSingleMode2Op(LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, mode2.Mode2ImmediateOffset(Regs.SP, mode2.IndexingType.NO_INDEX, None)),
-        instr.ArithmeticLogicOp(ArithmeticOpcode.ADD, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(4)),
-        instr.MoveOp(MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)),
+        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)),
     ]
 
     def __init__(self, code: List[instr.AssemblyLine]) -> None:

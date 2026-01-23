@@ -1,12 +1,8 @@
-import os
 import time
 import sys
-from typing import Iterator, Optional, Tuple, List, Dict
+from typing import Iterator, Optional, Tuple, List
 
-from util import log, out
-from instructions import *
-from opcodes import *
-from size import WordOrByte, HalfOrByte
+from util import log
 from type import Type, FuncSignature
 from scope import Symbol, Scope
 from token_class import Token

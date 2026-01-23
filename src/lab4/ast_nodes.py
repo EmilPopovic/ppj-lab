@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Any, Tuple
+from typing import List, Optional, Any
 
 import instructions as instr
 from util import log
@@ -8,7 +8,7 @@ from type import Type
 from scope import Symbol, Scope
 import opcodes as op
 from regs import Regs
-from addressing import mode2, mode3, mode4, oprnd2
+import addressing
 from size import WordOrByte
 from indexing import IndexingType
 from cond import Cond
@@ -17,40 +17,40 @@ import math
 needs_div = False
 
 def PUSH_REG(reg: int) -> instr.LoadStoreSingleMode2Op:
-    return instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, reg, mode2.Mode2ImmediateOffset(Regs.SP, IndexingType.PREINDEX, 4, negate_imm=True))
+    return instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, reg, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.PREINDEX, 4, negate_imm=True))
 
 PUSH = PUSH_REG(Regs.R0)
 
 def POP_REG(reg: int) -> instr.LoadStoreSingleMode2Op:
-    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, reg, mode2.Mode2ImmediateOffset(Regs.SP, IndexingType.POSTINDEX, 4))
+    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, reg, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.POSTINDEX, 4))
 POP = POP_REG(Regs.R0)
 
 def LOAD_WORD(const: int) -> instr.LoadStoreSingleMode2Op:
-    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, mode2.Mode2Immediate(const))
+    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2Immediate(const))
 
 def LOAD_BYTE(const: int) -> instr.LoadStoreSingleMode2Op:
-    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.BYTE, Regs.R0, mode2.Mode2Immediate(const))
+    return instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.BYTE, Regs.R0, addressing.Mode2Immediate(const))
 
 ENTER: List[instr.AssemblyLine] = [
-    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.STM, Regs.SP, mode4.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True),
-    instr.MoveOp(op.MoveOpcode.MOV, Regs.FP, oprnd2.Oprnd2Rm(Regs.SP))
+    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.STM, Regs.SP, addressing.Mode4.DECREMENT_BEFORE, [Regs.FP, Regs.LR], True),
+    instr.MoveOp(op.MoveOpcode.MOV, Regs.FP, addressing.Oprnd2Rm(Regs.SP))
 ]
 
 LEAVE: List[instr.AssemblyLine] = [
-    instr.MoveOp(op.MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)),
-    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True)
+    instr.MoveOp(op.MoveOpcode.MOV, Regs.SP, addressing.Oprnd2Rm(Regs.FP)),
+    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, addressing.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True)
 ]
 
 RETURN: List[instr.AssemblyLine] = [
-    instr.MoveOp(op.MoveOpcode.MOV, Regs.SP, oprnd2.Oprnd2Rm(Regs.FP)),
-    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, mode4.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True),
-    instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR))
+    instr.MoveOp(op.MoveOpcode.MOV, Regs.SP, addressing.Oprnd2Rm(Regs.FP)),
+    instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, addressing.Mode4.INCREMENT_AFTER, [Regs.FP, Regs.LR], True),
+    instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR))
 ]
 
 def CALL(label: str) -> instr.BranchOp:
     return instr.BranchOp(op.BranchOpcode.BL, label, Cond.ALWAYS)
 
-CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0))
+CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Imm8(0))
 
 class OptimizationVisitor:
     """Performs constant folding and assigns loops to break/continue statements."""
@@ -156,7 +156,7 @@ class Block(Stmt):
                 offset += int(math.ceil(var_decl.bytes / 4)) * 4
 
             # TODO: what if offset can't fit in imm_8
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(offset)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(offset)))
 
             for var_decl in self.var_decls:
                 if var_decl.init is None:
@@ -164,7 +164,7 @@ class Block(Stmt):
                 elif isinstance(var_decl.init, Expr):
                     code.extend(var_decl.init.to_asm())
                     code.append(POP)
-                    code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R0, mode2.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, offset, negate_imm=True)))
+                    code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, offset, negate_imm=True)))
                 else:  # array
                     assert isinstance(var_decl.vtype.nested_type, Type)
                     is_byte = var_decl.vtype.nested_type.name == 'char'
@@ -175,7 +175,7 @@ class Block(Stmt):
                     for init in var_decl.init:
                         code.extend(init.to_asm())
                         code.append(POP)
-                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE if is_byte else WordOrByte.WORD, Regs.R0, mode2.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, elem_offset, negate_imm=True)))
+                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE if is_byte else WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, elem_offset, negate_imm=True)))
                         elem_offset += 1 if is_byte else 4
 
         for stmt in self.stmts:
@@ -194,7 +194,7 @@ class FuncDef(ASTNode):
     def to_asm(self) -> List[instr.AssemblyLine]:
         code: List[instr.AssemblyLine] = [instr.Label(f'f_{self.sym.name}')]
         code.extend(self.body.to_asm())
-        code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, oprnd2.Oprnd2Rm(Regs.LR)))
+        code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)))
         return code
 
 @dataclass
@@ -232,22 +232,22 @@ class Var(Expr):
         size = WordOrByte.BYTE if self.sym.type.name == 'char' else WordOrByte.WORD
 
         if self.is_global:
-            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, mode2.Mode2Label(f'g_{self.sym.name}')))
+            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2Label(f'g_{self.sym.name}')))
             code.append(PUSH)
         elif self.decl_dist == 0:
-            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, mode2.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)))
+            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)))
             code.append(PUSH)
         else:
             loop_label = instr.Label()
             code.extend([
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Rm(Regs.FP)),
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, mode2.Mode2Immediate(self.decl_dist)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(self.decl_dist)),
                 loop_label,
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, mode2.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
-                instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, oprnd2.Oprnd2Imm8(1)),
-                instr.TestOp(op.TestOpcode.CMP, Regs.R1, oprnd2.Oprnd2Imm8(0)),
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
+                instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
                 instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, mode2.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)),
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)),
                 PUSH
             ])
 
@@ -572,7 +572,7 @@ class BinOp(Expr):
 
             code.extend([
                 CMPZ,
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL)
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.NOT_EQUAL)
             ])
 
             code.append(end_label)
@@ -587,7 +587,7 @@ class BinOp(Expr):
             code.append(POP)
             code.extend([
                 CMPZ,
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.NOT_EQUAL),
                 instr.BranchOp(op.BranchOpcode.B, end_label.name, Cond.NOT_EQUAL)
             ])
 
@@ -596,7 +596,7 @@ class BinOp(Expr):
 
             code.extend([
                 CMPZ,
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL)
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.NOT_EQUAL)
             ])
 
             code.append(end_label)
@@ -611,9 +611,9 @@ class BinOp(Expr):
         global needs_div
 
         if self.op == 'ADD':
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
         elif self.op == 'SUB':
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
         elif self.op == 'MUL':
             code.append(instr.MultiplyOp(Regs.R0, Regs.R0, Regs.R1))
         elif self.op == 'DIV':
@@ -626,47 +626,47 @@ class BinOp(Expr):
             return code
 
         elif self.op == 'AND':
-            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
+            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
         elif self.op == 'OR':
-            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.ORR, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
+            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.ORR, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
         elif self.op == 'XOR':
-            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.EOR, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
+            code.append(instr.ArithmeticLogicOp(op.LogicOpcode.EOR, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
         
         elif self.op == 'EQ':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.EQUAL)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.EQUAL)
             ])
         elif self.op == 'NEQ':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.NOT_EQUAL)
             ])
         elif self.op == 'LT':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.SIGNED_LESS_THAN)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.SIGNED_LESS_THAN)
             ])
         elif self.op == 'GT':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.SIGNED_GREATER_THAN)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.SIGNED_GREATER_THAN)
             ])
         elif self.op == 'LTE':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.SIGNED_LESS_OR_EQUAL)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.SIGNED_LESS_OR_EQUAL)
             ])
         elif self.op == 'GTE':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0)),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.SIGNED_GREATER_OR_EQUAL)
+                instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.SIGNED_GREATER_OR_EQUAL)
             ])
 
         code.append(PUSH)
@@ -683,20 +683,20 @@ class UnaryOp(Expr):
         if self.op == 'PLUS':
             return []
         elif self.op == 'NEG':
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, oprnd2.Oprnd2Imm8(0)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(0)))
         elif self.op == 'BITNOT':
-            code.append(instr.MoveOp(op.MoveOpcode.MVN, Regs.R0, oprnd2.Oprnd2Rm(Regs.R0)))
+            code.append(instr.MoveOp(op.MoveOpcode.MVN, Regs.R0, addressing.Oprnd2Rm(Regs.R0)))
         elif self.op == 'LOGNOT':
             code.extend([
                 CMPZ,
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0), Cond.NOT_EQUAL),
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.EQUAL)
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0), Cond.NOT_EQUAL),
+                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.EQUAL)
             ])
         # TODO prefix and postfix are not correct
         elif self.op in ('PREFIX_INC', 'POSTFIX_INC'):
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, oprnd2.Oprnd2Imm8(1)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
         elif self.op in ('POSTFIX_DEC', 'POSTFIX_INC'):
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, oprnd2.Oprnd2Imm8(1)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
 
         code.append(PUSH)
         return code
@@ -714,7 +714,7 @@ class Call(Expr):
         code.append(instr.BranchOp(op.BranchOpcode.BL, f'f_{self.name}', Cond.ALWAYS))
         code.append(POP)
         if self.args:
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, oprnd2.Oprnd2Imm8(len(self.args) * 4)))
+            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(len(self.args) * 4)))
         code.append(PUSH)
 
         return code
