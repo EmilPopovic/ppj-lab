@@ -50,6 +50,8 @@ RETURN: List[instr.AssemblyLine] = [
 def CALL(label: str) -> instr.BranchOp:
     return instr.BranchOp(op.BranchOpcode.BL, label, Cond.ALWAYS)
 
+CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0))
+
 class ConstantFoldingVisitor:
 
     @staticmethod
@@ -437,7 +439,7 @@ class If(Stmt):
         else_label: Optional[instr.Label] = instr.Label() if self.else_branch else None
         end_label: instr.Label = instr.Label()
 
-        code.append(instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)))
+        code.append(CMPZ)
 
         branch_if_false_label_name = else_label.name if else_label else end_label.name
 
@@ -480,7 +482,7 @@ class While(Stmt):
             code.extend(self.cond.to_asm())
             code.append(POP)
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.BranchOp(op.BranchOpcode.BL, self.exit_label.name, Cond.EQUAL)
             ])
 
@@ -589,7 +591,7 @@ class BinOp(Expr):
             code.extend(self.left.to_asm())
             code.append(POP)
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.BranchOp(op.BranchOpcode.B, end_label.name, Cond.EQUAL)
             ])
 
@@ -597,7 +599,7 @@ class BinOp(Expr):
             code.append(POP)
 
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL)
             ])
 
@@ -612,7 +614,7 @@ class BinOp(Expr):
             code.extend(self.left.to_asm())
             code.append(POP)
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL),
                 instr.BranchOp(op.BranchOpcode.B, end_label.name, Cond.NOT_EQUAL)
             ])
@@ -621,7 +623,7 @@ class BinOp(Expr):
             code.append(POP)
 
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.NOT_EQUAL)
             ])
 
@@ -633,6 +635,8 @@ class BinOp(Expr):
         code.extend(self.left.to_asm())
         code.extend(self.right.to_asm())
         code.extend([POP_REG(Regs.R1), POP])
+        
+        global needs_div
 
         if self.op == 'ADD':
             code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, oprnd2.Oprnd2Rm(Regs.R1)))
@@ -642,12 +646,10 @@ class BinOp(Expr):
             code.append(instr.MultiplyOp(Regs.R0, Regs.R0, Regs.R1))
         elif self.op == 'DIV':
             code.append(instr.BranchOp(op.BranchOpcode.BL, '_f_divide', Cond.ALWAYS))
-            global needs_div
             needs_div = True
         elif self.op == 'MOD':
             code.append(instr.BranchOp(op.BranchOpcode.BL, '_f_divide', Cond.ALWAYS))
             code.append(PUSH_REG(Regs.R1))
-            global needs_div
             needs_div = True
             return code
 
@@ -714,7 +716,7 @@ class UnaryOp(Expr):
             code.append(instr.MoveOp(op.MoveOpcode.MVN, Regs.R0, oprnd2.Oprnd2Rm(Regs.R0)))
         elif self.op == 'LOGNOT':
             code.extend([
-                instr.TestOp(op.TestOpcode.CMP, Regs.R0, oprnd2.Oprnd2Imm8(0)),
+                CMPZ,
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(0), Cond.NOT_EQUAL),
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, oprnd2.Oprnd2Imm8(1), Cond.EQUAL)
             ])

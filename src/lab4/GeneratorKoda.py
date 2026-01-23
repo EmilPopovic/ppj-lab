@@ -152,11 +152,7 @@ class CodeGenerator:
         return code
 
     @staticmethod
-    def from_ast(program: ast.Program) -> 'CodeGenerator':
-        # Set the global root_scope for lookups during code generation
-        if program.scope:
-            ast.root_scope = program.scope
-        
+    def from_ast(program: ast.Program) -> 'CodeGenerator':        
         code = CodeGenerator.runtime
 
         for func in program.functions:
@@ -166,13 +162,7 @@ class CodeGenerator:
             code.extend(CodeGenerator.div_func)
 
         code.extend(CodeGenerator.globals_asm(program))
-        
-        # Perform register allocation
-        log('[Info]   Starting register allocation...')
-        start_reg_alloc = time.time()
-        end_reg_alloc = time.time()
-        log(f'[Timing] Register allocation: {(end_reg_alloc - start_reg_alloc) * 1000:.2f} ms')
-
+    
         return CodeGenerator(code)
 
 def main() -> None:
@@ -180,38 +170,50 @@ def main() -> None:
     log(f'[Info]   Starting semantic analysis...')
     
     start_parse_input = time.time()
-    parse_tree, _ = TreeFactory.from_stdin()
+    parse_tree, scope_tree = TreeFactory.from_stdin()
     end_parse_input = time.time()
-    log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000:.2f} ms')
+    log(f'[Timing] Parse input: {(end_parse_input - start_parse_input) * 1000000:.0f} us')
 
     start_validation = time.time()
-    error, tree = parse_tree.generate_ast()
+    error, syntax_tree = parse_tree.generate_ast()
     end_validation = time.time()
-    log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000:.2f} ms')
+    log(f'[Timing] Validate semantic rules: {(end_validation - start_validation) * 1000000:.0f} us')
 
     if error:
         log(f'[Error]  Finished with error: {error}')
         return
     
-    assert tree is not None
+    assert syntax_tree is not None
+
+    log()
+    log(f'========== Scope Tree ==========')
+    print(scope_tree)
+    log()
 
     log(f'[Info]   Found no semantic errors')
     
     start_optimize = time.time()
     while_stack: List[ast.While] = []
-    tree.optimize(while_stack)
+    syntax_tree.optimize(while_stack)
     end_optimize = time.time()
-    log(f'[Info]   AST optimization completed')
-    log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000:.2f} ms')
+    log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000000:.0f} us')
+
+    log()
+    log(f'========== Abstract Syntax Tree ==========')
+    ast.print_ast(syntax_tree)
+    log()
     
     log(f'[Info]   Starting code generation...')
-
-    ast.log()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(script_dir, OUTPUT_FILENAME)
 
-    CodeGenerator.from_ast(tree).to_file(output_path)
+    start_generate = time.time()
+    CodeGenerator.from_ast(syntax_tree).to_file(output_path)
+    end_generate = time.time()
+
+    log(f'[Timing] Code generation: {(end_generate - start_generate) * 1000000:.0f} us')
+    log(f'[Info]   Code generation completed. Output file in {output_path}')
 
 if __name__ == '__main__':
     main()
