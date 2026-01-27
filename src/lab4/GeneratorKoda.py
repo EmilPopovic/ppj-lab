@@ -103,7 +103,6 @@ class CodeGenerator:
     @staticmethod
     def global_var_emit(var: ast.VarDecl) -> List[instr.AssemblyLine]:
         code: List[instr.AssemblyLine] = [
-            instr.AssemblerDirective('.align 4'),
             instr.Label(f'g_{var.sym.name}')
         ]
         if var.init:
@@ -147,7 +146,7 @@ class CodeGenerator:
     
     @staticmethod
     def globals_asm(program: ast.Program) -> List[instr.AssemblyLine]:
-        code = [instr.AssemblerDirective('.data')]
+        code = []
         for glob in program.globals:
             code.extend(CodeGenerator.global_var_emit(glob))
         return code
