@@ -10,6 +10,7 @@ import opcodes as op
 from regs import Regs
 import addressing
 from size import WordOrByte
+from shift import ShiftType
 from indexing import IndexingType
 from cond import Cond
 import math
@@ -53,7 +54,6 @@ def CALL(label: str) -> instr.BranchOp:
 CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Imm8(0))
 
 class OptimizationVisitor:
-    """Performs constant folding and assigns loops to break/continue statements."""
 
     @staticmethod
     def visit_expr(expr: 'Expr') -> 'Expr':
@@ -556,10 +556,45 @@ class BinOp(Expr):
         """
         code: List[instr.AssemblyLine] = []
         if self.op == 'ASSIGN':
-            code: List[instr.AssemblyLine] = self.right.to_asm()
+            code = self.right.to_asm()
             code.append(POP)
 
-            # TODO: finish this
+            if isinstance(self.left, Var):
+                target = self.left
+                assert target.sym.type
+                size = WordOrByte.BYTE if target.sym.type.name == 'char' else WordOrByte.WORD
+                negate_offset = not target.sym.is_param
+
+                if target.is_global:
+                    code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2Label(f'g_{target.sym.name}')))
+                else:
+                    assert target.sym.parent is not None
+                    depth_diff = self.scope.nesting_depth - target.sym.parent.nesting_depth
+                    if depth_diff == 0:
+                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, target.sym.frame_offset, negate_imm=negate_offset)))
+                    else:
+                        loop_label = instr.Label()
+                        code.extend([
+                            PUSH,
+                            instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
+                            instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
+                            loop_label,
+                            instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                            instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
+                            instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+                            instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
+                            POP_REG(Regs.R2),
+                            instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R2, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, target.sym.frame_offset, negate_imm=negate_offset)),
+                            instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.R2)),
+                        ])
+
+            elif isinstance(self.left, ArrayAccess):
+                code.append(PUSH)
+                code.extend(self.left.addr_asm())
+                code.append(POP_REG(Regs.R1))
+                code.append(POP_REG(Regs.R2))
+                code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, self.left.elem_size(), Regs.R2, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None)))
+                code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.R2)))
 
             code.append(PUSH)
             return code
@@ -730,22 +765,70 @@ class ArrayAccess(Expr):
     array: Expr
     index: Expr
 
+    def elem_size(self) -> WordOrByte:
+        assert isinstance(self.array, Var)
+        assert self.array.sym.type and isinstance(self.array.sym.type.nested_type, Type)
+        return WordOrByte.BYTE if self.array.sym.type.nested_type.name == 'char' else WordOrByte.WORD
+
+    def addr_asm(self) -> List[instr.AssemblyLine]:
+        """Pushes the address of the element onto the stack."""
+        assert isinstance(self.array, Var)
+        target = self.array
+        code: List[instr.AssemblyLine] = self.index.to_asm()
+        code.append(POP)
+
+        elem_bytes = 1 if self.elem_size() == WordOrByte.BYTE else 4
+        if elem_bytes == 4:
+            code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2ShiftImm5(Regs.R0, ShiftType.LSL, 2)))
+
+        if target.is_global:
+            code.extend([
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Label(f'g_{target.sym.name}')),
+                instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+            ])
+        else:
+            assert target.sym.parent is not None
+            negate_offset = not target.sym.is_param
+            depth_diff = self.scope.nesting_depth - target.sym.parent.nesting_depth
+            if depth_diff == 0:
+                if negate_offset:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.FP)))
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
+                else:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.FP)))
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
+            else:
+                loop_label = instr.Label()
+                code.extend([
+                    PUSH,
+                    instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
+                    loop_label,
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                    instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
+                    instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+                    instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
+                    POP_REG(Regs.R1),
+                ])
+                if negate_offset:
+                    code.extend([
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R1, Regs.R1, addressing.Oprnd2Rm(Regs.R0)),
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
+                    ])
+                else:
+                    code.extend([
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R1, Regs.R1, addressing.Oprnd2Rm(Regs.R0)),
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
+                    ])
+
+        code.append(PUSH)
+        return code
+
     def to_asm(self) -> List[instr.AssemblyLine]:
-        """
-        Stack machine approach for array access:
-        1. Evaluate index expression (push result)
-        2. Pop index value
-        3. Calculate element address:
-           - Get base address (local array: FP-offset, param: load from stack, global: load label)
-           - Multiply index by element size
-           - Add to base
-        4. Load value from calculated address
-        5. Push loaded value onto stack
-        """
-        # TODO: Implement stack machine code generation
-
-        code: List[instr.AssemblyLine] = []
-
+        code = self.addr_asm()
+        code.append(POP)
+        code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, self.elem_size(), Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, None)))
+        code.append(PUSH)
         return code
 
 def print_ast(node: Any, indent: int = 0) -> None:
