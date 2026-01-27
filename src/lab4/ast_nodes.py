@@ -145,9 +145,10 @@ class Stmt(ASTNode):
 class Block(Stmt):
     var_decls: List[VarDecl]
     stmts: List[Stmt]
+    nesting_depth: int
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        code = ENTER
+        code = list(ENTER)
 
         if self.var_decls:
             offset = 0
@@ -230,26 +231,30 @@ class Var(Expr):
 
         assert self.sym.type
         size = WordOrByte.BYTE if self.sym.type.name == 'char' else WordOrByte.WORD
+        negate_offset = not self.sym.is_param
 
         if self.is_global:
             code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2Label(f'g_{self.sym.name}')))
             code.append(PUSH)
-        elif self.decl_dist == 0:
-            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)))
-            code.append(PUSH)
         else:
-            loop_label = instr.Label()
-            code.extend([
-                instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(self.decl_dist)),
-                loop_label,
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
-                instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
-                instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
-                instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=True)),
-                PUSH
-            ])
+            assert self.sym.parent is not None
+            depth_diff = self.scope.nesting_depth - self.sym.parent.nesting_depth
+            if depth_diff == 0:
+                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
+                code.append(PUSH)
+            else:
+                loop_label = instr.Label()
+                code.extend([
+                    instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
+                    loop_label,
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                    instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
+                    instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+                    instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)),
+                    PUSH
+                ])
 
         return code
 
@@ -528,6 +533,8 @@ class Return(CtrlFlowStmt):
 
     def to_asm(self) -> List[instr.AssemblyLine]:
         code = self.expr.to_asm() if self.expr else []
+        if self.expr:
+            code.append(POP)
         code.extend(RETURN)
         return code
 
@@ -712,7 +719,6 @@ class Call(Expr):
             code.extend(arg.to_asm())
 
         code.append(instr.BranchOp(op.BranchOpcode.BL, f'f_{self.name}', Cond.ALWAYS))
-        code.append(POP)
         if self.args:
             code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(len(self.args) * 4)))
         code.append(PUSH)

@@ -3,13 +3,14 @@ from typing import Optional, List, Tuple
 from type import Type, FuncSignature
 
 class Symbol:
-    def __init__(self, name: str, type: Optional[Type], is_l_expr: bool) -> None:
+    def __init__(self, name: str, type: Optional[Type], is_l_expr: bool, is_param: bool = False) -> None:
         self.name: str = name
         self.type: Optional[Type] = type
         self.is_l_expr: bool = is_l_expr
         self.const_val: 'Optional[int | str]' = None
         self.frame_offset: int = 0
         self.parent: Optional[Scope] = None
+        self.is_param: bool = is_param
 
     def __repr__(self) -> str:
         if self.type and isinstance(self.type.nested_type, FuncSignature):
@@ -25,6 +26,10 @@ class Scope:
         self.parent: Optional[Scope] = parent
         self.type: str = type
         self.children: List = []
+        if type == '<definicija_funkcije>' or parent is None:
+            self.nesting_depth: int = 0
+        else:
+            self.nesting_depth: int = parent.nesting_depth + 1
 
     def add_child(self, child: 'Symbol | Scope') -> None:
         self.children.append(child)

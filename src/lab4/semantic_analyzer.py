@@ -320,7 +320,6 @@ class ParseTree:
             self.add_attr('type', Type('int'))
             self.add_attr('is_l_expr', False)
             
-            # Get operator from unarni_operator child
             unarni_op_token = first_child.children[0]
             assert isinstance(unarni_op_token, Token)
             if unarni_op_token.name == 'MINUS':
@@ -371,7 +370,7 @@ class ParseTree:
             self.add_attr('type', second_child_type)
             self.add_attr('is_l_expr', False)
             
-            # Cast expression - for now just return the expression
+            # TODO: Cast expression - for now just return the expression
             # A proper implementation might wrap it in a Cast node
             return None, cast_expr
         
@@ -939,7 +938,6 @@ class ParseTree:
             self.add_attr('type', third_child_type)
             self.add_attr('is_l_expr', False)
             
-            # For comma operator, return the right expression
             return None, right_expr
         
         return None, None
@@ -948,7 +946,7 @@ class ParseTree:
         second_child = self.children[1]
         assert isinstance(second_child, ParseTree)
 
-        block = ast_nodes.Block(self.scope, [], [])
+        block = ast_nodes.Block(self.scope, [], [], self.scope.nesting_depth)
 
         if second_child.name == '<lista_naredbi>':
             if e := second_child.validate_lista_naredbi(block): return e, None
@@ -1002,7 +1000,7 @@ class ParseTree:
             return e, None
 
         if block is None:
-            block = ast_nodes.Block(self.scope, [], [])
+            block = ast_nodes.Block(self.scope, [], [], self.scope.nesting_depth)
         if stmt is not None:
             block.stmts.append(stmt)
 
@@ -1060,7 +1058,7 @@ class ParseTree:
             seventh_child = self.children[6]
             assert isinstance(seventh_child, ParseTree)
 
-            else_block = ast_nodes.Block(self.scope, [], [])
+            else_block = ast_nodes.Block(self.scope, [], [], self.scope.nesting_depth)
 
             e, else_block = seventh_child.validate_naredba(None)
             if e:
@@ -1099,9 +1097,9 @@ class ParseTree:
                 return e, None
             
             if while_block is None:
-                while_block = ast_nodes.Block(self.scope, [], [])
+                while_block = ast_nodes.Block(self.scope, [], [], self.scope.nesting_depth)
             elif not isinstance(while_block, ast_nodes.Block):
-                while_block = ast_nodes.Block(self.scope, [], [while_block])
+                while_block = ast_nodes.Block(self.scope, [], [while_block], self.scope.nesting_depth)
             
             return None, ast_nodes.While(self.scope, None, cond_expr, while_block)
             
@@ -1149,12 +1147,10 @@ class ParseTree:
                 if e:
                     return e, None
             
-            
-            # Helper to wrap non-block statements
             if for_block is None:
-                for_block = ast_nodes.Block(self.scope, [], [])
+                for_block = ast_nodes.Block(self.scope, [], [], self.scope.nesting_depth)
             elif not isinstance(for_block, ast_nodes.Block):
-                for_block = ast_nodes.Block(self.scope, [], [for_block])
+                for_block = ast_nodes.Block(self.scope, [], [for_block], self.scope.nesting_depth)
 
             step_stmt = ast_nodes.ExprStmt(self.scope, after_iter_expr) if after_iter_expr else None
             return None, ast_nodes.While(self.scope, decl_stmt, None if cond_stmt is None else cond_stmt.expr, for_block, step_stmt)
@@ -1309,7 +1305,7 @@ class ParseTree:
 
                 Scope.root_scope.add_child(root_func)
                 
-                func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, [], ast_nodes.Block(self.scope, [], []))
+                func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, [], ast_nodes.Block(self.scope, [], [], 0))
                 program.functions.append(func_def)
             
         elif isinstance(fourth_child, ParseTree) and fourth_child.name == '<lista_parametara>':
@@ -1342,15 +1338,16 @@ class ParseTree:
             Scope.root_scope.add_child(root_func)
 
             names = fourth_child.get_attr('names')
-            var_decls = []
+            var_decls: List[ast_nodes.VarDecl] = []
 
             assert isinstance(names, list)
-            for type, name in zip(decl_types, names):
-                symbol = Symbol(name, type, is_l_expr=not type.is_const)
+            for i, (type, name) in enumerate(zip(decl_types, names)):
+                symbol = Symbol(name, type, is_l_expr=not type.is_const, is_param=True)
+                symbol.frame_offset = i * 4 + 8
                 self.scope.add_child(symbol)
                 var_decls.append(ast_nodes.VarDecl(self.scope, symbol, type, Type.sizeof(type), None))
 
-            func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, var_decls, ast_nodes.Block(self.scope, [], []))
+            func_def = ast_nodes.FuncDef(self.scope, root_func, first_child_type, var_decls, ast_nodes.Block(self.scope, [], [], 0))
             program.functions.append(func_def)
 
         e, func_body = sixth_child.validate_slozena_naredba()
