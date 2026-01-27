@@ -14,68 +14,78 @@
      <lista_deklaracija>
       <lista_deklaracija>
        <lista_deklaracija>
+        <lista_deklaracija>
+         <deklaracija>
+          <ime_tipa>
+           <specifikator_tipa>
+            KR_INT 2 int
+          <lista_init_deklaratora>
+           <init_deklarator>
+            <izravni_deklarator>
+             IDN 2 arr1
+             L_UGL_ZAGRADA 2 [
+             BROJ 2 50
+             D_UGL_ZAGRADA 2 ]
+          TOCKAZAREZ 2 ;
         <deklaracija>
          <ime_tipa>
           <specifikator_tipa>
-           KR_INT 2 int
+           KR_INT 3 int
          <lista_init_deklaratora>
           <init_deklarator>
            <izravni_deklarator>
-            IDN 2 arr1
-            L_UGL_ZAGRADA 2 [
-            BROJ 2 50
-            D_UGL_ZAGRADA 2 ]
-         TOCKAZAREZ 2 ;
+            IDN 3 arr2
+            L_UGL_ZAGRADA 3 [
+            BROJ 3 50
+            D_UGL_ZAGRADA 3 ]
+         TOCKAZAREZ 3 ;
        <deklaracija>
         <ime_tipa>
          <specifikator_tipa>
-          KR_INT 3 int
+          KR_INT 4 int
         <lista_init_deklaratora>
          <init_deklarator>
           <izravni_deklarator>
-           IDN 3 arr2
-           L_UGL_ZAGRADA 3 [
-           BROJ 3 50
-           D_UGL_ZAGRADA 3 ]
-        TOCKAZAREZ 3 ;
+           IDN 4 arr3
+           L_UGL_ZAGRADA 4 [
+           BROJ 4 50
+           D_UGL_ZAGRADA 4 ]
+        TOCKAZAREZ 4 ;
       <deklaracija>
        <ime_tipa>
         <specifikator_tipa>
-         KR_INT 4 int
+         KR_INT 5 int
        <lista_init_deklaratora>
         <init_deklarator>
          <izravni_deklarator>
-          IDN 4 arr3
-          L_UGL_ZAGRADA 4 [
-          BROJ 4 50
-          D_UGL_ZAGRADA 4 ]
-       TOCKAZAREZ 4 ;
+          IDN 5 i
+         OP_PRIDRUZI 5 =
+         <inicijalizator>
+          <izraz_pridruzivanja>
+           <log_ili_izraz>
+            <log_i_izraz>
+             <bin_ili_izraz>
+              <bin_xili_izraz>
+               <bin_i_izraz>
+                <jednakosni_izraz>
+                 <odnosni_izraz>
+                  <aditivni_izraz>
+                   <multiplikativni_izraz>
+                    <cast_izraz>
+                     <unarni_izraz>
+                      <postfiks_izraz>
+                       <primarni_izraz>
+                        BROJ 5 0
+       TOCKAZAREZ 5 ;
      <deklaracija>
       <ime_tipa>
        <specifikator_tipa>
-        KR_INT 5 int
+        KR_INT 6 int
       <lista_init_deklaratora>
        <init_deklarator>
         <izravni_deklarator>
-         IDN 5 i
-        OP_PRIDRUZI 5 =
-        <inicijalizator>
-         <izraz_pridruzivanja>
-          <log_ili_izraz>
-           <log_i_izraz>
-            <bin_ili_izraz>
-             <bin_xili_izraz>
-              <bin_i_izraz>
-               <jednakosni_izraz>
-                <odnosni_izraz>
-                 <aditivni_izraz>
-                  <multiplikativni_izraz>
-                   <cast_izraz>
-                    <unarni_izraz>
-                     <postfiks_izraz>
-                      <primarni_izraz>
-                       BROJ 5 0
-      TOCKAZAREZ 5 ;
+         IDN 6 sum
+      TOCKAZAREZ 6 ;
     <lista_naredbi>
      <lista_naredbi>
       <lista_naredbi>
@@ -83,8 +93,8 @@
         <lista_naredbi>
          <naredba>
           <naredba_petlje>
-           KR_WHILE 7 while
-           L_ZAGRADA 7 (
+           KR_WHILE 8 while
+           L_ZAGRADA 8 (
            <izraz>
             <izraz_pridruzivanja>
              <log_ili_izraz>
@@ -101,19 +111,19 @@
                         <unarni_izraz>
                          <postfiks_izraz>
                           <primarni_izraz>
-                           IDN 7 i
-                    OP_LT 7 <
+                           IDN 8 i
+                    OP_LT 8 <
                     <aditivni_izraz>
                      <multiplikativni_izraz>
                       <cast_izraz>
                        <unarni_izraz>
                         <postfiks_izraz>
                          <primarni_izraz>
-                          BROJ 7 50
-           D_ZAGRADA 7 )
+                          BROJ 8 50
+           D_ZAGRADA 8 )
            <naredba>
             <slozena_naredba>
-             L_VIT_ZAGRADA 7 {
+             L_VIT_ZAGRADA 8 {
              <lista_naredbi>
               <lista_naredbi>
                <lista_naredbi>
@@ -125,8 +135,8 @@
                      <postfiks_izraz>
                       <postfiks_izraz>
                        <primarni_izraz>
-                        IDN 8 arr1
-                      L_UGL_ZAGRADA 8 [
+                        IDN 9 arr1
+                      L_UGL_ZAGRADA 9 [
                       <izraz>
                        <izraz_pridruzivanja>
                         <log_ili_izraz>
@@ -142,9 +152,9 @@
                                   <unarni_izraz>
                                    <postfiks_izraz>
                                     <primarni_izraz>
-                                     IDN 8 i
-                      D_UGL_ZAGRADA 8 ]
-                     OP_PRIDRUZI 8 =
+                                     IDN 9 i
+                      D_UGL_ZAGRADA 9 ]
+                     OP_PRIDRUZI 9 =
                      <izraz_pridruzivanja>
                       <log_ili_izraz>
                        <log_i_izraz>
@@ -159,8 +169,8 @@
                                 <unarni_izraz>
                                  <postfiks_izraz>
                                   <primarni_izraz>
-                                   IDN 8 i
-                   TOCKAZAREZ 8 ;
+                                   IDN 9 i
+                   TOCKAZAREZ 9 ;
                 <naredba>
                  <izraz_naredba>
                   <izraz>
@@ -168,8 +178,8 @@
                     <postfiks_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       IDN 9 arr2
-                     L_UGL_ZAGRADA 9 [
+                       IDN 10 arr2
+                     L_UGL_ZAGRADA 10 [
                      <izraz>
                       <izraz_pridruzivanja>
                        <log_ili_izraz>
@@ -185,9 +195,9 @@
                                  <unarni_izraz>
                                   <postfiks_izraz>
                                    <primarni_izraz>
-                                    IDN 9 i
-                     D_UGL_ZAGRADA 9 ]
-                    OP_PRIDRUZI 9 =
+                                    IDN 10 i
+                     D_UGL_ZAGRADA 10 ]
+                    OP_PRIDRUZI 10 =
                     <izraz_pridruzivanja>
                      <log_ili_izraz>
                       <log_i_izraz>
@@ -203,14 +213,14 @@
                                 <unarni_izraz>
                                  <postfiks_izraz>
                                   <primarni_izraz>
-                                   IDN 9 i
-                              OP_PUTA 9 *
+                                   IDN 10 i
+                              OP_PUTA 10 *
                               <cast_izraz>
                                <unarni_izraz>
                                 <postfiks_izraz>
                                  <primarni_izraz>
-                                  BROJ 9 2
-                  TOCKAZAREZ 9 ;
+                                  BROJ 10 2
+                  TOCKAZAREZ 10 ;
                <naredba>
                 <izraz_naredba>
                  <izraz>
@@ -218,8 +228,8 @@
                    <postfiks_izraz>
                     <postfiks_izraz>
                      <primarni_izraz>
-                      IDN 10 arr3
-                    L_UGL_ZAGRADA 10 [
+                      IDN 11 arr3
+                    L_UGL_ZAGRADA 11 [
                     <izraz>
                      <izraz_pridruzivanja>
                       <log_ili_izraz>
@@ -235,9 +245,9 @@
                                 <unarni_izraz>
                                  <postfiks_izraz>
                                   <primarni_izraz>
-                                   IDN 10 i
-                    D_UGL_ZAGRADA 10 ]
-                   OP_PRIDRUZI 10 =
+                                   IDN 11 i
+                    D_UGL_ZAGRADA 11 ]
+                   OP_PRIDRUZI 11 =
                    <izraz_pridruzivanja>
                     <log_ili_izraz>
                      <log_i_izraz>
@@ -253,22 +263,22 @@
                                <unarni_izraz>
                                 <postfiks_izraz>
                                  <primarni_izraz>
-                                  IDN 10 i
-                             OP_PUTA 10 *
+                                  IDN 11 i
+                             OP_PUTA 11 *
                              <cast_izraz>
                               <unarni_izraz>
                                <postfiks_izraz>
                                 <primarni_izraz>
-                                 BROJ 10 3
-                 TOCKAZAREZ 10 ;
+                                 BROJ 11 3
+                 TOCKAZAREZ 11 ;
               <naredba>
                <izraz_naredba>
                 <izraz>
                  <izraz_pridruzivanja>
                   <postfiks_izraz>
                    <primarni_izraz>
-                    IDN 11 i
-                  OP_PRIDRUZI 11 =
+                    IDN 12 i
+                  OP_PRIDRUZI 12 =
                   <izraz_pridruzivanja>
                    <log_ili_izraz>
                     <log_i_izraz>
@@ -284,27 +294,48 @@
                               <unarni_izraz>
                                <postfiks_izraz>
                                 <primarni_izraz>
-                                 IDN 11 i
-                           PLUS 11 +
+                                 IDN 12 i
+                           PLUS 12 +
                            <multiplikativni_izraz>
                             <cast_izraz>
                              <unarni_izraz>
                               <postfiks_izraz>
                                <primarni_izraz>
-                                BROJ 11 1
-                TOCKAZAREZ 11 ;
-             D_VIT_ZAGRADA 12 }
+                                BROJ 12 1
+                TOCKAZAREZ 12 ;
+             D_VIT_ZAGRADA 13 }
         <naredba>
          <izraz_naredba>
-          TOCKAZAREZ 14 ;
+          <izraz>
+           <izraz_pridruzivanja>
+            <postfiks_izraz>
+             <primarni_izraz>
+              IDN 15 sum
+            OP_PRIDRUZI 15 =
+            <izraz_pridruzivanja>
+             <log_ili_izraz>
+              <log_i_izraz>
+               <bin_ili_izraz>
+                <bin_xili_izraz>
+                 <bin_i_izraz>
+                  <jednakosni_izraz>
+                   <odnosni_izraz>
+                    <aditivni_izraz>
+                     <multiplikativni_izraz>
+                      <cast_izraz>
+                       <unarni_izraz>
+                        <postfiks_izraz>
+                         <primarni_izraz>
+                          BROJ 15 0
+          TOCKAZAREZ 15 ;
        <naredba>
         <izraz_naredba>
          <izraz>
           <izraz_pridruzivanja>
            <postfiks_izraz>
             <primarni_izraz>
-             IDN 15 i
-           OP_PRIDRUZI 15 =
+             IDN 16 i
+           OP_PRIDRUZI 16 =
            <izraz_pridruzivanja>
             <log_ili_izraz>
              <log_i_izraz>
@@ -319,12 +350,12 @@
                       <unarni_izraz>
                        <postfiks_izraz>
                         <primarni_izraz>
-                         BROJ 15 0
-         TOCKAZAREZ 15 ;
+                         BROJ 16 0
+         TOCKAZAREZ 16 ;
       <naredba>
        <naredba_petlje>
-        KR_WHILE 17 while
-        L_ZAGRADA 17 (
+        KR_WHILE 18 while
+        L_ZAGRADA 18 (
         <izraz>
          <izraz_pridruzivanja>
           <log_ili_izraz>
@@ -341,19 +372,19 @@
                      <unarni_izraz>
                       <postfiks_izraz>
                        <primarni_izraz>
-                        IDN 17 i
-                 OP_LT 17 <
+                        IDN 18 i
+                 OP_LT 18 <
                  <aditivni_izraz>
                   <multiplikativni_izraz>
                    <cast_izraz>
                     <unarni_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       BROJ 17 50
-        D_ZAGRADA 17 )
+                       BROJ 18 50
+        D_ZAGRADA 18 )
         <naredba>
          <slozena_naredba>
-          L_VIT_ZAGRADA 17 {
+          L_VIT_ZAGRADA 18 {
           <lista_naredbi>
            <lista_naredbi>
             <naredba>
@@ -362,8 +393,8 @@
                <izraz_pridruzivanja>
                 <postfiks_izraz>
                  <primarni_izraz>
-                  IDN 18 sum
-                OP_PRIDRUZI 18 =
+                  IDN 19 sum
+                OP_PRIDRUZI 19 =
                 <izraz_pridruzivanja>
                  <log_ili_izraz>
                   <log_i_izraz>
@@ -381,16 +412,16 @@
                               <unarni_izraz>
                                <postfiks_izraz>
                                 <primarni_izraz>
-                                 IDN 18 sum
-                           PLUS 18 +
+                                 IDN 19 sum
+                           PLUS 19 +
                            <multiplikativni_izraz>
                             <cast_izraz>
                              <unarni_izraz>
                               <postfiks_izraz>
                                <postfiks_izraz>
                                 <primarni_izraz>
-                                 IDN 18 arr1
-                               L_UGL_ZAGRADA 18 [
+                                 IDN 19 arr1
+                               L_UGL_ZAGRADA 19 [
                                <izraz>
                                 <izraz_pridruzivanja>
                                  <log_ili_izraz>
@@ -406,17 +437,17 @@
                                            <unarni_izraz>
                                             <postfiks_izraz>
                                              <primarni_izraz>
-                                              IDN 18 i
-                               D_UGL_ZAGRADA 18 ]
-                          PLUS 18 +
+                                              IDN 19 i
+                               D_UGL_ZAGRADA 19 ]
+                          PLUS 19 +
                           <multiplikativni_izraz>
                            <cast_izraz>
                             <unarni_izraz>
                              <postfiks_izraz>
                               <postfiks_izraz>
                                <primarni_izraz>
-                                IDN 18 arr2
-                              L_UGL_ZAGRADA 18 [
+                                IDN 19 arr2
+                              L_UGL_ZAGRADA 19 [
                               <izraz>
                                <izraz_pridruzivanja>
                                 <log_ili_izraz>
@@ -432,17 +463,17 @@
                                           <unarni_izraz>
                                            <postfiks_izraz>
                                             <primarni_izraz>
-                                             IDN 18 i
-                              D_UGL_ZAGRADA 18 ]
-                         PLUS 18 +
+                                             IDN 19 i
+                              D_UGL_ZAGRADA 19 ]
+                         PLUS 19 +
                          <multiplikativni_izraz>
                           <cast_izraz>
                            <unarni_izraz>
                             <postfiks_izraz>
                              <postfiks_izraz>
                               <primarni_izraz>
-                               IDN 18 arr3
-                             L_UGL_ZAGRADA 18 [
+                               IDN 19 arr3
+                             L_UGL_ZAGRADA 19 [
                              <izraz>
                               <izraz_pridruzivanja>
                                <log_ili_izraz>
@@ -458,17 +489,17 @@
                                          <unarni_izraz>
                                           <postfiks_izraz>
                                            <primarni_izraz>
-                                            IDN 18 i
-                             D_UGL_ZAGRADA 18 ]
-              TOCKAZAREZ 18 ;
+                                            IDN 19 i
+                             D_UGL_ZAGRADA 19 ]
+              TOCKAZAREZ 19 ;
            <naredba>
             <izraz_naredba>
              <izraz>
               <izraz_pridruzivanja>
                <postfiks_izraz>
                 <primarni_izraz>
-                 IDN 19 i
-               OP_PRIDRUZI 19 =
+                 IDN 20 i
+               OP_PRIDRUZI 20 =
                <izraz_pridruzivanja>
                 <log_ili_izraz>
                  <log_i_izraz>
@@ -484,19 +515,19 @@
                            <unarni_izraz>
                             <postfiks_izraz>
                              <primarni_izraz>
-                              IDN 19 i
-                        PLUS 19 +
+                              IDN 20 i
+                        PLUS 20 +
                         <multiplikativni_izraz>
                          <cast_izraz>
                           <unarni_izraz>
                            <postfiks_izraz>
                             <primarni_izraz>
-                             BROJ 19 1
-             TOCKAZAREZ 19 ;
-          D_VIT_ZAGRADA 20 }
+                             BROJ 20 1
+             TOCKAZAREZ 20 ;
+          D_VIT_ZAGRADA 21 }
      <naredba>
       <naredba_skoka>
-       KR_RETURN 22 return
+       KR_RETURN 23 return
        <izraz>
         <izraz_pridruzivanja>
          <log_ili_izraz>
@@ -512,6 +543,6 @@
                    <unarni_izraz>
                     <postfiks_izraz>
                      <primarni_izraz>
-                      IDN 22 sum
-       TOCKAZAREZ 22 ;
-    D_VIT_ZAGRADA 23 }
+                      IDN 23 sum
+       TOCKAZAREZ 23 ;
+    D_VIT_ZAGRADA 24 }

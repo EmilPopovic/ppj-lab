@@ -3,6 +3,7 @@ int main(void) {
     int arr2[50];
     int arr3[50];
     int i = 0;
+    int sum;
 
     while (i < 50) {
         arr1[i] = i;
@@ -11,7 +12,7 @@ int main(void) {
         i = i + 1;
     }
 
-    int sum = 0;
+    sum = 0;
     i = 0;
 
     while (i < 50) {

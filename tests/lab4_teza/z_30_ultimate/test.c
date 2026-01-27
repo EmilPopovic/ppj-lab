@@ -11,11 +11,13 @@ int main(void) {
     int c0=20, c1=21, c2=22, c3=23, c4=24, c5=25, c6=26, c7=27, c8=28, c9=29;
     int arr[30];
     int i = 0;
+    int sum = 0;
+
     while (i < 30) {
         arr[i] = i * i;
         i = i + 1;
     }
-    int sum = 0;
+
     sum = sum + helper(a0, a1, a2, a3, a4);
     sum = sum + helper(a5, a6, a7, a8, a9);
     sum = sum + helper(b0, b1, b2, b3, b4);

@@ -1,9 +1,10 @@
 int main(void) {
     int i1 = 100, i2 = 200, i3 = 300;
-    char c1 = 10, c2 = 20, c3 = 30;
+    char c1 = (char)10, c2 = (char)20, c3 = (char)30;
     int arr[20];
     char carr[20];
     int idx = 0;
+    int sum;
 
     while (idx < 20) {
         arr[idx] = idx * 10;
@@ -11,7 +12,7 @@ int main(void) {
         idx = idx + 1;
     }
 
-    int sum = i1 + i2 + i3;
+    sum = i1 + i2 + i3;
     sum = sum + (int)c1 + (int)c2 + (int)c3;
     idx = 0;
 
