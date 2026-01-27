@@ -206,7 +206,7 @@ class Block(Stmt):
         for stmt in self.stmts:
             code.extend(stmt.to_asm())
 
-        if emits_frame:
+        if emits_frame and self.scope.type != '<definicija_funkcije>':
             code.extend(LEAVE)
         return code
 

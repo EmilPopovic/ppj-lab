@@ -24,7 +24,7 @@ class Type:
 
     @staticmethod
     def sizeof(type: 'Type') -> int:
-        if type.name == 'int':
+        if type.name == 'int' or type.name == 'arr':
             return 4
         else:
             return 1
