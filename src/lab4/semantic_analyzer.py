@@ -370,8 +370,6 @@ class ParseTree:
             self.add_attr('type', second_child_type)
             self.add_attr('is_l_expr', False)
             
-            # TODO: Cast expression - for now just return the expression
-            # A proper implementation might wrap it in a Cast node
             return None, cast_expr
         
         return None, None
