@@ -173,13 +173,23 @@ def main():
         # Start generation timer
         gen_start = get_time_ms()
         
+        # GeneratorKoda.py writes to src/lab4/a.s automatically
+        asm_path = Path("src/lab4/a.s")
+        if asm_path.exists():
+            asm_path.unlink()
+        
         result = run_command(["python3.8", "src/lab4/GeneratorKoda.py"], stdin_data=in_content)
         
         gen_end = get_time_ms()
         gen_time_ms = gen_end - gen_start
         
-        # GeneratorKoda.py writes to src/lab4/a.s automatically
-        asm_path = Path("src/lab4/a.s")
+        if result is None or result.returncode != 0:
+            print(f"{RED}  ⚠ Generator failed with return code {result.returncode if result else 'unknown'}{RESET}")
+            if result and result.stderr:
+                print(f"    Error: {result.stderr.splitlines()[-1]}")
+            fail_count += 1
+            continue
+        
         if not asm_path.exists():
             print(f"{RED}  ⚠ Failed to generate ARM assembly{RESET}\n")
             fail_count += 1

@@ -74,7 +74,7 @@ class Mode2ImmediateOffset(Mode2):
         if self.imm_12 is None:
             return f'[{reg_to_str(self.rn)}]'
 
-        imm_sign_str = "-" if self.negate_imm else ""
+        imm_sign_str = "-" if self.negate_imm and self.imm_12 != 0 else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
             return f'[{reg_to_str(self.rn)}, #{imm_sign_str}{self.imm_12}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:
@@ -113,6 +113,13 @@ class Mode2Label(Mode2):
 
     def __repr__(self) -> str:
         return self.label
+
+class Mode2LabelAddr(Mode2):
+    def __init__(self, label: str) -> None:
+        self.label: str = label
+
+    def __repr__(self) -> str:
+        return f'={self.label}'
 
 # Mode3 classes
 
@@ -169,7 +176,7 @@ class Mode3ImmediateOffset(Mode3):
         if self.imm_8 is None:
             return f'[{reg_to_str(self.rn)}]'
 
-        imm_sign_str = "-" if self.negate_imm else ""
+        imm_sign_str = "-" if self.negate_imm and self.imm_12 != 0 else ""
         if self.indexing in [IndexingType.NO_INDEX, IndexingType.PREINDEX]:
             return f'[{reg_to_str(self.rn)}, #{imm_sign_str}{self.imm_8}]{"!" if self.indexing == IndexingType.PREINDEX else ""}'
         else:

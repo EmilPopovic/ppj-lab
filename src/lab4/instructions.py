@@ -178,7 +178,7 @@ class BranchOp(Instruction):
     
 class SoftwareInterruptOp(Instruction):
     def __init__(self, irq_num: int) -> None:
-        self.opcode: op.ControlOpcode = op.ControlOpcode.SWI
+        self.opcode: op.ControlOpcode = op.ControlOpcode.SVC
         self.irq_num: int = irq_num
 
     def __repr__(self) -> str:

@@ -17,6 +17,17 @@ import math
 
 needs_div = False
 
+def get_frame_diff(scope: Scope, sym: Symbol) -> int:
+    curr = scope
+    diff = 0
+    while curr and curr != sym.parent:
+        if curr.type == '<definicija_funkcije>':
+            diff += 1
+        elif curr.type == '<slozena_naredba>' and any(isinstance(c, Symbol) and not c.is_param for c in curr.children):
+            diff += 1
+        curr = curr.parent
+    return diff
+
 def PUSH_REG(reg: int) -> instr.LoadStoreSingleMode2Op:
     return instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, reg, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.PREINDEX, 4, negate_imm=True))
 
@@ -148,13 +159,14 @@ class Block(Stmt):
     nesting_depth: int
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        code = list(ENTER)
+        emits_frame = self.var_decls or self.scope.type == '<definicija_funkcije>'
+        code = list(ENTER) if emits_frame else []
 
         if self.var_decls:
-            offset = 0
+            offset = 4 # Skip saved FP
             for var_decl in self.var_decls:
-                var_decl.sym.frame_offset = offset
                 offset += int(math.ceil(var_decl.bytes / 4)) * 4
+                var_decl.sym.frame_offset = offset
 
             # TODO: what if offset can't fit in imm_8
             code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(offset)))
@@ -163,9 +175,21 @@ class Block(Stmt):
                 if var_decl.init is None:
                     continue
                 elif isinstance(var_decl.init, Expr):
-                    code.extend(var_decl.init.to_asm())
-                    code.append(POP)
-                    code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, offset, negate_imm=True)))
+                    if isinstance(var_decl.init, ConstStr):
+                        s = var_decl.init.value
+                        elem_offset = var_decl.sym.frame_offset
+                        for char in s:
+                            code.append(LOAD_BYTE(ord(char)))
+                            code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, elem_offset, negate_imm=True)))
+                            elem_offset -= 1
+                        # NULL terminator
+                        code.append(LOAD_BYTE(0))
+                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, elem_offset, negate_imm=True)))
+                    else:
+                        code.extend(var_decl.init.to_asm())
+                        code.append(POP)
+                        is_byte = var_decl.vtype.name == 'char'
+                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE if is_byte else WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, var_decl.sym.frame_offset, negate_imm=True)))
                 else:  # array
                     assert isinstance(var_decl.vtype.nested_type, Type)
                     is_byte = var_decl.vtype.nested_type.name == 'char'
@@ -177,12 +201,13 @@ class Block(Stmt):
                         code.extend(init.to_asm())
                         code.append(POP)
                         code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.BYTE if is_byte else WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, elem_offset, negate_imm=True)))
-                        elem_offset += 1 if is_byte else 4
+                        elem_offset -= 1 if is_byte else 4
 
         for stmt in self.stmts:
             code.extend(stmt.to_asm())
 
-        code.extend(LEAVE)
+        if emits_frame:
+            code.extend(LEAVE)
         return code
 
 @dataclass
@@ -195,7 +220,16 @@ class FuncDef(ASTNode):
     def to_asm(self) -> List[instr.AssemblyLine]:
         code: List[instr.AssemblyLine] = [instr.Label(f'f_{self.sym.name}')]
         code.extend(self.body.to_asm())
-        code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)))
+        # Fallback return for functions without explicit return
+        # Check if last instruction was a return already
+        is_return = False
+        if isinstance(self.body, Block) and self.body.stmts:
+            is_return = isinstance(self.body.stmts[-1], Return)
+        elif isinstance(self.body, Return):
+            is_return = True
+        
+        if not is_return:
+            code.extend(RETURN)
         return code
 
 @dataclass
@@ -234,13 +268,25 @@ class Var(Expr):
         negate_offset = not self.sym.is_param
 
         if self.is_global:
-            code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2Label(f'g_{self.sym.name}')))
+            if self.sym.type.name == 'arr':
+                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2LabelAddr(f'g_{self.sym.name}')))
+            else:
+                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2LabelAddr(f'g_{self.sym.name}')))
+                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, None)))
             code.append(PUSH)
         else:
             assert self.sym.parent is not None
-            depth_diff = self.scope.nesting_depth - self.sym.parent.nesting_depth
+            depth_diff = get_frame_diff(self.scope, self.sym)
             if depth_diff == 0:
-                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
+                if self.sym.type.name == 'arr':
+                    if self.sym.is_param:
+                        # Parameter array: load pointer from stack
+                        code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset)))
+                    else:
+                        # Local array: compute address
+                        code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.FP, addressing.Oprnd2Imm8(self.sym.frame_offset)))
+                else:
+                    code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
                 code.append(PUSH)
             else:
                 loop_label = instr.Label()
@@ -248,14 +294,52 @@ class Var(Expr):
                     instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
                     instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
                     loop_label,
-                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 0)),
                     instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
                     instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
                     instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
-                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)),
-                    PUSH
                 ])
+                if self.sym.type.name == 'arr':
+                    if self.sym.is_param:
+                        # Parameter array: load pointer
+                        code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset)))
+                    else:
+                        # Local array: compute address
+                        code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(self.sym.frame_offset)))
+                else:
+                    code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
+                code.append(PUSH)
 
+        return code
+
+    def store_asm(self, reg: int) -> List[instr.AssemblyLine]:
+        code: List[instr.AssemblyLine] = []
+        assert self.sym.type
+        size = WordOrByte.BYTE if self.sym.type.name == 'char' else WordOrByte.WORD
+        negate_offset = not self.sym.is_param
+
+        if self.is_global:
+            code.extend([
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2LabelAddr(f'g_{self.sym.name}')),
+                instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, reg, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None))
+            ])
+        else:
+            assert self.sym.parent is not None
+            depth_diff = get_frame_diff(self.scope, self.sym)
+            if depth_diff == 0:
+                code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size if self.sym.type.name != 'arr' else WordOrByte.WORD, reg, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
+            else:
+                loop_label = instr.Label()
+                code.extend([
+                    instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.FP)),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R2, addressing.Mode2Immediate(depth_diff)),
+                    loop_label,
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, 0)),
+                    instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R2, Regs.R2, addressing.Oprnd2Imm8(1)),
+                    instr.TestOp(op.TestOpcode.CMP, Regs.R2, addressing.Oprnd2Imm8(0)),
+                    instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
+                    instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size if self.sym.type.name != 'arr' else WordOrByte.WORD, reg, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)),
+                ])
         return code
 
 @dataclass
@@ -453,10 +537,21 @@ class If(Stmt):
         code.append(instr.BranchOp(op.BranchOpcode.B, branch_if_false_label_name, Cond.EQUAL))
 
         code.extend(self.then_branch.to_asm())
-
-        if else_label and self.else_branch:
+        
+        if else_label:
+            # If then_branch ends with a return, we don't need to branch to end_label
+            is_return = False
+            if isinstance(self.then_branch, Block) and self.then_branch.stmts:
+                is_return = isinstance(self.then_branch.stmts[-1], Return)
+            elif isinstance(self.then_branch, Return):
+                is_return = True
+            
+            if not is_return:
+                code.append(instr.BranchOp(op.BranchOpcode.B, end_label.name, Cond.ALWAYS))
+            
             code.append(else_label)
-            code.extend(self.else_branch.to_asm())
+            if self.else_branch:
+                code.extend(self.else_branch.to_asm())
 
         code.append(end_label)
         return code
@@ -484,7 +579,7 @@ class While(Stmt):
             code.append(POP)
             code.extend([
                 CMPZ,
-                instr.BranchOp(op.BranchOpcode.BL, self.exit_label.name, Cond.EQUAL)
+                instr.BranchOp(op.BranchOpcode.B, self.exit_label.name, Cond.EQUAL)
             ])
 
         code.extend(self.body.to_asm())
@@ -517,7 +612,15 @@ class Break(CtrlFlowStmt):
 
     def to_asm(self) -> List[instr.AssemblyLine]:
         assert self.loop and self.loop.exit_label
-        return [instr.BranchOp(op.BranchOpcode.B, self.loop.exit_label.name, Cond.ALWAYS)]
+        code = []
+        curr = self.scope
+        while curr != self.loop.scope:
+            if curr.type == '<slozena_naredba>':
+                if any(isinstance(c, Symbol) and not c.is_param for c in curr.children):
+                    code.extend(LEAVE)
+            curr = curr.parent
+        code.append(instr.BranchOp(op.BranchOpcode.B, self.loop.exit_label.name, Cond.ALWAYS))
+        return code
 
 @dataclass
 class Continue(CtrlFlowStmt):
@@ -525,7 +628,15 @@ class Continue(CtrlFlowStmt):
 
     def to_asm(self) -> List[instr.AssemblyLine]:
         assert self.loop and self.loop.step_label
-        return [instr.BranchOp(op.BranchOpcode.B, self.loop.step_label.name, Cond.ALWAYS)]
+        code = []
+        curr = self.scope
+        while curr != self.loop.scope:
+            if curr.type == '<slozena_naredba>':
+                if any(isinstance(c, Symbol) and not c.is_param for c in curr.children):
+                    code.extend(LEAVE)
+            curr = curr.parent
+        code.append(instr.BranchOp(op.BranchOpcode.B, self.loop.step_label.name, Cond.ALWAYS))
+        return code
 
 @dataclass
 class Return(CtrlFlowStmt):
@@ -535,6 +646,19 @@ class Return(CtrlFlowStmt):
         code = self.expr.to_asm() if self.expr else []
         if self.expr:
             code.append(POP)
+        
+        # Cleanup frames up to the function definition
+        curr = self.scope
+        while curr and curr.type != '<definicija_funkcije>':
+            if curr.type == '<slozena_naredba>':
+                # Check if this block actually emitted a frame (has var_decls)
+                # We need to know if the corresponding Block node emitted ENTER.
+                # Since we don't have the Block node here, we check the scope.
+                # In validate_lista_deklaracija, variables are added to the scope.
+                if any(isinstance(c, Symbol) and not c.is_param for c in curr.children):
+                    code.extend(LEAVE)
+            curr = curr.parent
+        
         code.extend(RETURN)
         return code
 
@@ -560,34 +684,7 @@ class BinOp(Expr):
             code.append(POP)
 
             if isinstance(self.left, Var):
-                target = self.left
-                assert target.sym.type
-                size = WordOrByte.BYTE if target.sym.type.name == 'char' else WordOrByte.WORD
-                negate_offset = not target.sym.is_param
-
-                if target.is_global:
-                    code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2Label(f'g_{target.sym.name}')))
-                else:
-                    assert target.sym.parent is not None
-                    depth_diff = self.scope.nesting_depth - target.sym.parent.nesting_depth
-                    if depth_diff == 0:
-                        code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, target.sym.frame_offset, negate_imm=negate_offset)))
-                    else:
-                        loop_label = instr.Label()
-                        code.extend([
-                            PUSH,
-                            instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
-                            instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
-                            loop_label,
-                            instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
-                            instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
-                            instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
-                            instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
-                            POP_REG(Regs.R2),
-                            instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R2, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, target.sym.frame_offset, negate_imm=negate_offset)),
-                            instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.R2)),
-                        ])
-
+                code.extend(self.left.store_asm(Regs.R0))
             elif isinstance(self.left, ArrayAccess):
                 code.append(PUSH)
                 code.extend(self.left.addr_asm())
@@ -648,7 +745,7 @@ class BinOp(Expr):
 
         code.extend(self.left.to_asm())
         code.extend(self.right.to_asm())
-        code.extend([POP_REG(Regs.R1), POP])
+        code.extend([POP_REG(Regs.R1), POP_REG(Regs.R0)])
         
         global needs_div
 
@@ -663,9 +760,8 @@ class BinOp(Expr):
             needs_div = True
         elif self.op == 'MOD':
             code.append(instr.BranchOp(op.BranchOpcode.BL, '_f_divide', Cond.ALWAYS))
-            code.append(PUSH_REG(Regs.R1))
+            code.append(instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
             needs_div = True
-            return code
 
         elif self.op == 'AND':
             code.append(instr.ArithmeticLogicOp(op.LogicOpcode.AND, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)))
@@ -720,10 +816,44 @@ class UnaryOp(Expr):
     operand: Expr
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        code: List[instr.AssemblyLine] = [POP]
+        if self.op in ('PREFIX_INC', 'POSTFIX_INC', 'PREFIX_DEC', 'POSTFIX_DEC'):
+            code = []
+            if isinstance(self.operand, Var):
+                code.extend(self.operand.to_asm())
+                code.append(POP)
+                if self.op.startswith('POSTFIX'):
+                    code.append(PUSH)
+                if 'INC' in self.op:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
+                else:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
+                code.extend(self.operand.store_asm(Regs.R0))
+                if self.op.startswith('PREFIX'):
+                    code.append(PUSH)
+                return code
+            elif isinstance(self.operand, ArrayAccess):
+                code.extend(self.operand.addr_asm())
+                code.append(POP_REG(Regs.R1))
+                code.append(PUSH_REG(Regs.R1))
+                size = self.operand.elem_size()
+                code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None)))
+                if self.op.startswith('POSTFIX'):
+                    code.append(PUSH)
+                if 'INC' in self.op:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
+                else:
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
+                code.append(POP_REG(Regs.R1))
+                code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None)))
+                if self.op.startswith('PREFIX'):
+                    code.append(PUSH)
+                return code
+
+        code: List[instr.AssemblyLine] = self.operand.to_asm()
+        code.append(POP)
 
         if self.op == 'PLUS':
-            return []
+            return [PUSH]
         elif self.op == 'NEG':
             code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(0)))
         elif self.op == 'BITNOT':
@@ -734,11 +864,6 @@ class UnaryOp(Expr):
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0), Cond.NOT_EQUAL),
                 instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(1), Cond.EQUAL)
             ])
-        # TODO prefix and postfix are not correct
-        elif self.op in ('PREFIX_INC', 'POSTFIX_INC'):
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
-        elif self.op in ('POSTFIX_DEC', 'POSTFIX_INC'):
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
 
         code.append(PUSH)
         return code
@@ -783,43 +908,50 @@ class ArrayAccess(Expr):
 
         if target.is_global:
             code.extend([
-                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Label(f'g_{target.sym.name}')),
+                instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2LabelAddr(f'g_{target.sym.name}')),
                 instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
             ])
         else:
             assert target.sym.parent is not None
             negate_offset = not target.sym.is_param
-            depth_diff = self.scope.nesting_depth - target.sym.parent.nesting_depth
+            depth_diff = get_frame_diff(self.scope, target.sym)
             if depth_diff == 0:
-                if negate_offset:
-                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.FP)))
-                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
+                if target.sym.is_param:
+                    # Parameter array: load base pointer from stack, then add index
+                    code.extend([
+                        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, target.sym.frame_offset)),
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R1)),
+                    ])
                 else:
+                    # Local array: compute address (FP - offset) + index
                     code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.FP)))
-                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
+                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
             else:
                 loop_label = instr.Label()
                 code.extend([
-                    PUSH,
+                    PUSH_REG(Regs.R0), # Save index
                     instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Rm(Regs.FP)),
                     instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R1, addressing.Mode2Immediate(depth_diff)),
                     loop_label,
-                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 4)),
+                    instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, 0)),
                     instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(1)),
                     instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
                     instr.BranchOp(op.BranchOpcode.B, loop_label.name, Cond.NOT_EQUAL),
-                    POP_REG(Regs.R1),
+                    POP_REG(Regs.R1), # R1 = index, R0 = parent FP
                 ])
-                if negate_offset:
+                if target.sym.is_param:
+                    # Parameter array in outer scope: load pointer from stack
                     code.extend([
-                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R1, Regs.R1, addressing.Oprnd2Rm(Regs.R0)),
-                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
+                        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R2, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, target.sym.frame_offset)),
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R1, addressing.Oprnd2Rm(Regs.R2)),
                     ])
                 else:
+                    # Local array in outer scope: compute address (outer FP - offset) + index
                     code.extend([
                         instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R1, Regs.R1, addressing.Oprnd2Rm(Regs.R0)),
-                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
+                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
                     ])
+
 
         code.append(PUSH)
         return code

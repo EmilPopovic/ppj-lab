@@ -26,7 +26,7 @@ class CodeGenerator:
         instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.SP, addressing.Mode2Immediate(0x20000)),
         instr.BranchOp(op.BranchOpcode.BL, 'f_main', Cond.ALWAYS),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R6, addressing.Oprnd2Rm(Regs.R0)),
-        instr.SoftwareInterruptOp(0),
+        instr.SoftwareInterruptOp(2),
     ]
 
     # R0=dividend, R1=divisor -> R0=quotient, R1=remainder

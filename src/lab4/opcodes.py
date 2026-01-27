@@ -42,7 +42,7 @@ class BranchOpcode(Enum):
     BL = 'bl'
 
 class ControlOpcode(Enum):
-    SWI = 'swi'
+    SVC = 'svc'
 
 class LoadSingleOpcode(Enum):
     LDR = 'ldr'
