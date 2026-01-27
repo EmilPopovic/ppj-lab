@@ -185,11 +185,6 @@ def main() -> None:
     
     assert syntax_tree is not None
 
-    log()
-    log(f'========== Scope Tree ==========')
-    print(scope_tree)
-    log()
-
     log(f'[Info]   Found no semantic errors')
     
     start_optimize = time.time()
@@ -197,11 +192,6 @@ def main() -> None:
     end_optimize = time.time()
     log(f'[Timing] AST optimization: {(end_optimize - start_optimize) * 1000000:.0f} us')
 
-    log()
-    log(f'========== Abstract Syntax Tree ==========')
-    ast.print_ast(syntax_tree)
-    log()
-    
     log(f'[Info]   Starting code generation...')
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
