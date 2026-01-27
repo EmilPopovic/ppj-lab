@@ -2,14 +2,13 @@
  <prijevodna_jedinica>
   <vanjska_deklaracija>
    <definicija_funkcije>
-    <specifikatori_deklaracije>
+    <ime_tipa>
      <specifikator_tipa>
       KR_INT 1 int
-    <deklarator>
-     <izravni_deklarator>
-      <izravni_deklarator>
-       IDN 1 mega
-      L_ZAGRADA 1 (
+    IDN 1 mega
+    L_ZAGRADA 1 (
+    <lista_parametara>
+     <lista_parametara>
       <lista_parametara>
        <lista_parametara>
         <lista_parametara>
@@ -28,168 +27,126 @@
                      <lista_parametara>
                       <lista_parametara>
                        <lista_parametara>
-                        <lista_parametara>
-                         <lista_parametara>
-                          <deklaracija_parametra>
-                           <specifikatori_deklaracije>
-                            <specifikator_tipa>
-                             KR_INT 1 int
-                           <deklarator>
-                            <izravni_deklarator>
-                             IDN 1 a
-                         ZAREZ 1 ,
-                         <deklaracija_parametra>
-                          <specifikatori_deklaracije>
-                           <specifikator_tipa>
-                            KR_INT 1 int
-                          <deklarator>
-                           <izravni_deklarator>
-                            IDN 1 b
-                        ZAREZ 1 ,
                         <deklaracija_parametra>
-                         <specifikatori_deklaracije>
+                         <ime_tipa>
                           <specifikator_tipa>
                            KR_INT 1 int
-                         <deklarator>
-                          <izravni_deklarator>
-                           IDN 1 c
+                         IDN 1 a
                        ZAREZ 1 ,
                        <deklaracija_parametra>
-                        <specifikatori_deklaracije>
+                        <ime_tipa>
                          <specifikator_tipa>
                           KR_INT 1 int
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 1 d
+                        IDN 1 b
                       ZAREZ 1 ,
                       <deklaracija_parametra>
-                       <specifikatori_deklaracije>
+                       <ime_tipa>
                         <specifikator_tipa>
                          KR_INT 1 int
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 1 e
+                       IDN 1 c
                      ZAREZ 1 ,
                      <deklaracija_parametra>
-                      <specifikatori_deklaracije>
+                      <ime_tipa>
                        <specifikator_tipa>
                         KR_INT 1 int
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 1 f
+                      IDN 1 d
                     ZAREZ 1 ,
                     <deklaracija_parametra>
-                     <specifikatori_deklaracije>
+                     <ime_tipa>
                       <specifikator_tipa>
                        KR_INT 1 int
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 1 g
+                     IDN 1 e
                    ZAREZ 1 ,
                    <deklaracija_parametra>
-                    <specifikatori_deklaracije>
+                    <ime_tipa>
                      <specifikator_tipa>
                       KR_INT 1 int
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 1 h
+                    IDN 1 f
                   ZAREZ 1 ,
                   <deklaracija_parametra>
-                   <specifikatori_deklaracije>
+                   <ime_tipa>
                     <specifikator_tipa>
                      KR_INT 1 int
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 1 i
+                   IDN 1 g
                  ZAREZ 1 ,
                  <deklaracija_parametra>
-                  <specifikatori_deklaracije>
+                  <ime_tipa>
                    <specifikator_tipa>
                     KR_INT 1 int
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 1 j
+                  IDN 1 h
                 ZAREZ 1 ,
                 <deklaracija_parametra>
-                 <specifikatori_deklaracije>
+                 <ime_tipa>
                   <specifikator_tipa>
                    KR_INT 1 int
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 1 k
+                 IDN 1 i
                ZAREZ 1 ,
                <deklaracija_parametra>
-                <specifikatori_deklaracije>
+                <ime_tipa>
                  <specifikator_tipa>
                   KR_INT 1 int
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 1 l
+                IDN 1 j
               ZAREZ 1 ,
               <deklaracija_parametra>
-               <specifikatori_deklaracije>
+               <ime_tipa>
                 <specifikator_tipa>
                  KR_INT 1 int
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 1 m
+               IDN 1 k
              ZAREZ 1 ,
              <deklaracija_parametra>
-              <specifikatori_deklaracije>
+              <ime_tipa>
                <specifikator_tipa>
                 KR_INT 1 int
-              <deklarator>
-               <izravni_deklarator>
-                IDN 1 n
+              IDN 1 l
             ZAREZ 1 ,
             <deklaracija_parametra>
-             <specifikatori_deklaracije>
+             <ime_tipa>
               <specifikator_tipa>
                KR_INT 1 int
-             <deklarator>
-              <izravni_deklarator>
-               IDN 1 o
+             IDN 1 m
            ZAREZ 1 ,
            <deklaracija_parametra>
-            <specifikatori_deklaracije>
+            <ime_tipa>
              <specifikator_tipa>
               KR_INT 1 int
-            <deklarator>
-             <izravni_deklarator>
-              IDN 1 p
+            IDN 1 n
           ZAREZ 1 ,
           <deklaracija_parametra>
-           <specifikatori_deklaracije>
+           <ime_tipa>
             <specifikator_tipa>
              KR_INT 1 int
-           <deklarator>
-            <izravni_deklarator>
-             IDN 1 q
+           IDN 1 o
          ZAREZ 1 ,
          <deklaracija_parametra>
-          <specifikatori_deklaracije>
+          <ime_tipa>
            <specifikator_tipa>
             KR_INT 1 int
-          <deklarator>
-           <izravni_deklarator>
-            IDN 1 r
+          IDN 1 p
         ZAREZ 1 ,
         <deklaracija_parametra>
-         <specifikatori_deklaracije>
+         <ime_tipa>
           <specifikator_tipa>
            KR_INT 1 int
-         <deklarator>
-          <izravni_deklarator>
-           IDN 1 s
+         IDN 1 q
        ZAREZ 1 ,
        <deklaracija_parametra>
-        <specifikatori_deklaracije>
+        <ime_tipa>
          <specifikator_tipa>
           KR_INT 1 int
-        <deklarator>
-         <izravni_deklarator>
-          IDN 1 t
-      D_ZAGRADA 1 )
+        IDN 1 r
+      ZAREZ 1 ,
+      <deklaracija_parametra>
+       <ime_tipa>
+        <specifikator_tipa>
+         KR_INT 1 int
+       IDN 1 s
+     ZAREZ 1 ,
+     <deklaracija_parametra>
+      <ime_tipa>
+       <specifikator_tipa>
+        KR_INT 1 int
+      IDN 1 t
+    D_ZAGRADA 1 )
     <slozena_naredba>
      L_VIT_ZAGRADA 1 {
      <lista_naredbi>
@@ -368,32 +325,24 @@
      D_VIT_ZAGRADA 3 }
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 5 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 5 main
-     L_ZAGRADA 5 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 5 void
-     D_ZAGRADA 5 )
+   IDN 5 main
+   L_ZAGRADA 5 (
+   KR_VOID 5 void
+   D_ZAGRADA 5 )
    <slozena_naredba>
     L_VIT_ZAGRADA 5 {
     <lista_deklaracija>
      <deklaracija>
-      <specifikatori_deklaracije>
+      <ime_tipa>
        <specifikator_tipa>
         KR_INT 6 int
       <lista_init_deklaratora>
        <init_deklarator>
-        <deklarator>
-         <izravni_deklarator>
-          IDN 6 result
+        <izravni_deklarator>
+         IDN 6 result
         OP_PRIDRUZI 6 =
         <inicijalizator>
          <izraz_pridruzivanja>

@@ -1,20 +1,13 @@
 <prijevodna_jedinica>
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 1 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 1 main
-     L_ZAGRADA 1 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 1 void
-     D_ZAGRADA 1 )
+   IDN 1 main
+   L_ZAGRADA 1 (
+   KR_VOID 1 void
+   D_ZAGRADA 1 )
    <slozena_naredba>
     L_VIT_ZAGRADA 1 {
     <lista_deklaracija>
@@ -27,7 +20,7 @@
            <lista_deklaracija>
             <lista_deklaracija>
              <deklaracija>
-              <specifikatori_deklaracije>
+              <ime_tipa>
                <specifikator_tipa>
                 KR_INT 2 int
               <lista_init_deklaratora>
@@ -41,9 +34,8 @@
                       <lista_init_deklaratora>
                        <lista_init_deklaratora>
                         <init_deklarator>
-                         <deklarator>
-                          <izravni_deklarator>
-                           IDN 2 a0
+                         <izravni_deklarator>
+                          IDN 2 a0
                          OP_PRIDRUZI 2 =
                          <inicijalizator>
                           <izraz_pridruzivanja>
@@ -63,9 +55,8 @@
                                         BROJ 2 0
                        ZAREZ 2 ,
                        <init_deklarator>
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 2 a1
+                        <izravni_deklarator>
+                         IDN 2 a1
                         OP_PRIDRUZI 2 =
                         <inicijalizator>
                          <izraz_pridruzivanja>
@@ -85,9 +76,8 @@
                                        BROJ 2 1
                       ZAREZ 2 ,
                       <init_deklarator>
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 2 a2
+                       <izravni_deklarator>
+                        IDN 2 a2
                        OP_PRIDRUZI 2 =
                        <inicijalizator>
                         <izraz_pridruzivanja>
@@ -107,9 +97,8 @@
                                       BROJ 2 2
                      ZAREZ 2 ,
                      <init_deklarator>
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 2 a3
+                      <izravni_deklarator>
+                       IDN 2 a3
                       OP_PRIDRUZI 2 =
                       <inicijalizator>
                        <izraz_pridruzivanja>
@@ -129,9 +118,8 @@
                                      BROJ 2 3
                     ZAREZ 2 ,
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 2 a4
+                     <izravni_deklarator>
+                      IDN 2 a4
                      OP_PRIDRUZI 2 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -151,9 +139,8 @@
                                     BROJ 2 4
                    ZAREZ 2 ,
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 2 a5
+                    <izravni_deklarator>
+                     IDN 2 a5
                     OP_PRIDRUZI 2 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -173,9 +160,8 @@
                                    BROJ 2 5
                   ZAREZ 2 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 2 a6
+                   <izravni_deklarator>
+                    IDN 2 a6
                    OP_PRIDRUZI 2 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -195,9 +181,8 @@
                                   BROJ 2 6
                  ZAREZ 2 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 2 a7
+                  <izravni_deklarator>
+                   IDN 2 a7
                   OP_PRIDRUZI 2 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -217,9 +202,8 @@
                                  BROJ 2 7
                 ZAREZ 2 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 2 a8
+                 <izravni_deklarator>
+                  IDN 2 a8
                  OP_PRIDRUZI 2 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -239,9 +223,8 @@
                                 BROJ 2 8
                ZAREZ 2 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 2 a9
+                <izravni_deklarator>
+                 IDN 2 a9
                 OP_PRIDRUZI 2 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -261,7 +244,7 @@
                                BROJ 2 9
               TOCKAZAREZ 2 ;
             <deklaracija>
-             <specifikatori_deklaracije>
+             <ime_tipa>
               <specifikator_tipa>
                KR_INT 3 int
              <lista_init_deklaratora>
@@ -275,9 +258,8 @@
                      <lista_init_deklaratora>
                       <lista_init_deklaratora>
                        <init_deklarator>
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 3 b0
+                        <izravni_deklarator>
+                         IDN 3 b0
                         OP_PRIDRUZI 3 =
                         <inicijalizator>
                          <izraz_pridruzivanja>
@@ -297,9 +279,8 @@
                                        BROJ 3 10
                       ZAREZ 3 ,
                       <init_deklarator>
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 3 b1
+                       <izravni_deklarator>
+                        IDN 3 b1
                        OP_PRIDRUZI 3 =
                        <inicijalizator>
                         <izraz_pridruzivanja>
@@ -319,9 +300,8 @@
                                       BROJ 3 11
                      ZAREZ 3 ,
                      <init_deklarator>
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 3 b2
+                      <izravni_deklarator>
+                       IDN 3 b2
                       OP_PRIDRUZI 3 =
                       <inicijalizator>
                        <izraz_pridruzivanja>
@@ -341,9 +321,8 @@
                                      BROJ 3 12
                     ZAREZ 3 ,
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 3 b3
+                     <izravni_deklarator>
+                      IDN 3 b3
                      OP_PRIDRUZI 3 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -363,9 +342,8 @@
                                     BROJ 3 13
                    ZAREZ 3 ,
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 3 b4
+                    <izravni_deklarator>
+                     IDN 3 b4
                     OP_PRIDRUZI 3 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -385,9 +363,8 @@
                                    BROJ 3 14
                   ZAREZ 3 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 3 b5
+                   <izravni_deklarator>
+                    IDN 3 b5
                    OP_PRIDRUZI 3 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -407,9 +384,8 @@
                                   BROJ 3 15
                  ZAREZ 3 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 3 b6
+                  <izravni_deklarator>
+                   IDN 3 b6
                   OP_PRIDRUZI 3 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -429,9 +405,8 @@
                                  BROJ 3 16
                 ZAREZ 3 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 3 b7
+                 <izravni_deklarator>
+                  IDN 3 b7
                  OP_PRIDRUZI 3 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -451,9 +426,8 @@
                                 BROJ 3 17
                ZAREZ 3 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 3 b8
+                <izravni_deklarator>
+                 IDN 3 b8
                 OP_PRIDRUZI 3 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -473,9 +447,8 @@
                                BROJ 3 18
               ZAREZ 3 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 3 b9
+               <izravni_deklarator>
+                IDN 3 b9
                OP_PRIDRUZI 3 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -495,7 +468,7 @@
                               BROJ 3 19
              TOCKAZAREZ 3 ;
            <deklaracija>
-            <specifikatori_deklaracije>
+            <ime_tipa>
              <specifikator_tipa>
               KR_INT 4 int
             <lista_init_deklaratora>
@@ -509,9 +482,8 @@
                     <lista_init_deklaratora>
                      <lista_init_deklaratora>
                       <init_deklarator>
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 4 c0
+                       <izravni_deklarator>
+                        IDN 4 c0
                        OP_PRIDRUZI 4 =
                        <inicijalizator>
                         <izraz_pridruzivanja>
@@ -531,9 +503,8 @@
                                       BROJ 4 20
                      ZAREZ 4 ,
                      <init_deklarator>
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 4 c1
+                      <izravni_deklarator>
+                       IDN 4 c1
                       OP_PRIDRUZI 4 =
                       <inicijalizator>
                        <izraz_pridruzivanja>
@@ -553,9 +524,8 @@
                                      BROJ 4 21
                     ZAREZ 4 ,
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 4 c2
+                     <izravni_deklarator>
+                      IDN 4 c2
                      OP_PRIDRUZI 4 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -575,9 +545,8 @@
                                     BROJ 4 22
                    ZAREZ 4 ,
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 4 c3
+                    <izravni_deklarator>
+                     IDN 4 c3
                     OP_PRIDRUZI 4 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -597,9 +566,8 @@
                                    BROJ 4 23
                   ZAREZ 4 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 4 c4
+                   <izravni_deklarator>
+                    IDN 4 c4
                    OP_PRIDRUZI 4 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -619,9 +587,8 @@
                                   BROJ 4 24
                  ZAREZ 4 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 4 c5
+                  <izravni_deklarator>
+                   IDN 4 c5
                   OP_PRIDRUZI 4 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -641,9 +608,8 @@
                                  BROJ 4 25
                 ZAREZ 4 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 4 c6
+                 <izravni_deklarator>
+                  IDN 4 c6
                  OP_PRIDRUZI 4 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -663,9 +629,8 @@
                                 BROJ 4 26
                ZAREZ 4 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 4 c7
+                <izravni_deklarator>
+                 IDN 4 c7
                 OP_PRIDRUZI 4 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -685,9 +650,8 @@
                                BROJ 4 27
               ZAREZ 4 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 4 c8
+               <izravni_deklarator>
+                IDN 4 c8
                OP_PRIDRUZI 4 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -707,9 +671,8 @@
                               BROJ 4 28
              ZAREZ 4 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 4 c9
+              <izravni_deklarator>
+               IDN 4 c9
               OP_PRIDRUZI 4 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -729,7 +692,7 @@
                              BROJ 4 29
             TOCKAZAREZ 4 ;
           <deklaracija>
-           <specifikatori_deklaracije>
+           <ime_tipa>
             <specifikator_tipa>
              KR_INT 5 int
            <lista_init_deklaratora>
@@ -743,9 +706,8 @@
                    <lista_init_deklaratora>
                     <lista_init_deklaratora>
                      <init_deklarator>
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 5 d0
+                      <izravni_deklarator>
+                       IDN 5 d0
                       OP_PRIDRUZI 5 =
                       <inicijalizator>
                        <izraz_pridruzivanja>
@@ -765,9 +727,8 @@
                                      BROJ 5 30
                     ZAREZ 5 ,
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 5 d1
+                     <izravni_deklarator>
+                      IDN 5 d1
                      OP_PRIDRUZI 5 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -787,9 +748,8 @@
                                     BROJ 5 31
                    ZAREZ 5 ,
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 5 d2
+                    <izravni_deklarator>
+                     IDN 5 d2
                     OP_PRIDRUZI 5 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -809,9 +769,8 @@
                                    BROJ 5 32
                   ZAREZ 5 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 5 d3
+                   <izravni_deklarator>
+                    IDN 5 d3
                    OP_PRIDRUZI 5 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -831,9 +790,8 @@
                                   BROJ 5 33
                  ZAREZ 5 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 5 d4
+                  <izravni_deklarator>
+                   IDN 5 d4
                   OP_PRIDRUZI 5 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -853,9 +811,8 @@
                                  BROJ 5 34
                 ZAREZ 5 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 5 d5
+                 <izravni_deklarator>
+                  IDN 5 d5
                  OP_PRIDRUZI 5 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -875,9 +832,8 @@
                                 BROJ 5 35
                ZAREZ 5 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 5 d6
+                <izravni_deklarator>
+                 IDN 5 d6
                 OP_PRIDRUZI 5 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -897,9 +853,8 @@
                                BROJ 5 36
               ZAREZ 5 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 5 d7
+               <izravni_deklarator>
+                IDN 5 d7
                OP_PRIDRUZI 5 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -919,9 +874,8 @@
                               BROJ 5 37
              ZAREZ 5 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 5 d8
+              <izravni_deklarator>
+               IDN 5 d8
               OP_PRIDRUZI 5 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -941,9 +895,8 @@
                              BROJ 5 38
             ZAREZ 5 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 5 d9
+             <izravni_deklarator>
+              IDN 5 d9
              OP_PRIDRUZI 5 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -963,7 +916,7 @@
                             BROJ 5 39
            TOCKAZAREZ 5 ;
          <deklaracija>
-          <specifikatori_deklaracije>
+          <ime_tipa>
            <specifikator_tipa>
             KR_INT 6 int
           <lista_init_deklaratora>
@@ -977,9 +930,8 @@
                   <lista_init_deklaratora>
                    <lista_init_deklaratora>
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 6 e0
+                     <izravni_deklarator>
+                      IDN 6 e0
                      OP_PRIDRUZI 6 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -999,9 +951,8 @@
                                     BROJ 6 40
                    ZAREZ 6 ,
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 6 e1
+                    <izravni_deklarator>
+                     IDN 6 e1
                     OP_PRIDRUZI 6 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -1021,9 +972,8 @@
                                    BROJ 6 41
                   ZAREZ 6 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 6 e2
+                   <izravni_deklarator>
+                    IDN 6 e2
                    OP_PRIDRUZI 6 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -1043,9 +993,8 @@
                                   BROJ 6 42
                  ZAREZ 6 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 6 e3
+                  <izravni_deklarator>
+                   IDN 6 e3
                   OP_PRIDRUZI 6 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -1065,9 +1014,8 @@
                                  BROJ 6 43
                 ZAREZ 6 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 6 e4
+                 <izravni_deklarator>
+                  IDN 6 e4
                  OP_PRIDRUZI 6 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -1087,9 +1035,8 @@
                                 BROJ 6 44
                ZAREZ 6 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 6 e5
+                <izravni_deklarator>
+                 IDN 6 e5
                 OP_PRIDRUZI 6 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -1109,9 +1056,8 @@
                                BROJ 6 45
               ZAREZ 6 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 6 e6
+               <izravni_deklarator>
+                IDN 6 e6
                OP_PRIDRUZI 6 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -1131,9 +1077,8 @@
                               BROJ 6 46
              ZAREZ 6 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 6 e7
+              <izravni_deklarator>
+               IDN 6 e7
               OP_PRIDRUZI 6 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -1153,9 +1098,8 @@
                              BROJ 6 47
             ZAREZ 6 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 6 e8
+             <izravni_deklarator>
+              IDN 6 e8
              OP_PRIDRUZI 6 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -1175,9 +1119,8 @@
                             BROJ 6 48
            ZAREZ 6 ,
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 6 e9
+            <izravni_deklarator>
+             IDN 6 e9
             OP_PRIDRUZI 6 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -1197,7 +1140,7 @@
                            BROJ 6 49
           TOCKAZAREZ 6 ;
         <deklaracija>
-         <specifikatori_deklaracije>
+         <ime_tipa>
           <specifikator_tipa>
            KR_INT 7 int
          <lista_init_deklaratora>
@@ -1211,9 +1154,8 @@
                  <lista_init_deklaratora>
                   <lista_init_deklaratora>
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 7 f0
+                    <izravni_deklarator>
+                     IDN 7 f0
                     OP_PRIDRUZI 7 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -1233,9 +1175,8 @@
                                    BROJ 7 50
                   ZAREZ 7 ,
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 7 f1
+                   <izravni_deklarator>
+                    IDN 7 f1
                    OP_PRIDRUZI 7 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -1255,9 +1196,8 @@
                                   BROJ 7 51
                  ZAREZ 7 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 7 f2
+                  <izravni_deklarator>
+                   IDN 7 f2
                   OP_PRIDRUZI 7 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -1277,9 +1217,8 @@
                                  BROJ 7 52
                 ZAREZ 7 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 7 f3
+                 <izravni_deklarator>
+                  IDN 7 f3
                  OP_PRIDRUZI 7 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -1299,9 +1238,8 @@
                                 BROJ 7 53
                ZAREZ 7 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 7 f4
+                <izravni_deklarator>
+                 IDN 7 f4
                 OP_PRIDRUZI 7 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -1321,9 +1259,8 @@
                                BROJ 7 54
               ZAREZ 7 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 7 f5
+               <izravni_deklarator>
+                IDN 7 f5
                OP_PRIDRUZI 7 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -1343,9 +1280,8 @@
                               BROJ 7 55
              ZAREZ 7 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 7 f6
+              <izravni_deklarator>
+               IDN 7 f6
               OP_PRIDRUZI 7 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -1365,9 +1301,8 @@
                              BROJ 7 56
             ZAREZ 7 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 7 f7
+             <izravni_deklarator>
+              IDN 7 f7
              OP_PRIDRUZI 7 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -1387,9 +1322,8 @@
                             BROJ 7 57
            ZAREZ 7 ,
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 7 f8
+            <izravni_deklarator>
+             IDN 7 f8
             OP_PRIDRUZI 7 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -1409,9 +1343,8 @@
                            BROJ 7 58
           ZAREZ 7 ,
           <init_deklarator>
-           <deklarator>
-            <izravni_deklarator>
-             IDN 7 f9
+           <izravni_deklarator>
+            IDN 7 f9
            OP_PRIDRUZI 7 =
            <inicijalizator>
             <izraz_pridruzivanja>
@@ -1431,7 +1364,7 @@
                           BROJ 7 59
          TOCKAZAREZ 7 ;
        <deklaracija>
-        <specifikatori_deklaracije>
+        <ime_tipa>
          <specifikator_tipa>
           KR_INT 8 int
         <lista_init_deklaratora>
@@ -1445,9 +1378,8 @@
                 <lista_init_deklaratora>
                  <lista_init_deklaratora>
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 8 g0
+                   <izravni_deklarator>
+                    IDN 8 g0
                    OP_PRIDRUZI 8 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -1467,9 +1399,8 @@
                                   BROJ 8 60
                  ZAREZ 8 ,
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 8 g1
+                  <izravni_deklarator>
+                   IDN 8 g1
                   OP_PRIDRUZI 8 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -1489,9 +1420,8 @@
                                  BROJ 8 61
                 ZAREZ 8 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 8 g2
+                 <izravni_deklarator>
+                  IDN 8 g2
                  OP_PRIDRUZI 8 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -1511,9 +1441,8 @@
                                 BROJ 8 62
                ZAREZ 8 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 8 g3
+                <izravni_deklarator>
+                 IDN 8 g3
                 OP_PRIDRUZI 8 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -1533,9 +1462,8 @@
                                BROJ 8 63
               ZAREZ 8 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 8 g4
+               <izravni_deklarator>
+                IDN 8 g4
                OP_PRIDRUZI 8 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -1555,9 +1483,8 @@
                               BROJ 8 64
              ZAREZ 8 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 8 g5
+              <izravni_deklarator>
+               IDN 8 g5
               OP_PRIDRUZI 8 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -1577,9 +1504,8 @@
                              BROJ 8 65
             ZAREZ 8 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 8 g6
+             <izravni_deklarator>
+              IDN 8 g6
              OP_PRIDRUZI 8 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -1599,9 +1525,8 @@
                             BROJ 8 66
            ZAREZ 8 ,
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 8 g7
+            <izravni_deklarator>
+             IDN 8 g7
             OP_PRIDRUZI 8 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -1621,9 +1546,8 @@
                            BROJ 8 67
           ZAREZ 8 ,
           <init_deklarator>
-           <deklarator>
-            <izravni_deklarator>
-             IDN 8 g8
+           <izravni_deklarator>
+            IDN 8 g8
            OP_PRIDRUZI 8 =
            <inicijalizator>
             <izraz_pridruzivanja>
@@ -1643,9 +1567,8 @@
                           BROJ 8 68
          ZAREZ 8 ,
          <init_deklarator>
-          <deklarator>
-           <izravni_deklarator>
-            IDN 8 g9
+          <izravni_deklarator>
+           IDN 8 g9
           OP_PRIDRUZI 8 =
           <inicijalizator>
            <izraz_pridruzivanja>
@@ -1665,7 +1588,7 @@
                          BROJ 8 69
         TOCKAZAREZ 8 ;
       <deklaracija>
-       <specifikatori_deklaracije>
+       <ime_tipa>
         <specifikator_tipa>
          KR_INT 9 int
        <lista_init_deklaratora>
@@ -1679,9 +1602,8 @@
                <lista_init_deklaratora>
                 <lista_init_deklaratora>
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 9 h0
+                  <izravni_deklarator>
+                   IDN 9 h0
                   OP_PRIDRUZI 9 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -1701,9 +1623,8 @@
                                  BROJ 9 70
                 ZAREZ 9 ,
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 9 h1
+                 <izravni_deklarator>
+                  IDN 9 h1
                  OP_PRIDRUZI 9 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -1723,9 +1644,8 @@
                                 BROJ 9 71
                ZAREZ 9 ,
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 9 h2
+                <izravni_deklarator>
+                 IDN 9 h2
                 OP_PRIDRUZI 9 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -1745,9 +1665,8 @@
                                BROJ 9 72
               ZAREZ 9 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 9 h3
+               <izravni_deklarator>
+                IDN 9 h3
                OP_PRIDRUZI 9 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -1767,9 +1686,8 @@
                               BROJ 9 73
              ZAREZ 9 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 9 h4
+              <izravni_deklarator>
+               IDN 9 h4
               OP_PRIDRUZI 9 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -1789,9 +1707,8 @@
                              BROJ 9 74
             ZAREZ 9 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 9 h5
+             <izravni_deklarator>
+              IDN 9 h5
              OP_PRIDRUZI 9 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -1811,9 +1728,8 @@
                             BROJ 9 75
            ZAREZ 9 ,
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 9 h6
+            <izravni_deklarator>
+             IDN 9 h6
             OP_PRIDRUZI 9 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -1833,9 +1749,8 @@
                            BROJ 9 76
           ZAREZ 9 ,
           <init_deklarator>
-           <deklarator>
-            <izravni_deklarator>
-             IDN 9 h7
+           <izravni_deklarator>
+            IDN 9 h7
            OP_PRIDRUZI 9 =
            <inicijalizator>
             <izraz_pridruzivanja>
@@ -1855,9 +1770,8 @@
                           BROJ 9 77
          ZAREZ 9 ,
          <init_deklarator>
-          <deklarator>
-           <izravni_deklarator>
-            IDN 9 h8
+          <izravni_deklarator>
+           IDN 9 h8
           OP_PRIDRUZI 9 =
           <inicijalizator>
            <izraz_pridruzivanja>
@@ -1877,9 +1791,8 @@
                          BROJ 9 78
         ZAREZ 9 ,
         <init_deklarator>
-         <deklarator>
-          <izravni_deklarator>
-           IDN 9 h9
+         <izravni_deklarator>
+          IDN 9 h9
          OP_PRIDRUZI 9 =
          <inicijalizator>
           <izraz_pridruzivanja>
@@ -1899,14 +1812,13 @@
                         BROJ 9 79
        TOCKAZAREZ 9 ;
      <deklaracija>
-      <specifikatori_deklaracije>
+      <ime_tipa>
        <specifikator_tipa>
         KR_INT 10 int
       <lista_init_deklaratora>
        <init_deklarator>
-        <deklarator>
-         <izravni_deklarator>
-          IDN 10 sum
+        <izravni_deklarator>
+         IDN 10 sum
         OP_PRIDRUZI 10 =
         <inicijalizator>
          <izraz_pridruzivanja>
@@ -2009,10 +1921,9 @@
              <izraz_naredba>
               <izraz>
                <izraz_pridruzivanja>
-                <unarni_izraz>
-                 <postfiks_izraz>
-                  <primarni_izraz>
-                   IDN 11 sum
+                <postfiks_izraz>
+                 <primarni_izraz>
+                  IDN 11 sum
                 OP_PRIDRUZI 11 =
                 <izraz_pridruzivanja>
                  <log_ili_izraz>
@@ -2114,10 +2025,9 @@
             <izraz_naredba>
              <izraz>
               <izraz_pridruzivanja>
-               <unarni_izraz>
-                <postfiks_izraz>
-                 <primarni_izraz>
-                  IDN 12 sum
+               <postfiks_izraz>
+                <primarni_izraz>
+                 IDN 12 sum
                OP_PRIDRUZI 12 =
                <izraz_pridruzivanja>
                 <log_ili_izraz>
@@ -2219,10 +2129,9 @@
            <izraz_naredba>
             <izraz>
              <izraz_pridruzivanja>
-              <unarni_izraz>
-               <postfiks_izraz>
-                <primarni_izraz>
-                 IDN 13 sum
+              <postfiks_izraz>
+               <primarni_izraz>
+                IDN 13 sum
               OP_PRIDRUZI 13 =
               <izraz_pridruzivanja>
                <log_ili_izraz>
@@ -2324,10 +2233,9 @@
           <izraz_naredba>
            <izraz>
             <izraz_pridruzivanja>
-             <unarni_izraz>
-              <postfiks_izraz>
-               <primarni_izraz>
-                IDN 14 sum
+             <postfiks_izraz>
+              <primarni_izraz>
+               IDN 14 sum
              OP_PRIDRUZI 14 =
              <izraz_pridruzivanja>
               <log_ili_izraz>
@@ -2429,10 +2337,9 @@
          <izraz_naredba>
           <izraz>
            <izraz_pridruzivanja>
-            <unarni_izraz>
-             <postfiks_izraz>
-              <primarni_izraz>
-               IDN 15 sum
+            <postfiks_izraz>
+             <primarni_izraz>
+              IDN 15 sum
             OP_PRIDRUZI 15 =
             <izraz_pridruzivanja>
              <log_ili_izraz>
@@ -2534,10 +2441,9 @@
         <izraz_naredba>
          <izraz>
           <izraz_pridruzivanja>
-           <unarni_izraz>
-            <postfiks_izraz>
-             <primarni_izraz>
-              IDN 16 sum
+           <postfiks_izraz>
+            <primarni_izraz>
+             IDN 16 sum
            OP_PRIDRUZI 16 =
            <izraz_pridruzivanja>
             <log_ili_izraz>
@@ -2639,10 +2545,9 @@
        <izraz_naredba>
         <izraz>
          <izraz_pridruzivanja>
-          <unarni_izraz>
-           <postfiks_izraz>
-            <primarni_izraz>
-             IDN 17 sum
+          <postfiks_izraz>
+           <primarni_izraz>
+            IDN 17 sum
           OP_PRIDRUZI 17 =
           <izraz_pridruzivanja>
            <log_ili_izraz>

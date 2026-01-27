@@ -2,23 +2,18 @@
  <prijevodna_jedinica>
   <vanjska_deklaracija>
    <definicija_funkcije>
-    <specifikatori_deklaracije>
+    <ime_tipa>
      <specifikator_tipa>
       KR_INT 1 int
-    <deklarator>
-     <izravni_deklarator>
-      <izravni_deklarator>
-       IDN 1 compute
-      L_ZAGRADA 1 (
-      <lista_parametara>
-       <deklaracija_parametra>
-        <specifikatori_deklaracije>
-         <specifikator_tipa>
-          KR_INT 1 int
-        <deklarator>
-         <izravni_deklarator>
-          IDN 1 x
-      D_ZAGRADA 1 )
+    IDN 1 compute
+    L_ZAGRADA 1 (
+    <lista_parametara>
+     <deklaracija_parametra>
+      <ime_tipa>
+       <specifikator_tipa>
+        KR_INT 1 int
+      IDN 1 x
+    D_ZAGRADA 1 )
     <slozena_naredba>
      L_VIT_ZAGRADA 1 {
      <lista_deklaracija>
@@ -42,14 +37,13 @@
                        <lista_deklaracija>
                         <lista_deklaracija>
                          <deklaracija>
-                          <specifikatori_deklaracije>
+                          <ime_tipa>
                            <specifikator_tipa>
                             KR_INT 2 int
                           <lista_init_deklaratora>
                            <init_deklarator>
-                            <deklarator>
-                             <izravni_deklarator>
-                              IDN 2 v1
+                            <izravni_deklarator>
+                             IDN 2 v1
                             OP_PRIDRUZI 2 =
                             <inicijalizator>
                              <izraz_pridruzivanja>
@@ -77,14 +71,13 @@
                                            BROJ 2 1
                           TOCKAZAREZ 2 ;
                         <deklaracija>
-                         <specifikatori_deklaracije>
+                         <ime_tipa>
                           <specifikator_tipa>
                            KR_INT 3 int
                          <lista_init_deklaratora>
                           <init_deklarator>
-                           <deklarator>
-                            <izravni_deklarator>
-                             IDN 3 v2
+                           <izravni_deklarator>
+                            IDN 3 v2
                            OP_PRIDRUZI 3 =
                            <inicijalizator>
                             <izraz_pridruzivanja>
@@ -112,14 +105,13 @@
                                           BROJ 3 2
                          TOCKAZAREZ 3 ;
                        <deklaracija>
-                        <specifikatori_deklaracije>
+                        <ime_tipa>
                          <specifikator_tipa>
                           KR_INT 4 int
                         <lista_init_deklaratora>
                          <init_deklarator>
-                          <deklarator>
-                           <izravni_deklarator>
-                            IDN 4 v3
+                          <izravni_deklarator>
+                           IDN 4 v3
                           OP_PRIDRUZI 4 =
                           <inicijalizator>
                            <izraz_pridruzivanja>
@@ -147,14 +139,13 @@
                                          BROJ 4 3
                         TOCKAZAREZ 4 ;
                       <deklaracija>
-                       <specifikatori_deklaracije>
+                       <ime_tipa>
                         <specifikator_tipa>
                          KR_INT 5 int
                        <lista_init_deklaratora>
                         <init_deklarator>
-                         <deklarator>
-                          <izravni_deklarator>
-                           IDN 5 v4
+                         <izravni_deklarator>
+                          IDN 5 v4
                          OP_PRIDRUZI 5 =
                          <inicijalizator>
                           <izraz_pridruzivanja>
@@ -182,14 +173,13 @@
                                         BROJ 5 4
                        TOCKAZAREZ 5 ;
                      <deklaracija>
-                      <specifikatori_deklaracije>
+                      <ime_tipa>
                        <specifikator_tipa>
                         KR_INT 6 int
                       <lista_init_deklaratora>
                        <init_deklarator>
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 6 v5
+                        <izravni_deklarator>
+                         IDN 6 v5
                         OP_PRIDRUZI 6 =
                         <inicijalizator>
                          <izraz_pridruzivanja>
@@ -217,14 +207,13 @@
                                        BROJ 6 5
                       TOCKAZAREZ 6 ;
                     <deklaracija>
-                     <specifikatori_deklaracije>
+                     <ime_tipa>
                       <specifikator_tipa>
                        KR_INT 7 int
                      <lista_init_deklaratora>
                       <init_deklarator>
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 7 v6
+                       <izravni_deklarator>
+                        IDN 7 v6
                        OP_PRIDRUZI 7 =
                        <inicijalizator>
                         <izraz_pridruzivanja>
@@ -252,14 +241,13 @@
                                       BROJ 7 6
                      TOCKAZAREZ 7 ;
                    <deklaracija>
-                    <specifikatori_deklaracije>
+                    <ime_tipa>
                      <specifikator_tipa>
                       KR_INT 8 int
                     <lista_init_deklaratora>
                      <init_deklarator>
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 8 v7
+                      <izravni_deklarator>
+                       IDN 8 v7
                       OP_PRIDRUZI 8 =
                       <inicijalizator>
                        <izraz_pridruzivanja>
@@ -287,14 +275,13 @@
                                      BROJ 8 7
                     TOCKAZAREZ 8 ;
                   <deklaracija>
-                   <specifikatori_deklaracije>
+                   <ime_tipa>
                     <specifikator_tipa>
                      KR_INT 9 int
                    <lista_init_deklaratora>
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 9 v8
+                     <izravni_deklarator>
+                      IDN 9 v8
                      OP_PRIDRUZI 9 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -322,14 +309,13 @@
                                     BROJ 9 8
                    TOCKAZAREZ 9 ;
                  <deklaracija>
-                  <specifikatori_deklaracije>
+                  <ime_tipa>
                    <specifikator_tipa>
                     KR_INT 10 int
                   <lista_init_deklaratora>
                    <init_deklarator>
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 10 v9
+                    <izravni_deklarator>
+                     IDN 10 v9
                     OP_PRIDRUZI 10 =
                     <inicijalizator>
                      <izraz_pridruzivanja>
@@ -357,14 +343,13 @@
                                    BROJ 10 9
                   TOCKAZAREZ 10 ;
                 <deklaracija>
-                 <specifikatori_deklaracije>
+                 <ime_tipa>
                   <specifikator_tipa>
                    KR_INT 11 int
                  <lista_init_deklaratora>
                   <init_deklarator>
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 11 v10
+                   <izravni_deklarator>
+                    IDN 11 v10
                    OP_PRIDRUZI 11 =
                    <inicijalizator>
                     <izraz_pridruzivanja>
@@ -392,14 +377,13 @@
                                   BROJ 11 10
                  TOCKAZAREZ 11 ;
                <deklaracija>
-                <specifikatori_deklaracije>
+                <ime_tipa>
                  <specifikator_tipa>
                   KR_INT 12 int
                 <lista_init_deklaratora>
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 12 v11
+                  <izravni_deklarator>
+                   IDN 12 v11
                   OP_PRIDRUZI 12 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -427,14 +411,13 @@
                                  BROJ 12 11
                 TOCKAZAREZ 12 ;
               <deklaracija>
-               <specifikatori_deklaracije>
+               <ime_tipa>
                 <specifikator_tipa>
                  KR_INT 13 int
                <lista_init_deklaratora>
                 <init_deklarator>
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 13 v12
+                 <izravni_deklarator>
+                  IDN 13 v12
                  OP_PRIDRUZI 13 =
                  <inicijalizator>
                   <izraz_pridruzivanja>
@@ -462,14 +445,13 @@
                                 BROJ 13 12
                TOCKAZAREZ 13 ;
              <deklaracija>
-              <specifikatori_deklaracije>
+              <ime_tipa>
                <specifikator_tipa>
                 KR_INT 14 int
               <lista_init_deklaratora>
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 14 v13
+                <izravni_deklarator>
+                 IDN 14 v13
                 OP_PRIDRUZI 14 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -497,14 +479,13 @@
                                BROJ 14 13
               TOCKAZAREZ 14 ;
             <deklaracija>
-             <specifikatori_deklaracije>
+             <ime_tipa>
               <specifikator_tipa>
                KR_INT 15 int
              <lista_init_deklaratora>
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 15 v14
+               <izravni_deklarator>
+                IDN 15 v14
                OP_PRIDRUZI 15 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -532,14 +513,13 @@
                               BROJ 15 14
              TOCKAZAREZ 15 ;
            <deklaracija>
-            <specifikatori_deklaracije>
+            <ime_tipa>
              <specifikator_tipa>
               KR_INT 16 int
             <lista_init_deklaratora>
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 16 v15
+              <izravni_deklarator>
+               IDN 16 v15
               OP_PRIDRUZI 16 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -567,14 +547,13 @@
                              BROJ 16 15
             TOCKAZAREZ 16 ;
           <deklaracija>
-           <specifikatori_deklaracije>
+           <ime_tipa>
             <specifikator_tipa>
              KR_INT 17 int
            <lista_init_deklaratora>
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 17 v16
+             <izravni_deklarator>
+              IDN 17 v16
              OP_PRIDRUZI 17 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -602,14 +581,13 @@
                             BROJ 17 16
            TOCKAZAREZ 17 ;
          <deklaracija>
-          <specifikatori_deklaracije>
+          <ime_tipa>
            <specifikator_tipa>
             KR_INT 18 int
           <lista_init_deklaratora>
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 18 v17
+            <izravni_deklarator>
+             IDN 18 v17
             OP_PRIDRUZI 18 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -637,14 +615,13 @@
                            BROJ 18 17
           TOCKAZAREZ 18 ;
         <deklaracija>
-         <specifikatori_deklaracije>
+         <ime_tipa>
           <specifikator_tipa>
            KR_INT 19 int
          <lista_init_deklaratora>
           <init_deklarator>
-           <deklarator>
-            <izravni_deklarator>
-             IDN 19 v18
+           <izravni_deklarator>
+            IDN 19 v18
            OP_PRIDRUZI 19 =
            <inicijalizator>
             <izraz_pridruzivanja>
@@ -672,14 +649,13 @@
                           BROJ 19 18
          TOCKAZAREZ 19 ;
        <deklaracija>
-        <specifikatori_deklaracije>
+        <ime_tipa>
          <specifikator_tipa>
           KR_INT 20 int
         <lista_init_deklaratora>
          <init_deklarator>
-          <deklarator>
-           <izravni_deklarator>
-            IDN 20 v19
+          <izravni_deklarator>
+           IDN 20 v19
           OP_PRIDRUZI 20 =
           <inicijalizator>
            <izraz_pridruzivanja>
@@ -707,14 +683,13 @@
                          BROJ 20 19
         TOCKAZAREZ 20 ;
       <deklaracija>
-       <specifikatori_deklaracije>
+       <ime_tipa>
         <specifikator_tipa>
          KR_INT 21 int
        <lista_init_deklaratora>
         <init_deklarator>
-         <deklarator>
-          <izravni_deklarator>
-           IDN 21 v20
+         <izravni_deklarator>
+          IDN 21 v20
          OP_PRIDRUZI 21 =
          <inicijalizator>
           <izraz_pridruzivanja>
@@ -917,20 +892,13 @@
      D_VIT_ZAGRADA 23 }
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 25 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 25 main
-     L_ZAGRADA 25 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 25 void
-     D_ZAGRADA 25 )
+   IDN 25 main
+   L_ZAGRADA 25 (
+   KR_VOID 25 void
+   D_ZAGRADA 25 )
    <slozena_naredba>
     L_VIT_ZAGRADA 25 {
     <lista_naredbi>

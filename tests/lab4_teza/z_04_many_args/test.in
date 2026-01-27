@@ -147,17 +147,17 @@
   <definicija_funkcije>
    <ime_tipa>
     <specifikator_tipa>
-     KR_INT 4 int
-   IDN 4 main
-   L_ZAGRADA 4 (
-   KR_VOID 4 void
-   D_ZAGRADA 4 )
+     KR_INT 5 int
+   IDN 5 main
+   L_ZAGRADA 5 (
+   KR_VOID 5 void
+   D_ZAGRADA 5 )
    <slozena_naredba>
-    L_VIT_ZAGRADA 4 {
+    L_VIT_ZAGRADA 5 {
     <lista_naredbi>
      <naredba>
       <naredba_skoka>
-       KR_RETURN 5 return
+       KR_RETURN 6 return
        <izraz>
         <izraz_pridruzivanja>
          <log_ili_izraz>
@@ -174,8 +174,8 @@
                     <postfiks_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       IDN 5 add
-                     L_ZAGRADA 5 (
+                       IDN 6 add
+                     L_ZAGRADA 6 (
                      <lista_argumenata>
                       <lista_argumenata>
                        <lista_argumenata>
@@ -198,8 +198,8 @@
                                         <unarni_izraz>
                                          <postfiks_izraz>
                                           <primarni_izraz>
-                                           BROJ 5 1
-                            ZAREZ 5 ,
+                                           BROJ 6 1
+                            ZAREZ 6 ,
                             <izraz_pridruzivanja>
                              <log_ili_izraz>
                               <log_i_izraz>
@@ -214,8 +214,8 @@
                                        <unarni_izraz>
                                         <postfiks_izraz>
                                          <primarni_izraz>
-                                          BROJ 5 1
-                           ZAREZ 5 ,
+                                          BROJ 6 1
+                           ZAREZ 6 ,
                            <izraz_pridruzivanja>
                             <log_ili_izraz>
                              <log_i_izraz>
@@ -230,8 +230,8 @@
                                       <unarni_izraz>
                                        <postfiks_izraz>
                                         <primarni_izraz>
-                                         BROJ 5 1
-                          ZAREZ 5 ,
+                                         BROJ 6 1
+                          ZAREZ 6 ,
                           <izraz_pridruzivanja>
                            <log_ili_izraz>
                             <log_i_izraz>
@@ -246,8 +246,8 @@
                                      <unarni_izraz>
                                       <postfiks_izraz>
                                        <primarni_izraz>
-                                        BROJ 5 1
-                         ZAREZ 5 ,
+                                        BROJ 6 1
+                         ZAREZ 6 ,
                          <izraz_pridruzivanja>
                           <log_ili_izraz>
                            <log_i_izraz>
@@ -262,8 +262,8 @@
                                     <unarni_izraz>
                                      <postfiks_izraz>
                                       <primarni_izraz>
-                                       BROJ 5 1
-                        ZAREZ 5 ,
+                                       BROJ 6 1
+                        ZAREZ 6 ,
                         <izraz_pridruzivanja>
                          <log_ili_izraz>
                           <log_i_izraz>
@@ -278,8 +278,8 @@
                                    <unarni_izraz>
                                     <postfiks_izraz>
                                      <primarni_izraz>
-                                      BROJ 5 1
-                       ZAREZ 5 ,
+                                      BROJ 6 1
+                       ZAREZ 6 ,
                        <izraz_pridruzivanja>
                         <log_ili_izraz>
                          <log_i_izraz>
@@ -294,8 +294,8 @@
                                   <unarni_izraz>
                                    <postfiks_izraz>
                                     <primarni_izraz>
-                                     BROJ 5 1
-                      ZAREZ 5 ,
+                                     BROJ 6 1
+                      ZAREZ 6 ,
                       <izraz_pridruzivanja>
                        <log_ili_izraz>
                         <log_i_izraz>
@@ -310,7 +310,7 @@
                                  <unarni_izraz>
                                   <postfiks_izraz>
                                    <primarni_izraz>
-                                    BROJ 5 1
-                     D_ZAGRADA 5 )
-       TOCKAZAREZ 5 ;
-    D_VIT_ZAGRADA 6 }
+                                    BROJ 6 1
+                     D_ZAGRADA 6 )
+       TOCKAZAREZ 6 ;
+    D_VIT_ZAGRADA 7 }

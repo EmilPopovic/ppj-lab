@@ -20,7 +20,7 @@
       <lista_naredbi>
        <naredba>
         <naredba_skoka>
-         KR_RETURN 1 return
+         KR_RETURN 2 return
          <izraz>
           <izraz_pridruzivanja>
            <log_ili_izraz>
@@ -37,36 +37,36 @@
                       <unarni_izraz>
                        <postfiks_izraz>
                         <primarni_izraz>
-                         IDN 1 x
-                   PLUS 1 +
+                         IDN 2 x
+                   PLUS 2 +
                    <multiplikativni_izraz>
                     <cast_izraz>
                      <unarni_izraz>
                       <postfiks_izraz>
                        <primarni_izraz>
-                        BROJ 1 1
-         TOCKAZAREZ 1 ;
-      D_VIT_ZAGRADA 1 }
+                        BROJ 2 1
+         TOCKAZAREZ 2 ;
+      D_VIT_ZAGRADA 3 }
   <vanjska_deklaracija>
    <definicija_funkcije>
     <ime_tipa>
      <specifikator_tipa>
-      KR_INT 2 int
-    IDN 2 dbl
-    L_ZAGRADA 2 (
+      KR_INT 5 int
+    IDN 5 dbl
+    L_ZAGRADA 5 (
     <lista_parametara>
      <deklaracija_parametra>
       <ime_tipa>
        <specifikator_tipa>
-        KR_INT 2 int
-      IDN 2 x
-    D_ZAGRADA 2 )
+        KR_INT 5 int
+      IDN 5 x
+    D_ZAGRADA 5 )
     <slozena_naredba>
-     L_VIT_ZAGRADA 2 {
+     L_VIT_ZAGRADA 5 {
      <lista_naredbi>
       <naredba>
        <naredba_skoka>
-        KR_RETURN 2 return
+        KR_RETURN 6 return
         <izraz>
          <izraz_pridruzivanja>
           <log_ili_izraz>
@@ -83,30 +83,30 @@
                      <unarni_izraz>
                       <postfiks_izraz>
                        <primarni_izraz>
-                        IDN 2 x
-                   OP_PUTA 2 *
+                        IDN 6 x
+                   OP_PUTA 6 *
                    <cast_izraz>
                     <unarni_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       BROJ 2 2
-        TOCKAZAREZ 2 ;
-     D_VIT_ZAGRADA 2 }
+                       BROJ 6 2
+        TOCKAZAREZ 6 ;
+     D_VIT_ZAGRADA 7 }
  <vanjska_deklaracija>
   <definicija_funkcije>
    <ime_tipa>
     <specifikator_tipa>
-     KR_INT 3 int
-   IDN 3 main
-   L_ZAGRADA 3 (
-   KR_VOID 3 void
-   D_ZAGRADA 3 )
+     KR_INT 9 int
+   IDN 9 main
+   L_ZAGRADA 9 (
+   KR_VOID 9 void
+   D_ZAGRADA 9 )
    <slozena_naredba>
-    L_VIT_ZAGRADA 3 {
+    L_VIT_ZAGRADA 9 {
     <lista_naredbi>
      <naredba>
       <naredba_skoka>
-       KR_RETURN 4 return
+       KR_RETURN 10 return
        <izraz>
         <izraz_pridruzivanja>
          <log_ili_izraz>
@@ -123,8 +123,8 @@
                     <postfiks_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       IDN 4 dbl
-                     L_ZAGRADA 4 (
+                       IDN 10 dbl
+                     L_ZAGRADA 10 (
                      <lista_argumenata>
                       <izraz_pridruzivanja>
                        <log_ili_izraz>
@@ -141,8 +141,8 @@
                                   <postfiks_izraz>
                                    <postfiks_izraz>
                                     <primarni_izraz>
-                                     IDN 4 inc
-                                   L_ZAGRADA 4 (
+                                     IDN 10 inc
+                                   L_ZAGRADA 10 (
                                    <lista_argumenata>
                                     <izraz_pridruzivanja>
                                      <log_ili_izraz>
@@ -158,8 +158,8 @@
                                                <unarni_izraz>
                                                 <postfiks_izraz>
                                                  <primarni_izraz>
-                                                  BROJ 4 5
-                                   D_ZAGRADA 4 )
-                     D_ZAGRADA 4 )
-       TOCKAZAREZ 4 ;
-    D_VIT_ZAGRADA 5 }
+                                                  BROJ 10 5
+                                   D_ZAGRADA 10 )
+                     D_ZAGRADA 10 )
+       TOCKAZAREZ 10 ;
+    D_VIT_ZAGRADA 11 }

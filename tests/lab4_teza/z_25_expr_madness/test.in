@@ -1,26 +1,19 @@
 <prijevodna_jedinica>
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 1 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 1 main
-     L_ZAGRADA 1 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 1 void
-     D_ZAGRADA 1 )
+   IDN 1 main
+   L_ZAGRADA 1 (
+   KR_VOID 1 void
+   D_ZAGRADA 1 )
    <slozena_naredba>
     L_VIT_ZAGRADA 1 {
     <lista_deklaracija>
      <lista_deklaracija>
       <deklaracija>
-       <specifikatori_deklaracije>
+       <ime_tipa>
         <specifikator_tipa>
          KR_INT 2 int
        <lista_init_deklaratora>
@@ -32,9 +25,8 @@
              <lista_init_deklaratora>
               <lista_init_deklaratora>
                <init_deklarator>
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 2 a
+                <izravni_deklarator>
+                 IDN 2 a
                 OP_PRIDRUZI 2 =
                 <inicijalizator>
                  <izraz_pridruzivanja>
@@ -54,9 +46,8 @@
                                BROJ 2 1
               ZAREZ 2 ,
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 2 b
+               <izravni_deklarator>
+                IDN 2 b
                OP_PRIDRUZI 2 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -76,9 +67,8 @@
                               BROJ 2 2
              ZAREZ 2 ,
              <init_deklarator>
-              <deklarator>
-               <izravni_deklarator>
-                IDN 2 c
+              <izravni_deklarator>
+               IDN 2 c
               OP_PRIDRUZI 2 =
               <inicijalizator>
                <izraz_pridruzivanja>
@@ -98,9 +88,8 @@
                              BROJ 2 3
             ZAREZ 2 ,
             <init_deklarator>
-             <deklarator>
-              <izravni_deklarator>
-               IDN 2 d
+             <izravni_deklarator>
+              IDN 2 d
              OP_PRIDRUZI 2 =
              <inicijalizator>
               <izraz_pridruzivanja>
@@ -120,9 +109,8 @@
                             BROJ 2 4
            ZAREZ 2 ,
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 2 e
+            <izravni_deklarator>
+             IDN 2 e
             OP_PRIDRUZI 2 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -142,9 +130,8 @@
                            BROJ 2 5
           ZAREZ 2 ,
           <init_deklarator>
-           <deklarator>
-            <izravni_deklarator>
-             IDN 2 f
+           <izravni_deklarator>
+            IDN 2 f
            OP_PRIDRUZI 2 =
            <inicijalizator>
             <izraz_pridruzivanja>
@@ -164,9 +151,8 @@
                           BROJ 2 6
          ZAREZ 2 ,
          <init_deklarator>
-          <deklarator>
-           <izravni_deklarator>
-            IDN 2 g
+          <izravni_deklarator>
+           IDN 2 g
           OP_PRIDRUZI 2 =
           <inicijalizator>
            <izraz_pridruzivanja>
@@ -186,9 +172,8 @@
                          BROJ 2 7
         ZAREZ 2 ,
         <init_deklarator>
-         <deklarator>
-          <izravni_deklarator>
-           IDN 2 h
+         <izravni_deklarator>
+          IDN 2 h
          OP_PRIDRUZI 2 =
          <inicijalizator>
           <izraz_pridruzivanja>
@@ -208,14 +193,13 @@
                         BROJ 2 8
        TOCKAZAREZ 2 ;
      <deklaracija>
-      <specifikatori_deklaracije>
+      <ime_tipa>
        <specifikator_tipa>
         KR_INT 3 int
       <lista_init_deklaratora>
        <init_deklarator>
-        <deklarator>
-         <izravni_deklarator>
-          IDN 3 result
+        <izravni_deklarator>
+         IDN 3 result
         OP_PRIDRUZI 3 =
         <inicijalizator>
          <izraz_pridruzivanja>
@@ -276,7 +260,7 @@
                                                       <primarni_izraz>
                                                        IDN 3 b
                                         D_ZAGRADA 3 )
-                                   ASTERISK 3 *
+                                   OP_PUTA 3 *
                                    <cast_izraz>
                                     <unarni_izraz>
                                      <postfiks_izraz>
@@ -354,7 +338,7 @@
                                                      <postfiks_izraz>
                                                       <primarni_izraz>
                                                        IDN 3 e
-                                              AMPERSAND 3 &
+                                              OP_BIN_I 3 &
                                               <jednakosni_izraz>
                                                <odnosni_izraz>
                                                 <aditivni_izraz>
@@ -417,10 +401,9 @@
           <izraz_naredba>
            <izraz>
             <izraz_pridruzivanja>
-             <unarni_izraz>
-              <postfiks_izraz>
-               <primarni_izraz>
-                IDN 4 result
+             <postfiks_izraz>
+              <primarni_izraz>
+               IDN 4 result
              OP_PRIDRUZI 4 =
              <izraz_pridruzivanja>
               <log_ili_izraz>
@@ -493,7 +476,7 @@
                                                           <primarni_izraz>
                                                            IDN 4 b
                                             D_ZAGRADA 4 )
-                                   AMPERSAND 4 &
+                                   OP_BIN_I 4 &
                                    <jednakosni_izraz>
                                     <odnosni_izraz>
                                      <aditivni_izraz>
@@ -582,7 +565,7 @@
                                                          <primarni_izraz>
                                                           IDN 4 f
                                            D_ZAGRADA 4 )
-                                      ASTERISK 4 *
+                                      OP_PUTA 4 *
                                       <cast_izraz>
                                        <unarni_izraz>
                                         <postfiks_izraz>
@@ -619,10 +602,9 @@
          <izraz_naredba>
           <izraz>
            <izraz_pridruzivanja>
-            <unarni_izraz>
-             <postfiks_izraz>
-              <primarni_izraz>
-               IDN 5 result
+            <postfiks_izraz>
+             <primarni_izraz>
+              IDN 5 result
             OP_PRIDRUZI 5 =
             <izraz_pridruzivanja>
              <log_ili_izraz>
@@ -686,7 +668,7 @@
                                                          <postfiks_izraz>
                                                           <primarni_izraz>
                                                            IDN 5 a
-                                                      ASTERISK 5 *
+                                                      OP_PUTA 5 *
                                                       <cast_izraz>
                                                        <unarni_izraz>
                                                         <postfiks_izraz>
@@ -717,7 +699,7 @@
                                                         <postfiks_izraz>
                                                          <primarni_izraz>
                                                           IDN 5 c
-                                                     ASTERISK 5 *
+                                                     OP_PUTA 5 *
                                                      <cast_izraz>
                                                       <unarni_izraz>
                                                        <postfiks_izraz>
@@ -725,7 +707,7 @@
                                                          IDN 5 d
                                           D_ZAGRADA 5 )
                            D_ZAGRADA 5 )
-                  AMPERSAND 5 &
+                  OP_BIN_I 5 &
                   <jednakosni_izraz>
                    <odnosni_izraz>
                     <aditivni_izraz>
@@ -815,10 +797,9 @@
         <izraz_naredba>
          <izraz>
           <izraz_pridruzivanja>
-           <unarni_izraz>
-            <postfiks_izraz>
-             <primarni_izraz>
-              IDN 6 result
+           <postfiks_izraz>
+            <primarni_izraz>
+             IDN 6 result
            OP_PRIDRUZI 6 =
            <izraz_pridruzivanja>
             <log_ili_izraz>
@@ -883,7 +864,7 @@
                                                         <postfiks_izraz>
                                                          <primarni_izraz>
                                                           IDN 6 a
-                                                 AMPERSAND 6 &
+                                                 OP_BIN_I 6 &
                                                  <jednakosni_izraz>
                                                   <odnosni_izraz>
                                                    <aditivni_izraz>
@@ -923,7 +904,7 @@
                                                        <postfiks_izraz>
                                                         <primarni_izraz>
                                                          IDN 6 c
-                                                AMPERSAND 6 &
+                                                OP_BIN_I 6 &
                                                 <jednakosni_izraz>
                                                  <odnosni_izraz>
                                                   <aditivni_izraz>
@@ -1035,10 +1016,9 @@
        <izraz_naredba>
         <izraz>
          <izraz_pridruzivanja>
-          <unarni_izraz>
-           <postfiks_izraz>
-            <primarni_izraz>
-             IDN 7 result
+          <postfiks_izraz>
+           <primarni_izraz>
+            IDN 7 result
           OP_PRIDRUZI 7 =
           <izraz_pridruzivanja>
            <log_ili_izraz>
@@ -1056,7 +1036,7 @@
                        <postfiks_izraz>
                         <primarni_izraz>
                          IDN 7 result
-                AMPERSAND 7 &
+                OP_BIN_I 7 &
                 <jednakosni_izraz>
                  <odnosni_izraz>
                   <aditivni_izraz>
@@ -1151,7 +1131,7 @@
                                                        IDN 7 d
                                         D_ZAGRADA 7 )
                          D_ZAGRADA 7 )
-                    ASTERISK 7 *
+                    OP_PUTA 7 *
                     <cast_izraz>
                      <unarni_izraz>
                       <postfiks_izraz>
@@ -1191,7 +1171,7 @@
                                                       <postfiks_izraz>
                                                        <primarni_izraz>
                                                         IDN 7 e
-                                                   ASTERISK 7 *
+                                                   OP_PUTA 7 *
                                                    <cast_izraz>
                                                     <unarni_izraz>
                                                      <postfiks_izraz>
@@ -1222,7 +1202,7 @@
                                                      <postfiks_izraz>
                                                       <primarni_izraz>
                                                        IDN 7 g
-                                                  ASTERISK 7 *
+                                                  OP_PUTA 7 *
                                                   <cast_izraz>
                                                    <unarni_izraz>
                                                     <postfiks_izraz>

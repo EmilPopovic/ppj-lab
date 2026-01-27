@@ -21,23 +21,18 @@
                     <prijevodna_jedinica>
                      <vanjska_deklaracija>
                       <definicija_funkcije>
-                       <specifikatori_deklaracije>
+                       <ime_tipa>
                         <specifikator_tipa>
                          KR_INT 1 int
-                       <deklarator>
-                        <izravni_deklarator>
-                         <izravni_deklarator>
-                          IDN 1 f20
-                         L_ZAGRADA 1 (
-                         <lista_parametara>
-                          <deklaracija_parametra>
-                           <specifikatori_deklaracije>
-                            <specifikator_tipa>
-                             KR_INT 1 int
-                           <deklarator>
-                            <izravni_deklarator>
-                             IDN 1 x
-                         D_ZAGRADA 1 )
+                       IDN 1 f20
+                       L_ZAGRADA 1 (
+                       <lista_parametara>
+                        <deklaracija_parametra>
+                         <ime_tipa>
+                          <specifikator_tipa>
+                           KR_INT 1 int
+                         IDN 1 x
+                       D_ZAGRADA 1 )
                        <slozena_naredba>
                         L_VIT_ZAGRADA 1 {
                         <lista_naredbi>
@@ -72,23 +67,18 @@
                         D_VIT_ZAGRADA 1 }
                     <vanjska_deklaracija>
                      <definicija_funkcije>
-                      <specifikatori_deklaracije>
+                      <ime_tipa>
                        <specifikator_tipa>
                         KR_INT 2 int
-                      <deklarator>
-                       <izravni_deklarator>
-                        <izravni_deklarator>
-                         IDN 2 f19
-                        L_ZAGRADA 2 (
-                        <lista_parametara>
-                         <deklaracija_parametra>
-                          <specifikatori_deklaracije>
-                           <specifikator_tipa>
-                            KR_INT 2 int
-                          <deklarator>
-                           <izravni_deklarator>
-                            IDN 2 x
-                        D_ZAGRADA 2 )
+                      IDN 2 f19
+                      L_ZAGRADA 2 (
+                      <lista_parametara>
+                       <deklaracija_parametra>
+                        <ime_tipa>
+                         <specifikator_tipa>
+                          KR_INT 2 int
+                        IDN 2 x
+                      D_ZAGRADA 2 )
                       <slozena_naredba>
                        L_VIT_ZAGRADA 2 {
                        <lista_naredbi>
@@ -142,23 +132,18 @@
                        D_VIT_ZAGRADA 2 }
                    <vanjska_deklaracija>
                     <definicija_funkcije>
-                     <specifikatori_deklaracije>
+                     <ime_tipa>
                       <specifikator_tipa>
                        KR_INT 3 int
-                     <deklarator>
-                      <izravni_deklarator>
-                       <izravni_deklarator>
-                        IDN 3 f18
-                       L_ZAGRADA 3 (
-                       <lista_parametara>
-                        <deklaracija_parametra>
-                         <specifikatori_deklaracije>
-                          <specifikator_tipa>
-                           KR_INT 3 int
-                         <deklarator>
-                          <izravni_deklarator>
-                           IDN 3 x
-                       D_ZAGRADA 3 )
+                     IDN 3 f18
+                     L_ZAGRADA 3 (
+                     <lista_parametara>
+                      <deklaracija_parametra>
+                       <ime_tipa>
+                        <specifikator_tipa>
+                         KR_INT 3 int
+                       IDN 3 x
+                     D_ZAGRADA 3 )
                      <slozena_naredba>
                       L_VIT_ZAGRADA 3 {
                       <lista_naredbi>
@@ -212,23 +197,18 @@
                       D_VIT_ZAGRADA 3 }
                   <vanjska_deklaracija>
                    <definicija_funkcije>
-                    <specifikatori_deklaracije>
+                    <ime_tipa>
                      <specifikator_tipa>
                       KR_INT 4 int
-                    <deklarator>
-                     <izravni_deklarator>
-                      <izravni_deklarator>
-                       IDN 4 f17
-                      L_ZAGRADA 4 (
-                      <lista_parametara>
-                       <deklaracija_parametra>
-                        <specifikatori_deklaracije>
-                         <specifikator_tipa>
-                          KR_INT 4 int
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 4 x
-                      D_ZAGRADA 4 )
+                    IDN 4 f17
+                    L_ZAGRADA 4 (
+                    <lista_parametara>
+                     <deklaracija_parametra>
+                      <ime_tipa>
+                       <specifikator_tipa>
+                        KR_INT 4 int
+                      IDN 4 x
+                    D_ZAGRADA 4 )
                     <slozena_naredba>
                      L_VIT_ZAGRADA 4 {
                      <lista_naredbi>
@@ -282,23 +262,18 @@
                      D_VIT_ZAGRADA 4 }
                  <vanjska_deklaracija>
                   <definicija_funkcije>
-                   <specifikatori_deklaracije>
+                   <ime_tipa>
                     <specifikator_tipa>
                      KR_INT 5 int
-                   <deklarator>
-                    <izravni_deklarator>
-                     <izravni_deklarator>
-                      IDN 5 f16
-                     L_ZAGRADA 5 (
-                     <lista_parametara>
-                      <deklaracija_parametra>
-                       <specifikatori_deklaracije>
-                        <specifikator_tipa>
-                         KR_INT 5 int
-                       <deklarator>
-                        <izravni_deklarator>
-                         IDN 5 x
-                     D_ZAGRADA 5 )
+                   IDN 5 f16
+                   L_ZAGRADA 5 (
+                   <lista_parametara>
+                    <deklaracija_parametra>
+                     <ime_tipa>
+                      <specifikator_tipa>
+                       KR_INT 5 int
+                     IDN 5 x
+                   D_ZAGRADA 5 )
                    <slozena_naredba>
                     L_VIT_ZAGRADA 5 {
                     <lista_naredbi>
@@ -352,23 +327,18 @@
                     D_VIT_ZAGRADA 5 }
                 <vanjska_deklaracija>
                  <definicija_funkcije>
-                  <specifikatori_deklaracije>
+                  <ime_tipa>
                    <specifikator_tipa>
                     KR_INT 6 int
-                  <deklarator>
-                   <izravni_deklarator>
-                    <izravni_deklarator>
-                     IDN 6 f15
-                    L_ZAGRADA 6 (
-                    <lista_parametara>
-                     <deklaracija_parametra>
-                      <specifikatori_deklaracije>
-                       <specifikator_tipa>
-                        KR_INT 6 int
-                      <deklarator>
-                       <izravni_deklarator>
-                        IDN 6 x
-                    D_ZAGRADA 6 )
+                  IDN 6 f15
+                  L_ZAGRADA 6 (
+                  <lista_parametara>
+                   <deklaracija_parametra>
+                    <ime_tipa>
+                     <specifikator_tipa>
+                      KR_INT 6 int
+                    IDN 6 x
+                  D_ZAGRADA 6 )
                   <slozena_naredba>
                    L_VIT_ZAGRADA 6 {
                    <lista_naredbi>
@@ -422,23 +392,18 @@
                    D_VIT_ZAGRADA 6 }
                <vanjska_deklaracija>
                 <definicija_funkcije>
-                 <specifikatori_deklaracije>
+                 <ime_tipa>
                   <specifikator_tipa>
                    KR_INT 7 int
-                 <deklarator>
-                  <izravni_deklarator>
-                   <izravni_deklarator>
-                    IDN 7 f14
-                   L_ZAGRADA 7 (
-                   <lista_parametara>
-                    <deklaracija_parametra>
-                     <specifikatori_deklaracije>
-                      <specifikator_tipa>
-                       KR_INT 7 int
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 7 x
-                   D_ZAGRADA 7 )
+                 IDN 7 f14
+                 L_ZAGRADA 7 (
+                 <lista_parametara>
+                  <deklaracija_parametra>
+                   <ime_tipa>
+                    <specifikator_tipa>
+                     KR_INT 7 int
+                   IDN 7 x
+                 D_ZAGRADA 7 )
                  <slozena_naredba>
                   L_VIT_ZAGRADA 7 {
                   <lista_naredbi>
@@ -492,23 +457,18 @@
                   D_VIT_ZAGRADA 7 }
               <vanjska_deklaracija>
                <definicija_funkcije>
-                <specifikatori_deklaracije>
+                <ime_tipa>
                  <specifikator_tipa>
                   KR_INT 8 int
-                <deklarator>
-                 <izravni_deklarator>
-                  <izravni_deklarator>
-                   IDN 8 f13
-                  L_ZAGRADA 8 (
-                  <lista_parametara>
-                   <deklaracija_parametra>
-                    <specifikatori_deklaracije>
-                     <specifikator_tipa>
-                      KR_INT 8 int
-                    <deklarator>
-                     <izravni_deklarator>
-                      IDN 8 x
-                  D_ZAGRADA 8 )
+                IDN 8 f13
+                L_ZAGRADA 8 (
+                <lista_parametara>
+                 <deklaracija_parametra>
+                  <ime_tipa>
+                   <specifikator_tipa>
+                    KR_INT 8 int
+                  IDN 8 x
+                D_ZAGRADA 8 )
                 <slozena_naredba>
                  L_VIT_ZAGRADA 8 {
                  <lista_naredbi>
@@ -562,23 +522,18 @@
                  D_VIT_ZAGRADA 8 }
              <vanjska_deklaracija>
               <definicija_funkcije>
-               <specifikatori_deklaracije>
+               <ime_tipa>
                 <specifikator_tipa>
                  KR_INT 9 int
-               <deklarator>
-                <izravni_deklarator>
-                 <izravni_deklarator>
-                  IDN 9 f12
-                 L_ZAGRADA 9 (
-                 <lista_parametara>
-                  <deklaracija_parametra>
-                   <specifikatori_deklaracije>
-                    <specifikator_tipa>
-                     KR_INT 9 int
-                   <deklarator>
-                    <izravni_deklarator>
-                     IDN 9 x
-                 D_ZAGRADA 9 )
+               IDN 9 f12
+               L_ZAGRADA 9 (
+               <lista_parametara>
+                <deklaracija_parametra>
+                 <ime_tipa>
+                  <specifikator_tipa>
+                   KR_INT 9 int
+                 IDN 9 x
+               D_ZAGRADA 9 )
                <slozena_naredba>
                 L_VIT_ZAGRADA 9 {
                 <lista_naredbi>
@@ -632,23 +587,18 @@
                 D_VIT_ZAGRADA 9 }
             <vanjska_deklaracija>
              <definicija_funkcije>
-              <specifikatori_deklaracije>
+              <ime_tipa>
                <specifikator_tipa>
                 KR_INT 10 int
-              <deklarator>
-               <izravni_deklarator>
-                <izravni_deklarator>
-                 IDN 10 f11
-                L_ZAGRADA 10 (
-                <lista_parametara>
-                 <deklaracija_parametra>
-                  <specifikatori_deklaracije>
-                   <specifikator_tipa>
-                    KR_INT 10 int
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 10 x
-                D_ZAGRADA 10 )
+              IDN 10 f11
+              L_ZAGRADA 10 (
+              <lista_parametara>
+               <deklaracija_parametra>
+                <ime_tipa>
+                 <specifikator_tipa>
+                  KR_INT 10 int
+                IDN 10 x
+              D_ZAGRADA 10 )
               <slozena_naredba>
                L_VIT_ZAGRADA 10 {
                <lista_naredbi>
@@ -702,23 +652,18 @@
                D_VIT_ZAGRADA 10 }
            <vanjska_deklaracija>
             <definicija_funkcije>
-             <specifikatori_deklaracije>
+             <ime_tipa>
               <specifikator_tipa>
                KR_INT 11 int
-             <deklarator>
-              <izravni_deklarator>
-               <izravni_deklarator>
-                IDN 11 f10
-               L_ZAGRADA 11 (
-               <lista_parametara>
-                <deklaracija_parametra>
-                 <specifikatori_deklaracije>
-                  <specifikator_tipa>
-                   KR_INT 11 int
-                 <deklarator>
-                  <izravni_deklarator>
-                   IDN 11 x
-               D_ZAGRADA 11 )
+             IDN 11 f10
+             L_ZAGRADA 11 (
+             <lista_parametara>
+              <deklaracija_parametra>
+               <ime_tipa>
+                <specifikator_tipa>
+                 KR_INT 11 int
+               IDN 11 x
+             D_ZAGRADA 11 )
              <slozena_naredba>
               L_VIT_ZAGRADA 11 {
               <lista_naredbi>
@@ -772,23 +717,18 @@
               D_VIT_ZAGRADA 11 }
           <vanjska_deklaracija>
            <definicija_funkcije>
-            <specifikatori_deklaracije>
+            <ime_tipa>
              <specifikator_tipa>
               KR_INT 12 int
-            <deklarator>
-             <izravni_deklarator>
-              <izravni_deklarator>
-               IDN 12 f9
-              L_ZAGRADA 12 (
-              <lista_parametara>
-               <deklaracija_parametra>
-                <specifikatori_deklaracije>
-                 <specifikator_tipa>
-                  KR_INT 12 int
-                <deklarator>
-                 <izravni_deklarator>
-                  IDN 12 x
-              D_ZAGRADA 12 )
+            IDN 12 f9
+            L_ZAGRADA 12 (
+            <lista_parametara>
+             <deklaracija_parametra>
+              <ime_tipa>
+               <specifikator_tipa>
+                KR_INT 12 int
+              IDN 12 x
+            D_ZAGRADA 12 )
             <slozena_naredba>
              L_VIT_ZAGRADA 12 {
              <lista_naredbi>
@@ -842,23 +782,18 @@
              D_VIT_ZAGRADA 12 }
          <vanjska_deklaracija>
           <definicija_funkcije>
-           <specifikatori_deklaracije>
+           <ime_tipa>
             <specifikator_tipa>
              KR_INT 13 int
-           <deklarator>
-            <izravni_deklarator>
-             <izravni_deklarator>
-              IDN 13 f8
-             L_ZAGRADA 13 (
-             <lista_parametara>
-              <deklaracija_parametra>
-               <specifikatori_deklaracije>
-                <specifikator_tipa>
-                 KR_INT 13 int
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 13 x
-             D_ZAGRADA 13 )
+           IDN 13 f8
+           L_ZAGRADA 13 (
+           <lista_parametara>
+            <deklaracija_parametra>
+             <ime_tipa>
+              <specifikator_tipa>
+               KR_INT 13 int
+             IDN 13 x
+           D_ZAGRADA 13 )
            <slozena_naredba>
             L_VIT_ZAGRADA 13 {
             <lista_naredbi>
@@ -912,23 +847,18 @@
             D_VIT_ZAGRADA 13 }
         <vanjska_deklaracija>
          <definicija_funkcije>
-          <specifikatori_deklaracije>
+          <ime_tipa>
            <specifikator_tipa>
             KR_INT 14 int
-          <deklarator>
-           <izravni_deklarator>
-            <izravni_deklarator>
-             IDN 14 f7
-            L_ZAGRADA 14 (
-            <lista_parametara>
-             <deklaracija_parametra>
-              <specifikatori_deklaracije>
-               <specifikator_tipa>
-                KR_INT 14 int
-              <deklarator>
-               <izravni_deklarator>
-                IDN 14 x
-            D_ZAGRADA 14 )
+          IDN 14 f7
+          L_ZAGRADA 14 (
+          <lista_parametara>
+           <deklaracija_parametra>
+            <ime_tipa>
+             <specifikator_tipa>
+              KR_INT 14 int
+            IDN 14 x
+          D_ZAGRADA 14 )
           <slozena_naredba>
            L_VIT_ZAGRADA 14 {
            <lista_naredbi>
@@ -982,23 +912,18 @@
            D_VIT_ZAGRADA 14 }
        <vanjska_deklaracija>
         <definicija_funkcije>
-         <specifikatori_deklaracije>
+         <ime_tipa>
           <specifikator_tipa>
            KR_INT 15 int
-         <deklarator>
-          <izravni_deklarator>
-           <izravni_deklarator>
-            IDN 15 f6
-           L_ZAGRADA 15 (
-           <lista_parametara>
-            <deklaracija_parametra>
-             <specifikatori_deklaracije>
-              <specifikator_tipa>
-               KR_INT 15 int
-             <deklarator>
-              <izravni_deklarator>
-               IDN 15 x
-           D_ZAGRADA 15 )
+         IDN 15 f6
+         L_ZAGRADA 15 (
+         <lista_parametara>
+          <deklaracija_parametra>
+           <ime_tipa>
+            <specifikator_tipa>
+             KR_INT 15 int
+           IDN 15 x
+         D_ZAGRADA 15 )
          <slozena_naredba>
           L_VIT_ZAGRADA 15 {
           <lista_naredbi>
@@ -1052,23 +977,18 @@
           D_VIT_ZAGRADA 15 }
       <vanjska_deklaracija>
        <definicija_funkcije>
-        <specifikatori_deklaracije>
+        <ime_tipa>
          <specifikator_tipa>
           KR_INT 16 int
-        <deklarator>
-         <izravni_deklarator>
-          <izravni_deklarator>
-           IDN 16 f5
-          L_ZAGRADA 16 (
-          <lista_parametara>
-           <deklaracija_parametra>
-            <specifikatori_deklaracije>
-             <specifikator_tipa>
-              KR_INT 16 int
-            <deklarator>
-             <izravni_deklarator>
-              IDN 16 x
-          D_ZAGRADA 16 )
+        IDN 16 f5
+        L_ZAGRADA 16 (
+        <lista_parametara>
+         <deklaracija_parametra>
+          <ime_tipa>
+           <specifikator_tipa>
+            KR_INT 16 int
+          IDN 16 x
+        D_ZAGRADA 16 )
         <slozena_naredba>
          L_VIT_ZAGRADA 16 {
          <lista_naredbi>
@@ -1122,23 +1042,18 @@
          D_VIT_ZAGRADA 16 }
      <vanjska_deklaracija>
       <definicija_funkcije>
-       <specifikatori_deklaracije>
+       <ime_tipa>
         <specifikator_tipa>
          KR_INT 17 int
-       <deklarator>
-        <izravni_deklarator>
-         <izravni_deklarator>
-          IDN 17 f4
-         L_ZAGRADA 17 (
-         <lista_parametara>
-          <deklaracija_parametra>
-           <specifikatori_deklaracije>
-            <specifikator_tipa>
-             KR_INT 17 int
-           <deklarator>
-            <izravni_deklarator>
-             IDN 17 x
-         D_ZAGRADA 17 )
+       IDN 17 f4
+       L_ZAGRADA 17 (
+       <lista_parametara>
+        <deklaracija_parametra>
+         <ime_tipa>
+          <specifikator_tipa>
+           KR_INT 17 int
+         IDN 17 x
+       D_ZAGRADA 17 )
        <slozena_naredba>
         L_VIT_ZAGRADA 17 {
         <lista_naredbi>
@@ -1192,23 +1107,18 @@
         D_VIT_ZAGRADA 17 }
     <vanjska_deklaracija>
      <definicija_funkcije>
-      <specifikatori_deklaracije>
+      <ime_tipa>
        <specifikator_tipa>
         KR_INT 18 int
-      <deklarator>
-       <izravni_deklarator>
-        <izravni_deklarator>
-         IDN 18 f3
-        L_ZAGRADA 18 (
-        <lista_parametara>
-         <deklaracija_parametra>
-          <specifikatori_deklaracije>
-           <specifikator_tipa>
-            KR_INT 18 int
-          <deklarator>
-           <izravni_deklarator>
-            IDN 18 x
-        D_ZAGRADA 18 )
+      IDN 18 f3
+      L_ZAGRADA 18 (
+      <lista_parametara>
+       <deklaracija_parametra>
+        <ime_tipa>
+         <specifikator_tipa>
+          KR_INT 18 int
+        IDN 18 x
+      D_ZAGRADA 18 )
       <slozena_naredba>
        L_VIT_ZAGRADA 18 {
        <lista_naredbi>
@@ -1262,23 +1172,18 @@
        D_VIT_ZAGRADA 18 }
    <vanjska_deklaracija>
     <definicija_funkcije>
-     <specifikatori_deklaracije>
+     <ime_tipa>
       <specifikator_tipa>
        KR_INT 19 int
-     <deklarator>
-      <izravni_deklarator>
-       <izravni_deklarator>
-        IDN 19 f2
-       L_ZAGRADA 19 (
-       <lista_parametara>
-        <deklaracija_parametra>
-         <specifikatori_deklaracije>
-          <specifikator_tipa>
-           KR_INT 19 int
-         <deklarator>
-          <izravni_deklarator>
-           IDN 19 x
-       D_ZAGRADA 19 )
+     IDN 19 f2
+     L_ZAGRADA 19 (
+     <lista_parametara>
+      <deklaracija_parametra>
+       <ime_tipa>
+        <specifikator_tipa>
+         KR_INT 19 int
+       IDN 19 x
+     D_ZAGRADA 19 )
      <slozena_naredba>
       L_VIT_ZAGRADA 19 {
       <lista_naredbi>
@@ -1332,23 +1237,18 @@
       D_VIT_ZAGRADA 19 }
   <vanjska_deklaracija>
    <definicija_funkcije>
-    <specifikatori_deklaracije>
+    <ime_tipa>
      <specifikator_tipa>
       KR_INT 20 int
-    <deklarator>
-     <izravni_deklarator>
-      <izravni_deklarator>
-       IDN 20 f1
-      L_ZAGRADA 20 (
-      <lista_parametara>
-       <deklaracija_parametra>
-        <specifikatori_deklaracije>
-         <specifikator_tipa>
-          KR_INT 20 int
-        <deklarator>
-         <izravni_deklarator>
-          IDN 20 x
-      D_ZAGRADA 20 )
+    IDN 20 f1
+    L_ZAGRADA 20 (
+    <lista_parametara>
+     <deklaracija_parametra>
+      <ime_tipa>
+       <specifikator_tipa>
+        KR_INT 20 int
+      IDN 20 x
+    D_ZAGRADA 20 )
     <slozena_naredba>
      L_VIT_ZAGRADA 20 {
      <lista_naredbi>
@@ -1402,20 +1302,13 @@
      D_VIT_ZAGRADA 20 }
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 22 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 22 main
-     L_ZAGRADA 22 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 22 void
-     D_ZAGRADA 22 )
+   IDN 22 main
+   L_ZAGRADA 22 (
+   KR_VOID 22 void
+   D_ZAGRADA 22 )
    <slozena_naredba>
     L_VIT_ZAGRADA 22 {
     <lista_naredbi>

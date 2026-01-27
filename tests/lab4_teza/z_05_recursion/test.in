@@ -128,17 +128,17 @@
   <definicija_funkcije>
    <ime_tipa>
     <specifikator_tipa>
-     KR_INT 5 int
-   IDN 5 main
-   L_ZAGRADA 5 (
-   KR_VOID 5 void
-   D_ZAGRADA 5 )
+     KR_INT 6 int
+   IDN 6 main
+   L_ZAGRADA 6 (
+   KR_VOID 6 void
+   D_ZAGRADA 6 )
    <slozena_naredba>
-    L_VIT_ZAGRADA 5 {
+    L_VIT_ZAGRADA 6 {
     <lista_naredbi>
      <naredba>
       <naredba_skoka>
-       KR_RETURN 6 return
+       KR_RETURN 7 return
        <izraz>
         <izraz_pridruzivanja>
          <log_ili_izraz>
@@ -155,8 +155,8 @@
                     <postfiks_izraz>
                      <postfiks_izraz>
                       <primarni_izraz>
-                       IDN 6 sum
-                     L_ZAGRADA 6 (
+                       IDN 7 sum
+                     L_ZAGRADA 7 (
                      <lista_argumenata>
                       <izraz_pridruzivanja>
                        <log_ili_izraz>
@@ -172,7 +172,7 @@
                                  <unarni_izraz>
                                   <postfiks_izraz>
                                    <primarni_izraz>
-                                    BROJ 6 10
-                     D_ZAGRADA 6 )
-       TOCKAZAREZ 6 ;
-    D_VIT_ZAGRADA 7 }
+                                    BROJ 7 10
+                     D_ZAGRADA 7 )
+       TOCKAZAREZ 7 ;
+    D_VIT_ZAGRADA 8 }

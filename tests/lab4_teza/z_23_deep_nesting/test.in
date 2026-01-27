@@ -1,32 +1,24 @@
 <prijevodna_jedinica>
  <vanjska_deklaracija>
   <definicija_funkcije>
-   <specifikatori_deklaracije>
+   <ime_tipa>
     <specifikator_tipa>
      KR_INT 1 int
-   <deklarator>
-    <izravni_deklarator>
-     <izravni_deklarator>
-      IDN 1 main
-     L_ZAGRADA 1 (
-     <lista_parametara>
-      <deklaracija_parametra>
-       <specifikatori_deklaracije>
-        <specifikator_tipa>
-         KR_VOID 1 void
-     D_ZAGRADA 1 )
+   IDN 1 main
+   L_ZAGRADA 1 (
+   KR_VOID 1 void
+   D_ZAGRADA 1 )
    <slozena_naredba>
     L_VIT_ZAGRADA 1 {
     <lista_deklaracija>
      <deklaracija>
-      <specifikatori_deklaracije>
+      <ime_tipa>
        <specifikator_tipa>
         KR_INT 2 int
       <lista_init_deklaratora>
        <init_deklarator>
-        <deklarator>
-         <izravni_deklarator>
-          IDN 2 x
+        <izravni_deklarator>
+         IDN 2 x
         OP_PRIDRUZI 2 =
         <inicijalizator>
          <izraz_pridruzivanja>
@@ -52,14 +44,13 @@
         L_VIT_ZAGRADA 3 {
         <lista_deklaracija>
          <deklaracija>
-          <specifikatori_deklaracije>
+          <ime_tipa>
            <specifikator_tipa>
             KR_INT 4 int
           <lista_init_deklaratora>
            <init_deklarator>
-            <deklarator>
-             <izravni_deklarator>
-              IDN 4 a
+            <izravni_deklarator>
+             IDN 4 a
             OP_PRIDRUZI 4 =
             <inicijalizator>
              <izraz_pridruzivanja>
@@ -84,14 +75,13 @@
            L_VIT_ZAGRADA 5 {
            <lista_deklaracija>
             <deklaracija>
-             <specifikatori_deklaracije>
+             <ime_tipa>
               <specifikator_tipa>
                KR_INT 6 int
              <lista_init_deklaratora>
               <init_deklarator>
-               <deklarator>
-                <izravni_deklarator>
-                 IDN 6 b
+               <izravni_deklarator>
+                IDN 6 b
                OP_PRIDRUZI 6 =
                <inicijalizator>
                 <izraz_pridruzivanja>
@@ -116,14 +106,13 @@
               L_VIT_ZAGRADA 7 {
               <lista_deklaracija>
                <deklaracija>
-                <specifikatori_deklaracije>
+                <ime_tipa>
                  <specifikator_tipa>
                   KR_INT 8 int
                 <lista_init_deklaratora>
                  <init_deklarator>
-                  <deklarator>
-                   <izravni_deklarator>
-                    IDN 8 c
+                  <izravni_deklarator>
+                   IDN 8 c
                   OP_PRIDRUZI 8 =
                   <inicijalizator>
                    <izraz_pridruzivanja>
@@ -148,14 +137,13 @@
                  L_VIT_ZAGRADA 9 {
                  <lista_deklaracija>
                   <deklaracija>
-                   <specifikatori_deklaracije>
+                   <ime_tipa>
                     <specifikator_tipa>
                      KR_INT 10 int
                    <lista_init_deklaratora>
                     <init_deklarator>
-                     <deklarator>
-                      <izravni_deklarator>
-                       IDN 10 d
+                     <izravni_deklarator>
+                      IDN 10 d
                      OP_PRIDRUZI 10 =
                      <inicijalizator>
                       <izraz_pridruzivanja>
@@ -180,14 +168,13 @@
                     L_VIT_ZAGRADA 11 {
                     <lista_deklaracija>
                      <deklaracija>
-                      <specifikatori_deklaracije>
+                      <ime_tipa>
                        <specifikator_tipa>
                         KR_INT 12 int
                       <lista_init_deklaratora>
                        <init_deklarator>
-                        <deklarator>
-                         <izravni_deklarator>
-                          IDN 12 e
+                        <izravni_deklarator>
+                         IDN 12 e
                         OP_PRIDRUZI 12 =
                         <inicijalizator>
                          <izraz_pridruzivanja>
@@ -212,14 +199,13 @@
                        L_VIT_ZAGRADA 13 {
                        <lista_deklaracija>
                         <deklaracija>
-                         <specifikatori_deklaracije>
+                         <ime_tipa>
                           <specifikator_tipa>
                            KR_INT 14 int
                          <lista_init_deklaratora>
                           <init_deklarator>
-                           <deklarator>
-                            <izravni_deklarator>
-                             IDN 14 f
+                           <izravni_deklarator>
+                            IDN 14 f
                            OP_PRIDRUZI 14 =
                            <inicijalizator>
                             <izraz_pridruzivanja>
@@ -244,14 +230,13 @@
                           L_VIT_ZAGRADA 15 {
                           <lista_deklaracija>
                            <deklaracija>
-                            <specifikatori_deklaracije>
+                            <ime_tipa>
                              <specifikator_tipa>
                               KR_INT 16 int
                             <lista_init_deklaratora>
                              <init_deklarator>
-                              <deklarator>
-                               <izravni_deklarator>
-                                IDN 16 g
+                              <izravni_deklarator>
+                               IDN 16 g
                               OP_PRIDRUZI 16 =
                               <inicijalizator>
                                <izraz_pridruzivanja>
@@ -276,14 +261,13 @@
                              L_VIT_ZAGRADA 17 {
                              <lista_deklaracija>
                               <deklaracija>
-                               <specifikatori_deklaracije>
+                               <ime_tipa>
                                 <specifikator_tipa>
                                  KR_INT 18 int
                                <lista_init_deklaratora>
                                 <init_deklarator>
-                                 <deklarator>
-                                  <izravni_deklarator>
-                                   IDN 18 h
+                                 <izravni_deklarator>
+                                  IDN 18 h
                                  OP_PRIDRUZI 18 =
                                  <inicijalizator>
                                   <izraz_pridruzivanja>
@@ -308,14 +292,13 @@
                                 L_VIT_ZAGRADA 19 {
                                 <lista_deklaracija>
                                  <deklaracija>
-                                  <specifikatori_deklaracije>
+                                  <ime_tipa>
                                    <specifikator_tipa>
                                     KR_INT 20 int
                                   <lista_init_deklaratora>
                                    <init_deklarator>
-                                    <deklarator>
-                                     <izravni_deklarator>
-                                      IDN 20 i
+                                    <izravni_deklarator>
+                                     IDN 20 i
                                     OP_PRIDRUZI 20 =
                                     <inicijalizator>
                                      <izraz_pridruzivanja>
@@ -340,14 +323,13 @@
                                    L_VIT_ZAGRADA 21 {
                                    <lista_deklaracija>
                                     <deklaracija>
-                                     <specifikatori_deklaracije>
+                                     <ime_tipa>
                                       <specifikator_tipa>
                                        KR_INT 22 int
                                      <lista_init_deklaratora>
                                       <init_deklarator>
-                                       <deklarator>
-                                        <izravni_deklarator>
-                                         IDN 22 j
+                                       <izravni_deklarator>
+                                        IDN 22 j
                                        OP_PRIDRUZI 22 =
                                        <inicijalizator>
                                         <izraz_pridruzivanja>
@@ -371,10 +353,9 @@
                                      <izraz_naredba>
                                       <izraz>
                                        <izraz_pridruzivanja>
-                                        <unarni_izraz>
-                                         <postfiks_izraz>
-                                          <primarni_izraz>
-                                           IDN 23 x
+                                        <postfiks_izraz>
+                                         <primarni_izraz>
+                                          IDN 23 x
                                         OP_PRIDRUZI 23 =
                                         <izraz_pridruzivanja>
                                          <log_ili_izraz>
