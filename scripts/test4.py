@@ -53,7 +53,7 @@ def evaluate_r6(arm_code_path, expected_r6_value):
     try:
         import unicorn.arm_const as arm
         from unicorn import UC_ARCH_ARM, UC_MODE_ARM, UC_HOOK_INTR
-        from unicorn.unicorn import Uc
+        from unicorn import Uc, UcError
     except ImportError:
         print(f"{RED}ERROR: unicorn package not installed{RESET}", file=sys.stderr)
         return False
@@ -102,8 +102,12 @@ def evaluate_r6(arm_code_path, expected_r6_value):
     # Run emulation
     try:
         mu.emu_start(ARM_CODE_ADDRESS, 0)
+    except UcError as e:
+        print(f"{RED}UNICORN_ERROR: {e}{RESET}", file=sys.stderr)
+        return False
     except Exception as e:
-        pass  # Normal termination via interrupt
+        print(f"{RED}RUNTIME_ERROR: {e}{RESET}", file=sys.stderr)
+        return False
 
     # Read R6 register value
     r6_value = mu.reg_read(arm.UC_ARM_REG_R6)
