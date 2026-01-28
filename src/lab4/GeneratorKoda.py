@@ -33,62 +33,68 @@ class CodeGenerator:
     div_func = [
         instr.Label('_f_divide'),
 
-        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
-        instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
-
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2Rm(Regs.R1)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R3, addressing.Oprnd2Rm(Regs.R0)),
+        instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.STM, Regs.SP, addressing.Mode4.DECREMENT_BEFORE, [Regs.R4, Regs.R5, Regs.R7, Regs.LR], True),
 
         instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
         instr.BranchOp(op.BranchOpcode.B, '_div_by_zero', Cond.EQUAL),
 
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2Rm(Regs.R0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R5, addressing.Oprnd2Rm(Regs.R1)),
+        instr.ArithmeticLogicOp(op.LogicOpcode.EOR, Regs.R7, Regs.R4, addressing.Oprnd2Rm(Regs.R5)),
 
+        instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Imm8(0)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(0), Cond.NEGATIVE),
+
+        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(0), Cond.NEGATIVE),
+
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2Rm(Regs.R1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R3, addressing.Oprnd2Rm(Regs.R0)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.R2)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2Imm8(1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2Imm8(1)),
+        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R5, addressing.Mode2Immediate(0x80000000)), # Max value for align check
 
         instr.Label('_align_loop'),
         instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Rm(Regs.R3)),
         instr.BranchOp(op.BranchOpcode.B, '_align_done', Cond.UNSIGNED_HIGHER),
-        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Imm8(0)),
-        instr.BranchOp(op.BranchOpcode.B, '_align_done', Cond.NEGATIVE),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R1, addressing.Oprnd2Rm(Regs.R5)),
+        instr.BranchOp(op.BranchOpcode.B, '_align_done', Cond.UNSIGNED_HIGHER_OR_SAME),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSL, 1)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSL, 1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2ShiftImm5(Regs.R2, ShiftType.LSL, 1)),
         instr.BranchOp(op.BranchOpcode.B, '_align_loop', Cond.ALWAYS),
 
         instr.Label('_align_done'),
-        instr.TestOp(op.TestOpcode.CMP, Regs.R4, addressing.Oprnd2Imm8(1)),
-        instr.BranchOp(op.BranchOpcode.B, '_divide_loop', Cond.EQUAL),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
-
         instr.Label('_divide_loop'),
-        instr.TestOp(op.TestOpcode.CMP, Regs.R4, addressing.Oprnd2Imm8(0)),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R2, addressing.Oprnd2Imm8(0)),
         instr.BranchOp(op.BranchOpcode.B, '_divide_done', Cond.EQUAL),
 
         instr.TestOp(op.TestOpcode.CMP, Regs.R3, addressing.Oprnd2Rm(Regs.R1)),
         instr.BranchOp(op.BranchOpcode.B, '_skip_subtract', Cond.UNSIGNED_LOWER),
 
         instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R3, Regs.R3, addressing.Oprnd2Rm(Regs.R1)),
-        instr.ArithmeticLogicOp(op.LogicOpcode.ORR, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R4)),
+        instr.ArithmeticLogicOp(op.LogicOpcode.ORR, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.R2)),
 
         instr.Label('_skip_subtract'),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2ShiftImm5(Regs.R1, ShiftType.LSR, 1)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R4, addressing.Oprnd2ShiftImm5(Regs.R4, ShiftType.LSR, 1)),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R2, addressing.Oprnd2ShiftImm5(Regs.R2, ShiftType.LSR, 1)),
         instr.BranchOp(op.BranchOpcode.B, '_divide_loop', Cond.ALWAYS),
+
+        instr.Label('_divide_done'),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R7, addressing.Oprnd2Imm8(0)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(0), Cond.NEGATIVE),
+
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.R3)),
+        instr.TestOp(op.TestOpcode.CMP, Regs.R4, addressing.Oprnd2Imm8(0)),
+        instr.ArithmeticLogicOp(op.ArithmeticOpcode.RSB, Regs.R1, Regs.R1, addressing.Oprnd2Imm8(0), Cond.NEGATIVE),
+
+        instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, addressing.Mode4.INCREMENT_AFTER, [Regs.R4, Regs.R5, Regs.R7, Regs.LR], True),
+        instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)),
 
         instr.Label('_div_by_zero'),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R0, addressing.Oprnd2Imm8(0)),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Imm8(0)),
-        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
-        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)),
-
-        instr.Label('_divide_done'),
-        instr.MoveOp(op.MoveOpcode.MOV, Regs.R1, addressing.Oprnd2Rm(Regs.R3)),
-
-        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R4, addressing.Mode2ImmediateOffset(Regs.SP, IndexingType.NO_INDEX, None)),
-        instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(4)),
+        instr.LoadStoreMultipleOp(op.LoadStoreBlockOpcode.LDM, Regs.SP, addressing.Mode4.INCREMENT_AFTER, [Regs.R4, Regs.R5, Regs.R7, Regs.LR], True),
         instr.MoveOp(op.MoveOpcode.MOV, Regs.PC, addressing.Oprnd2Rm(Regs.LR)),
     ]
 
@@ -100,6 +106,21 @@ class CodeGenerator:
             for instr in self.code:
                 f.write(f'{instr}\n')
     
+    @staticmethod
+    def escape_string(s: str) -> str:
+        replacements = {
+            '\n': '\\n',
+            '\t': '\\t',
+            '\0': '\\0',
+            '\'': "\\'",
+            '\"': '\\"',
+            '\\': '\\\\'
+        }
+        res = ""
+        for char in s:
+            res += replacements.get(char, char)
+        return res
+
     @staticmethod
     def global_var_emit(var: ast.VarDecl) -> List[instr.AssemblyLine]:
         code: List[instr.AssemblyLine] = [
@@ -116,7 +137,8 @@ class CodeGenerator:
                     code.append(instr.AssemblerDirective(f'.byte {val.value}'))
                     var.sym.const_val = val.value
                 elif isinstance(val, ast.ConstStr):
-                    code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
+                    escaped = CodeGenerator.escape_string(val.value)
+                    code.append(instr.AssemblerDirective(f'.string "{escaped}"'))
                     var.sym.const_val = val.value
                 else:
                     assert False
@@ -126,17 +148,19 @@ class CodeGenerator:
                     code.append(instr.AssemblerDirective(f'.space {var.bytes - len(val.value) - 1}'))
 
             else:
+                assert isinstance(var.vtype.nested_type, Type)
+                is_byte = var.vtype.nested_type.name == 'char'
+                directive = '.byte' if is_byte else '.word'
+
                 for val in var.init:
-                    if isinstance(val, ast.Const):
-                        code.append(instr.AssemblerDirective(f'.word {val.value}'))
-                    elif isinstance(val, ast.CharConst):
-                        code.append(instr.AssemblerDirective(f'.byte {val.value}'))
+                    if isinstance(val, (ast.Const, ast.CharConst)):
+                        code.append(instr.AssemblerDirective(f'{directive} {val.value}'))
                     elif isinstance(val, ast.ConstStr):
-                        code.append(instr.AssemblerDirective(f'.string "{val.value}"'))
+                        escaped = CodeGenerator.escape_string(val.value)
+                        code.append(instr.AssemblerDirective(f'.string "{escaped}"'))
                     else:
                         assert False
 
-                assert isinstance(var.vtype.nested_type, Type)
                 code.append(instr.AssemblerDirective(f'.space {var.bytes - len(var.init) * Type.sizeof(var.vtype.nested_type)}'))
 
         else:
@@ -157,6 +181,7 @@ class CodeGenerator:
 
         for func in program.functions:
             code.extend(func.to_asm())
+            code.append(instr.AssemblerDirective('.ltorg'))
 
         if ast.needs_div:
             code.extend(CodeGenerator.div_func)

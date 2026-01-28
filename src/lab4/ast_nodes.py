@@ -64,6 +64,15 @@ def CALL(label: str) -> instr.BranchOp:
 
 CMPZ = instr.TestOp(op.TestOpcode.CMP, Regs.R0, addressing.Oprnd2Imm8(0))
 
+def ADDSUB(opcode: 'op.ArithmeticOpcode | op.LogicOpcode', rd: int, rn: int, imm: int, cond: Cond = Cond.ALWAYS) -> List[instr.AssemblyLine]:
+    if addressing.is_valid_arm_immediate(imm):
+        return [instr.ArithmeticLogicOp(opcode, rd, rn, addressing.Oprnd2Imm8(imm), cond)]
+    
+    return [
+        instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R12, addressing.Mode2Immediate(imm), cond),
+        instr.ArithmeticLogicOp(opcode, rd, rn, addressing.Oprnd2Rm(Regs.R12), cond)
+    ]
+
 class OptimizationVisitor:
 
     @staticmethod
@@ -168,8 +177,7 @@ class Block(Stmt):
                 offset += int(math.ceil(var_decl.bytes / 4)) * 4
                 var_decl.sym.frame_offset = offset
 
-            # TODO: what if offset can't fit in imm_8
-            code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, addressing.Oprnd2Imm8(offset)))
+            code.extend(ADDSUB(op.ArithmeticOpcode.SUB, Regs.SP, Regs.SP, offset))
 
             for var_decl in self.var_decls:
                 if var_decl.init is None:
@@ -177,6 +185,19 @@ class Block(Stmt):
                 elif isinstance(var_decl.init, Expr):
                     if isinstance(var_decl.init, ConstStr):
                         s = var_decl.init.value
+                        
+                        escape_map = {
+                            r'\t': '\t',
+                            r'\n': '\n',
+                            r'\0': '\0',
+                            r"\'": "'",
+                            r'\"': '"',
+                            r'\\': '\\',
+                        }
+                        
+                        for esc, real in escape_map.items():
+                            s = s.replace(esc, real)
+
                         elem_offset = var_decl.sym.frame_offset
 
                         for char in s:
@@ -283,7 +304,7 @@ class Var(Expr):
                     if self.sym.is_param:
                         code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset)))
                     else:
-                        code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.FP, addressing.Oprnd2Imm8(self.sym.frame_offset)))
+                        code.extend(ADDSUB(op.ArithmeticOpcode.SUB, Regs.R0, Regs.FP, self.sym.frame_offset))
                 else:
                     code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.FP, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
                 code.append(PUSH)
@@ -302,9 +323,9 @@ class Var(Expr):
                     if self.sym.is_param:
                         code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset)))
                     else:
-                        code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(self.sym.frame_offset)))
+                        code.extend(ADDSUB(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, self.sym.frame_offset))
                 else:
-                    code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, WordOrByte.WORD, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
+                    code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R0, IndexingType.NO_INDEX, self.sym.frame_offset, negate_imm=negate_offset)))
                 code.append(PUSH)
 
         return code
@@ -591,11 +612,24 @@ class While(Stmt):
 
 @dataclass
 class ExprStmt(Stmt):
-    expr: Expr
+    exprs: List[Expr]
+
+    @property
+    def expr(self) -> Expr:
+        return self.exprs[-1]
+    
+    @expr.setter
+    def expr(self, value: Expr) -> None:
+        if self.exprs:
+            self.exprs[-1] = value
+        else:
+            self.exprs = [value]
 
     def to_asm(self) -> List[instr.AssemblyLine]:
-        code = self.expr.to_asm()
-        code.append(POP)
+        code = []
+        for expr in self.exprs:
+            code.extend(expr.to_asm())
+            code.append(POP)
         return code
 
 @dataclass
@@ -815,16 +849,16 @@ class UnaryOp(Expr):
             elif isinstance(self.operand, ArrayAccess):
                 code.extend(self.operand.addr_asm())
                 code.append(POP_REG(Regs.R1))
-                code.append(PUSH_REG(Regs.R1))
                 size = self.operand.elem_size()
                 code.append(instr.LoadStoreSingleMode2Op(op.LoadSingleOpcode.LDR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None)))
                 if self.op.startswith('POSTFIX'):
                     code.append(PUSH)
+                
                 if 'INC' in self.op:
                     code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
                 else:
                     code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(1)))
-                code.append(POP_REG(Regs.R1))
+                
                 code.append(instr.LoadStoreSingleMode2Op(op.StoreSingleOpcode.STR, size, Regs.R0, addressing.Mode2ImmediateOffset(Regs.R1, IndexingType.NO_INDEX, None)))
                 if self.op.startswith('PREFIX'):
                     code.append(PUSH)
@@ -904,7 +938,7 @@ class ArrayAccess(Expr):
                     ])
                 else:
                     code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R0, Regs.R0, addressing.Oprnd2Rm(Regs.FP)))
-                    code.append(instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, addressing.Oprnd2Imm8(target.sym.frame_offset)))
+                    code.extend(ADDSUB(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R0, target.sym.frame_offset))
             else:
                 loop_label = instr.Label()
                 code.extend([
@@ -926,7 +960,7 @@ class ArrayAccess(Expr):
                 else:
                     code.extend([
                         instr.ArithmeticLogicOp(op.ArithmeticOpcode.ADD, Regs.R1, Regs.R1, addressing.Oprnd2Rm(Regs.R0)),
-                        instr.ArithmeticLogicOp(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R1, addressing.Oprnd2Imm8(target.sym.frame_offset)),
+                        ADDSUB(op.ArithmeticOpcode.SUB, Regs.R0, Regs.R1, target.sym.frame_offset)
                     ])
 
 
